@@ -7,6 +7,7 @@ dependencies = [
     "alembic>=1.14.1",
     "anthropic>=0.45.2",
     "beautifulsoup4==4.13.3",
+    "discord-py>=2.4.0",
     "joblib==1.4.2",
     "keras>=2.14.0",
     "lightgbm==4.5.0",
@@ -25,9 +26,20 @@ dependencies = [
     "streamlit==1.42.0",
     "telethon==1.38.1",
     "tensorflow==2.14.0",
+    "torch>=2.6.0",
+    "transformers>=4.48.3",
     "tweepy==4.15.0",
     "twilio==9.4.1",
     "websocket-client==1.7.0",
     "xgboost==2.1.4",
     "yfinance==0.2.52",
 ]
+
+[[tool.uv.index]]
+explicit = true
+name = "pytorch-cpu"
+url = "https://download.pytorch.org/whl/cpu"
+
+[tool.uv.sources]
+torch = [{ index = "pytorch-cpu", marker = "platform_system == 'Linux'" }]
+torchvision = [{ index = "pytorch-cpu", marker = "platform_system == 'Linux'" }]

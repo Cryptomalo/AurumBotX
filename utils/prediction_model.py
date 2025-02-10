@@ -42,6 +42,31 @@ class MemeCoinPredictionModel:
         return self.model.predict(X_scaled)
 
 class PredictionModel:
+
+    def analyze_sentiment(self, social_data):
+        """Analisi avanzata del sentiment con NLP"""
+        try:
+            # Aggregazione dati social
+            combined_text = ' '.join([
+                post['text'] for platform in social_data.values()
+                for post in platform.get('posts', [])
+            ])
+            
+            # Analisi sentiment
+            sentiment_scores = self.sentiment_analyzer(combined_text)
+            
+            # Analisi trend
+            trend_score = self._calculate_trend_strength(social_data)
+            
+            return {
+                'sentiment': sentiment_scores,
+                'trend_strength': trend_score,
+                'viral_potential': self._calculate_viral_potential(social_data)
+            }
+        except Exception as e:
+            logger.error(f"Errore analisi sentiment: {e}")
+            return None
+
     def __init__(self):
         self.models = {}
         self.scaler = StandardScaler()

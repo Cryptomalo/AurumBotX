@@ -107,13 +107,26 @@ class MemeCoinSnipingStrategy:
             return False
 
     async def _analyze_social_signals(self) -> Dict[str, float]:
-        """Advanced social signal analysis"""
+        """Advanced social signal analysis with real-time monitoring"""
         try:
+            # Real-time social media monitoring
             signals = {
-                'reddit': await self._analyze_reddit(),
-                'telegram': await self._analyze_telegram(),
-                'twitter': await self._analyze_twitter(),
-                'web': await self._analyze_web_mentions()
+                'reddit': await self._analyze_reddit_trends(),
+                'telegram': await self._monitor_telegram_groups(),
+                'twitter': await self._analyze_twitter_sentiment(),
+                'discord': await self._monitor_discord_channels(),
+                'web': await self._analyze_web_mentions(),
+                'influencers': await self._track_influencer_mentions()
+            }
+            
+            # Weighted analysis based on source reliability
+            weights = {
+                'reddit': 0.25,
+                'telegram': 0.25,
+                'twitter': 0.20,
+                'discord': 0.15,
+                'web': 0.10,
+                'influencers': 0.05
             }
 
             # Calculate weighted score
