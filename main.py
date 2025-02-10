@@ -5,6 +5,7 @@ import pandas as pd
 import traceback
 import threading
 import time
+import numpy as np #Added to handle np.mean
 from utils.data_loader import CryptoDataLoader
 from utils.indicators import TechnicalIndicators
 from utils.trading_bot import TradingBot
@@ -280,11 +281,12 @@ try:
 
                 # AI Predictions Section
                 st.markdown('<div class="chart-container">', unsafe_allow_html=True)
-                st.subheader("🤖 AI Price Predictions")
+                st.subheader("🤖 Previsioni AI Avanzate")
 
-                prediction_tab1, prediction_tab2 = st.tabs([
-                    "Price Predictions", 
-                    "Model Metrics"
+                prediction_tab1, prediction_tab2, prediction_tab3 = st.tabs([
+                    "📈 Previsioni di Prezzo", 
+                    "📊 Metriche del Modello",
+                    "🔍 Analisi Dettagliata"
                 ])
 
                 with prediction_tab1:
@@ -307,7 +309,7 @@ try:
                             fig.add_trace(go.Scatter(
                                 x=pred_df.index,
                                 y=pred_df['Close'],
-                                name='Actual Price',
+                                name='Prezzo Attuale',
                                 line=dict(color='blue', width=2)
                             ))
 
@@ -315,11 +317,11 @@ try:
                             fig.add_trace(go.Scatter(
                                 x=pred_df.index,
                                 y=pred_df['Predicted'],
-                                name='Predicted Price',
+                                name='Prezzo Previsto',
                                 line=dict(color='green', width=2, dash='dash')
                             ))
 
-                            # Confidence intervals if available
+                            # Confidence intervals
                             if 'Lower Bound' in pred_df.columns:
                                 fig.add_trace(go.Scatter(
                                     x=pred_df.index,
@@ -336,58 +338,99 @@ try:
                                     fill='tonexty',
                                     mode='lines',
                                     line_color='rgba(0,100,80,0)',
-                                    name='Confidence Interval'
+                                    name='Intervallo di Confidenza'
                                 ))
 
                             fig.update_layout(
-                                height=400,
+                                height=500,
                                 template='plotly_dark',
-                                title="Price Predictions with Confidence Intervals"
+                                title="Previsioni di Prezzo con Intervalli di Confidenza",
+                                xaxis_title="Data",
+                                yaxis_title="Prezzo ($)"
                             )
                             st.plotly_chart(fig, use_container_width=True)
 
+                            # Model performance metrics
+                            col1, col2, col3 = st.columns(3)
+                            with col1:
+                                st.metric("Accuratezza Media", f"{np.mean(predictions['predictions']):.2%}")
+                            with col2:
+                                confidence_range = np.mean(
+                                    predictions['confidence_intervals']['upper'] - 
+                                    predictions['confidence_intervals']['lower']
+                                )
+                                st.metric("Intervallo di Confidenza", f"±{confidence_range:.2%}")
+                            with col3:
+                                st.metric("Orizzonte di Previsione", "5 giorni")
+
                         except Exception as e:
-                            st.error(f"Error generating predictions: {str(e)}")
+                            st.error(f"Errore nella generazione delle previsioni: {str(e)}")
 
                 with prediction_tab2:
                     if hasattr(trading_bot.prediction_model, 'metrics') and trading_bot.prediction_model.metrics:
                         metrics = trading_bot.prediction_model.metrics
-                        col1, col2 = st.columns(2)
 
-                        with col1:
-                            st.markdown('<div class="metric-card">', unsafe_allow_html=True)
-                            st.metric("Model Type", metrics.get('model_type', 'N/A').upper())
-                            st.metric("Cross-validation Score", 
-                                    f"{metrics.get('cv_scores_mean', 0):.3f} ± {metrics.get('cv_scores_std', 0):.3f}")
-                            st.markdown('</div>', unsafe_allow_html=True)
+                        # Display model performance
+                        st.subheader("Performance dei Modelli")
+                        model_scores = pd.DataFrame({
+                            'Modello': metrics['cv_scores_mean'].keys(),
+                            'Score Medio': metrics['cv_scores_mean'].values(),
+                            'Deviazione Standard': metrics['cv_scores_std'].values()
+                        })
 
-                        with col2:
-                            st.markdown('<div class="metric-card">', unsafe_allow_html=True)
-                            st.metric("Training Size", metrics.get('training_size', 0))
-                            st.markdown('</div>', unsafe_allow_html=True)
+                        fig = go.Figure(data=[
+                            go.Bar(name='Score Medio', x=model_scores['Modello'], y=model_scores['Score Medio']),
+                            go.Bar(name='Deviazione Standard', x=model_scores['Modello'], y=model_scores['Deviazione Standard'])
+                        ])
 
-                        # Feature importance plot
-                        feature_importance = trading_bot.get_feature_importance()
-                        if feature_importance and feature_importance['prediction']:
-                            st.markdown("### Feature Importance")
-                            fi_df = pd.DataFrame(feature_importance['prediction'], 
-                                              columns=['Feature', 'Importance'])
+                        fig.update_layout(
+                            barmode='group',
+                            title="Performance dei Modelli nell'Ensemble",
+                            xaxis_title="Modello",
+                            yaxis_title="Score"
+                        )
+                        st.plotly_chart(fig, use_container_width=True)
 
-                            fig = go.Figure(go.Bar(
-                                x=fi_df['Importance'],
-                                y=fi_df['Feature'],
-                                orientation='h'
+                with prediction_tab3:
+                    st.subheader("Importanza delle Features")
+                    feature_importance = trading_bot.prediction_model.get_feature_importance()
+                    if feature_importance:
+                        fi_df = pd.DataFrame(feature_importance, columns=['Feature', 'Importance'])
+                        fi_df = fi_df.head(15)  # Show top 15 features
+
+                        fig = go.Figure(go.Bar(
+                            x=fi_df['Importance'],
+                            y=fi_df['Feature'],
+                            orientation='h'
+                        ))
+
+                        fig.update_layout(
+                            height=500,
+                            template='plotly_dark',
+                            title="Top 15 Features più Influenti",
+                            xaxis_title="Importanza Relativa",
+                            yaxis_title="Feature"
+                        )
+                        st.plotly_chart(fig, use_container_width=True)
+
+                        # Feature correlation matrix
+                        st.subheader("Matrice di Correlazione delle Features")
+                        if 'feature_names' in metrics:
+                            corr_matrix = df[metrics['feature_names']].corr()
+                            fig = go.Figure(data=go.Heatmap(
+                                z=corr_matrix,
+                                x=corr_matrix.columns,
+                                y=corr_matrix.columns,
+                                colorscale='RdBu'
                             ))
-
                             fig.update_layout(
-                                height=400,
-                                template='plotly_dark',
-                                title="Model Feature Importance"
+                                height=600,
+                                title="Correlazione tra Features"
                             )
                             st.plotly_chart(fig, use_container_width=True)
 
                     else:
-                        st.info("Train the model to see performance metrics")
+                        st.info("Addestra il modello per vedere l'importanza delle features")
 
                 st.markdown('</div>', unsafe_allow_html=True)
 
