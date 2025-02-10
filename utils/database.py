@@ -13,7 +13,7 @@ Base = declarative_base()
 
 class TradingStrategy(Base):
     __tablename__ = "trading_strategies"
-    
+
     id = Column(Integer, primary_key=True, index=True)
     name = Column(String, unique=True, index=True)
     description = Column(String)
@@ -23,7 +23,7 @@ class TradingStrategy(Base):
 
 class SimulationResult(Base):
     __tablename__ = "simulation_results"
-    
+
     id = Column(Integer, primary_key=True, index=True)
     strategy_id = Column(Integer, ForeignKey("trading_strategies.id"))
     symbol = Column(String, index=True)
@@ -36,16 +36,26 @@ class SimulationResult(Base):
     sharpe_ratio = Column(Float)
     max_drawdown = Column(Float)
     created_at = Column(DateTime, default=datetime.utcnow)
-    
+
     strategy = relationship("TradingStrategy", back_populates="simulations")
 
 # Create all tables
 Base.metadata.create_all(bind=engine)
 
 def get_db():
-    """Get database session"""
     db = SessionLocal()
     try:
+        # Verifica la connessione
+        db.execute("SELECT 1")
         yield db
+    except Exception as e:
+        print(f"Database connection error: {e}")
+        db.rollback()
+        # Riprova a connettersi
+        try:
+            db.execute("SELECT 1")
+            yield db
+        except:
+            raise
     finally:
         db.close()
