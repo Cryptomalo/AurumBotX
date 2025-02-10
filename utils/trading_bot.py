@@ -1,8 +1,55 @@
 import numpy as np
 import pandas as pd
+import websocket
+import json
+import time
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.preprocessing import StandardScaler
 from utils.prediction_model import PredictionModel
+
+class WebSocketManager:
+    def __init__(self, url, max_retries=5):
+        self.url = url
+        self.ws = None
+        self.max_retries = max_retries
+        self.retry_delay = 1
+        
+    def connect(self):
+        attempt = 0
+        while attempt < self.max_retries:
+            try:
+                self.ws = websocket.WebSocketApp(
+                    self.url,
+                    on_message=self._on_message,
+                    on_error=self._on_error,
+                    on_close=self._on_close,
+                    on_open=self._on_open
+                )
+                return True
+            except Exception as e:
+                print(f"Connection attempt {attempt + 1} failed: {e}")
+                time.sleep(self.retry_delay)
+                self.retry_delay *= 2  # Exponential backoff
+                attempt += 1
+        return False
+
+    def _on_message(self, ws, message):
+        try:
+            data = json.loads(message)
+            self.handle_message(data)
+        except Exception as e:
+            print(f"Message handling error: {e}")
+
+    def _on_error(self, ws, error):
+        print(f"WebSocket error: {error}")
+        self.handle_error(error)
+
+    def _on_close(self, ws, close_status_code, close_msg):
+        print(f"WebSocket closed: {close_msg}")
+        self.reconnect()
+
+    def _on_open(self, ws):
+        print("WebSocket connection established")
 
 class TradingBot:
     def __init__(self):

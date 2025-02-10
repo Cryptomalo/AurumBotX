@@ -239,9 +239,16 @@ class PredictionModel:
             return None
 
     def predict(self, df, target_column='Close', prediction_horizon=5):
-        """Generate ensemble predictions"""
-        if not self.models:
-            raise ValueError("Models not trained. Call train() first.")
+        """Generate ensemble predictions with error handling"""
+        try:
+            if not self.models:
+                raise ValueError("Models not trained. Call train() first.")
+            
+            if df.empty:
+                raise ValueError("Empty dataframe provided")
+                
+            if target_column not in df.columns:
+                raise ValueError(f"Target column '{target_column}' not found in dataframe")
 
         X, _ = self.prepare_data(df, target_column, prediction_horizon)
         X_scaled = self.scaler.transform(X)
