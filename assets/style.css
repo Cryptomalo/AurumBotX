@@ -1,22 +1,108 @@
 .stApp {
-    max-width: 1200px;
+    max-width: 1400px;
     margin: 0 auto;
+    background-color: #f8f9fa;
 }
 
 .metric-card {
     background-color: white;
-    padding: 1rem;
-    border-radius: 0.5rem;
-    box-shadow: 0 1px 3px rgba(0,0,0,0.12);
+    padding: 1.5rem;
+    border-radius: 0.75rem;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+    transition: transform 0.2s;
+}
+
+.metric-card:hover {
+    transform: translateY(-2px);
 }
 
 .chart-container {
     background-color: white;
-    padding: 1rem;
-    border-radius: 0.5rem;
+    padding: 1.5rem;
+    border-radius: 0.75rem;
     margin: 1rem 0;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+}
+
+.strategy-card {
+    background-color: white;
+    padding: 1.5rem;
+    border-radius: 0.75rem;
+    margin: 1rem 0;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+}
+
+.strategy-card h3 {
+    color: #1f2937;
+    margin-bottom: 1rem;
+}
+
+.status-active {
+    color: #059669;
+    font-weight: 600;
+}
+
+.status-inactive {
+    color: #dc2626;
+    font-weight: 600;
 }
 
 .sidebar .stButton button {
     width: 100%;
+    padding: 0.75rem;
+    border-radius: 0.5rem;
+    background-color: #2563eb;
+    color: white;
+    font-weight: 600;
+    transition: background-color 0.2s;
+}
+
+.sidebar .stButton button:hover {
+    background-color: #1d4ed8;
+}
+
+/* Custom styles for metrics */
+[data-testid="stMetricValue"] {
+    font-size: 1.5rem !important;
+    font-weight: 600 !important;
+    color: #1f2937 !important;
+}
+
+[data-testid="stMetricDelta"] {
+    font-size: 0.875rem !important;
+    color: #059669 !important;
+}
+
+/* Table styles */
+.dataframe {
+    border: none !important;
+    border-radius: 0.5rem;
+    overflow: hidden;
+}
+
+.dataframe th {
+    background-color: #f3f4f6 !important;
+    padding: 1rem !important;
+    font-weight: 600 !important;
+}
+
+.dataframe td {
+    padding: 0.75rem !important;
+}
+
+/* Tab styles */
+.stTabs [data-baseweb="tab-list"] {
+    gap: 2rem;
+    margin-bottom: 2rem;
+}
+
+.stTabs [data-baseweb="tab"] {
+    padding: 1rem 2rem;
+    font-weight: 600;
+}
+
+/* Chart container */
+[data-testid="stPlotlyChart"] > div {
+    border-radius: 0.75rem;
+    overflow: hidden;
 }
