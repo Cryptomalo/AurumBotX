@@ -72,8 +72,13 @@ with st.sidebar:
     st.metric("💰 Profitto Totale", f"${total_profit:,.2f}")
 
 # Load custom CSS
-with open('assets/style.css') as f:
-    st.markdown(f'<style>{f.read()}</style>', unsafe_allow_html=True)
+try:
+    with open('assets/style.css') as f:
+        st.markdown(f'<style>{f.read()}</style>', unsafe_allow_html=True)
+except FileNotFoundError:
+    st.warning("⚠️ Style file not found. Using default styling.")
+except Exception as e:
+    st.error(f"Error loading styles: {str(e)}")
 
 try:
     # Initialize components
@@ -137,19 +142,19 @@ try:
     with st.sidebar:
         st.title("🤖 AurumBot")
         st.markdown("---")
-
+        
         selected_coin = st.selectbox(
             "🪙 Select Cryptocurrency",
             options=list(data_loader.supported_coins.keys()),
             format_func=lambda x: data_loader.supported_coins[x]
         )
-
+        
         timeframe = st.selectbox(
             "📊 Select Timeframe",
             options=['1mo', '3mo', '6mo', '1y'],
             index=2
         )
-
+        
         st.markdown("---")
         st.caption("Powered by Advanced AI Trading Strategies")
 
@@ -273,6 +278,120 @@ try:
 
                 st.markdown('</div>', unsafe_allow_html=True)
 
+                # AI Predictions Section
+                st.markdown('<div class="chart-container">', unsafe_allow_html=True)
+                st.subheader("🤖 AI Price Predictions")
+
+                prediction_tab1, prediction_tab2 = st.tabs([
+                    "Price Predictions", 
+                    "Model Metrics"
+                ])
+
+                with prediction_tab1:
+                    if df is not None and not df.empty:
+                        try:
+                            # Get predictions
+                            predictions = trading_bot.prediction_model.predict(df)
+                            pred_df = pd.DataFrame(index=df.index)
+                            pred_df['Close'] = df['Close']
+                            pred_df['Predicted'] = predictions['predictions']
+
+                            if predictions['confidence_intervals']:
+                                pred_df['Lower Bound'] = predictions['confidence_intervals']['lower']
+                                pred_df['Upper Bound'] = predictions['confidence_intervals']['upper']
+
+                            # Create prediction chart
+                            fig = go.Figure()
+
+                            # Actual price
+                            fig.add_trace(go.Scatter(
+                                x=pred_df.index,
+                                y=pred_df['Close'],
+                                name='Actual Price',
+                                line=dict(color='blue', width=2)
+                            ))
+
+                            # Predicted price
+                            fig.add_trace(go.Scatter(
+                                x=pred_df.index,
+                                y=pred_df['Predicted'],
+                                name='Predicted Price',
+                                line=dict(color='green', width=2, dash='dash')
+                            ))
+
+                            # Confidence intervals if available
+                            if 'Lower Bound' in pred_df.columns:
+                                fig.add_trace(go.Scatter(
+                                    x=pred_df.index,
+                                    y=pred_df['Upper Bound'],
+                                    fill=None,
+                                    mode='lines',
+                                    line_color='rgba(0,100,80,0)',
+                                    showlegend=False
+                                ))
+
+                                fig.add_trace(go.Scatter(
+                                    x=pred_df.index,
+                                    y=pred_df['Lower Bound'],
+                                    fill='tonexty',
+                                    mode='lines',
+                                    line_color='rgba(0,100,80,0)',
+                                    name='Confidence Interval'
+                                ))
+
+                            fig.update_layout(
+                                height=400,
+                                template='plotly_dark',
+                                title="Price Predictions with Confidence Intervals"
+                            )
+                            st.plotly_chart(fig, use_container_width=True)
+
+                        except Exception as e:
+                            st.error(f"Error generating predictions: {str(e)}")
+
+                with prediction_tab2:
+                    if hasattr(trading_bot.prediction_model, 'metrics') and trading_bot.prediction_model.metrics:
+                        metrics = trading_bot.prediction_model.metrics
+                        col1, col2 = st.columns(2)
+
+                        with col1:
+                            st.markdown('<div class="metric-card">', unsafe_allow_html=True)
+                            st.metric("Model Type", metrics.get('model_type', 'N/A').upper())
+                            st.metric("Cross-validation Score", 
+                                    f"{metrics.get('cv_scores_mean', 0):.3f} ± {metrics.get('cv_scores_std', 0):.3f}")
+                            st.markdown('</div>', unsafe_allow_html=True)
+
+                        with col2:
+                            st.markdown('<div class="metric-card">', unsafe_allow_html=True)
+                            st.metric("Training Size", metrics.get('training_size', 0))
+                            st.markdown('</div>', unsafe_allow_html=True)
+
+                        # Feature importance plot
+                        feature_importance = trading_bot.get_feature_importance()
+                        if feature_importance and feature_importance['prediction']:
+                            st.markdown("### Feature Importance")
+                            fi_df = pd.DataFrame(feature_importance['prediction'], 
+                                              columns=['Feature', 'Importance'])
+
+                            fig = go.Figure(go.Bar(
+                                x=fi_df['Importance'],
+                                y=fi_df['Feature'],
+                                orientation='h'
+                            ))
+
+                            fig.update_layout(
+                                height=400,
+                                template='plotly_dark',
+                                title="Model Feature Importance"
+                            )
+                            st.plotly_chart(fig, use_container_width=True)
+
+                    else:
+                        st.info("Train the model to see performance metrics")
+
+                st.markdown('</div>', unsafe_allow_html=True)
+
+
     with tab2:
         st.markdown('<div class="strategy-container">', unsafe_allow_html=True)
         st.subheader("🎯 Trading Strategies Configuration")
@@ -372,8 +491,7 @@ try:
 
             except Exception as e:
                 st.error(f"Error during simulation: {str(e)}")
-                st.code(traceback.format_exc())
-        st.markdown('</div>', unsafe_allow_html=True)
+            st.markdown('</div>', unsafe_allow_html=True)
 
     with tab3:
         st.markdown('<div class="trading-container">', unsafe_allow_html=True)

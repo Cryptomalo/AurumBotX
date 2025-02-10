@@ -2,15 +2,17 @@ import numpy as np
 import pandas as pd
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.preprocessing import StandardScaler
+from utils.prediction_model import PredictionModel
 
 class TradingBot:
     def __init__(self):
         self.model = RandomForestClassifier(
             n_estimators=100,
-            random_state=42,  # Per risultati riproducibili
-            min_samples_leaf=5  # Per evitare overfitting
+            random_state=42,
+            min_samples_leaf=5
         )
         self.scaler = StandardScaler()
+        self.prediction_model = PredictionModel()
         self.feature_names = [
             'SMA_ratio', 'RSI', 'MACD', 'Volume',
             'price_change', 'price_volatility'
@@ -18,77 +20,121 @@ class TradingBot:
 
     def prepare_features(self, df):
         """Prepare features for the model"""
-        features = pd.DataFrame(index=df.index)
+        try:
+            features = pd.DataFrame(index=df.index)
 
-        # Technical indicators as features
-        features['SMA_ratio'] = df['Close'] / df['SMA_20']
-        features['RSI'] = df['RSI']
-        features['MACD'] = df['MACD']
-        features['Volume'] = df['Volume']
+            # Technical indicators as features
+            features['SMA_ratio'] = df['Close'] / df['SMA_20']
+            features['RSI'] = df['RSI']
+            features['MACD'] = df['MACD']
+            features['Volume'] = df['Volume']
 
-        # Price changes
-        features['price_change'] = df['Close'].pct_change()
-        features['price_volatility'] = df['Close'].rolling(window=20).std()
+            # Price changes
+            features['price_change'] = df['Close'].pct_change()
+            features['price_volatility'] = df['Close'].rolling(window=20).std()
 
-        # Remove NaN values
-        features = features.dropna()
-        return features
+            # Add advanced predictions
+            try:
+                if hasattr(self.prediction_model, 'model') and self.prediction_model.model is not None:
+                    predictions = self.prediction_model.predict(df)
+                    features['price_prediction'] = predictions['predictions']
+                    if predictions.get('confidence_intervals'):
+                        features['prediction_uncertainty'] = (
+                            predictions['confidence_intervals']['upper'] - 
+                            predictions['confidence_intervals']['lower']
+                        )
+            except Exception as e:
+                print(f"Error in advanced predictions: {e}")
+                features['price_prediction'] = 0
+                features['prediction_uncertainty'] = 0
+
+            # Remove NaN values
+            features = features.dropna()
+            return features
+        except Exception as e:
+            print(f"Error in prepare_features: {e}")
+            return pd.DataFrame()
 
     def prepare_labels(self, df, valid_indices):
-        """Create labels for training (1 for price increase, 0 for decrease)"""
-        future_returns = df['Close'].shift(-1) / df['Close'] - 1
-        # Align labels with features using the same indices
-        labels = future_returns.loc[valid_indices]
-        # Ensure we have enough samples of both classes
-        labels = (labels > 0).astype(int)
-        return labels[:-1]  # Remove last row and convert to int
+        """Create labels for training"""
+        try:
+            future_returns = df['Close'].shift(-1) / df['Close'] - 1
+            labels = future_returns.loc[valid_indices]
+            labels = (labels > 0).astype(int)
+            return labels[:-1]
+        except Exception as e:
+            print(f"Error in prepare_labels: {e}")
+            return pd.Series()
 
     def train(self, df):
-        """Train the trading model"""
-        # Prepare features and keep track of valid indices
-        features = self.prepare_features(df)
-        valid_indices = features.index
+        """Train both classification and prediction models"""
+        try:
+            # Train prediction model first
+            prediction_metrics = self.prediction_model.train(df)
+            print("Prediction model metrics:", prediction_metrics)
 
-        # Prepare labels using the same indices
-        labels = self.prepare_labels(df, valid_indices)
+            # Prepare features and labels
+            features = self.prepare_features(df)
+            if features.empty:
+                return False
 
-        # Ensure features and labels have the same length
-        features = features[:-1]  # Remove last row to match labels
+            valid_indices = features.index
+            labels = self.prepare_labels(df, valid_indices)
+            if labels.empty:
+                return False
 
-        # Check if we have enough data
-        if len(features) < 30:
-            raise ValueError("Not enough data for training")
+            # Ensure features and labels have the same length
+            features = features[:-1]
 
-        # Scale features
-        scaled_features = self.scaler.fit_transform(features)
+            # Check if we have enough data
+            if len(features) < 30:
+                print("Not enough data for training")
+                return False
 
-        # Train model
-        self.model.fit(scaled_features, labels)
+            # Scale features
+            scaled_features = self.scaler.fit_transform(features)
+
+            # Train classification model
+            self.model.fit(scaled_features, labels)
+            return True
+
+        except Exception as e:
+            print(f"Error in training: {str(e)}")
+            return False
 
     def predict(self, df):
-        """Make trading predictions"""
+        """Make trading predictions with confidence scores"""
         try:
             features = self.prepare_features(df)
+            if features.empty:
+                return pd.Series(0.5, index=df.index)
+
             scaled_features = self.scaler.transform(features)
-            
-            # Create a Series of predictions with the same index as the original dataframe
-            predictions = pd.Series(index=df.index, dtype=float)
-            
-            # Get class probabilities for the features we have
+
+            # Get class probabilities
             probas = self.model.predict_proba(scaled_features)
-            
-            # Fill predictions where we have features
+            predictions = pd.Series(index=df.index, dtype=float)
+
             if probas.shape[1] == 2:
                 predictions[features.index] = probas[:, 1]
             else:
                 predictions[features.index] = self.model.predict(scaled_features).astype(float)
-                
-            # Fill missing values with 0.5 (neutral prediction)
+
             predictions.fillna(0.5, inplace=True)
-            
             return predictions
 
         except Exception as e:
             print(f"Error in prediction: {e}")
-            # Return neutral predictions
             return pd.Series(0.5, index=df.index)
+
+    def get_feature_importance(self):
+        """Get feature importance from both models"""
+        try:
+            importance_dict = {
+                'classification': dict(zip(self.feature_names, self.model.feature_importances_)),
+                'prediction': self.prediction_model.get_feature_importance()
+            }
+            return importance_dict
+        except Exception as e:
+            print(f"Error getting feature importance: {e}")
+            return None

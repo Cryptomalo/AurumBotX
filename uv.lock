@@ -1371,6 +1371,8 @@ source = { virtual = "." }
 dependencies = [
     { name = "alembic" },
     { name = "anthropic" },
+    { name = "joblib" },
+    { name = "numpy" },
     { name = "openai" },
     { name = "pandas" },
     { name = "plotly" },
@@ -1389,6 +1391,8 @@ dependencies = [
 requires-dist = [
     { name = "alembic", specifier = ">=1.14.1" },
     { name = "anthropic", specifier = ">=0.45.2" },
+    { name = "joblib", specifier = ">=1.4.2" },
+    { name = "numpy", specifier = ">=2.2.2" },
     { name = "openai", specifier = ">=1.61.1" },
     { name = "pandas", specifier = ">=2.2.3" },
     { name = "plotly", specifier = ">=6.0.0" },
