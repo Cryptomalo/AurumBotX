@@ -1,4 +1,4 @@
-from sqlalchemy import create_engine, Column, Integer, Float, String, DateTime, ForeignKey
+from sqlalchemy import create_engine, Column, Integer, Float, String, DateTime, ForeignKey, text
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker, relationship
 import os
@@ -45,15 +45,15 @@ Base.metadata.create_all(bind=engine)
 def get_db():
     db = SessionLocal()
     try:
-        # Verifica la connessione
-        db.execute("SELECT 1")
+        # Verifica la connessione usando text()
+        db.execute(text("SELECT 1"))
         yield db
     except Exception as e:
         print(f"Database connection error: {e}")
         db.rollback()
         # Riprova a connettersi
         try:
-            db.execute("SELECT 1")
+            db.execute(text("SELECT 1"))
             yield db
         except:
             raise
