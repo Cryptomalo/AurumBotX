@@ -18,6 +18,7 @@ class TradingSimulator:
         portfolio['Position'] = portfolio['Signal'].diff()
         portfolio['Holdings'] = self.initial_balance
         portfolio['Shares'] = 0
+        total_trades = abs(portfolio['Position']).sum()
 
         current_shares = 0
         current_balance = self.initial_balance
@@ -77,7 +78,7 @@ class TradingSimulator:
             end_date=end_date,
             initial_balance=float(self.initial_balance),
             final_balance=float(self.initial_balance * (1 + metrics['Total Return'])),
-            total_trades=0,  # To be implemented
+            total_trades=int(total_trades),
             win_rate=float(metrics['Win Rate']),
             sharpe_ratio=float(metrics['Sharpe Ratio']),
             max_drawdown=float(metrics['Max Drawdown']),

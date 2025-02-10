@@ -37,7 +37,7 @@ class MemeCoinSnipingStrategy(BaseStrategy):
         """
         try:
             response = self.client.chat.completions.create(
-                model="gpt-4o",  # Latest model as of May 13, 2024
+                model="gpt-4",  # Latest stable model
                 messages=[{
                     "role": "system",
                     "content": "Analyze the current market sentiment for meme coins and provide a sentiment score between 0 and 1."
@@ -99,4 +99,4 @@ class MemeCoinSnipingStrategy(BaseStrategy):
         risk_amount = (signal['target_price'] - signal['stop_loss']) * required_capital
         max_risk_per_trade = current_portfolio.get('total_capital', 0) * 0.02  # 2% max rischio
         
-        return risk_amount <= max_risk_per_traderade
+        return risk_amount <= max_risk_per_trade
