@@ -79,7 +79,8 @@ class TradingSimulator:
             total_trades=0,  # To be implemented
             win_rate=float(metrics['Win Rate']),
             sharpe_ratio=float(metrics['Sharpe Ratio']),
-            max_drawdown=float(metrics['Max Drawdown'])
+            max_drawdown=float(metrics['Max Drawdown']),
+            created_at=datetime.utcnow()
         )
 
         db.add(simulation)
