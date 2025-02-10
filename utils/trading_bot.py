@@ -135,10 +135,21 @@ class TradingBot:
             return pd.Series(0.5, index=df.index)
 
     def handle_websocket_error(self, e: Exception):
-        """Gestisce errori WebSocket"""
-        print(f"WebSocket error: {str(e)}")
-        time.sleep(2)  # Attende prima di riprovare
-        return self.reconnect_websocket()
+        """Gestisce errori WebSocket con retry exponenziale"""
+        max_retries = 5
+        retry_delay = 1
+        
+        for attempt in range(max_retries):
+            try:
+                print(f"Tentativo riconnessione WebSocket {attempt + 1}/{max_retries}")
+                if self.reconnect_websocket():
+                    return True
+                retry_delay *= 2  # Exponential backoff
+                time.sleep(retry_delay)
+            except Exception as conn_error:
+                print(f"Errore riconnessione: {str(conn_error)}")
+                
+        return False
         
     def reconnect_websocket(self):
         """Riconnette il WebSocket"""
