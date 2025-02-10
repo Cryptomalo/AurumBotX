@@ -74,12 +74,12 @@ class TradingSimulator:
             symbol=symbol,
             start_date=start_date,
             end_date=end_date,
-            initial_balance=self.initial_balance,
-            final_balance=self.initial_balance * (1 + metrics['Total Return']),
+            initial_balance=float(self.initial_balance),
+            final_balance=float(self.initial_balance * (1 + metrics['Total Return'])),
             total_trades=0,  # To be implemented
-            win_rate=metrics['Win Rate'],
-            sharpe_ratio=metrics['Sharpe Ratio'],
-            max_drawdown=metrics['Max Drawdown']
+            win_rate=float(metrics['Win Rate']),
+            sharpe_ratio=float(metrics['Sharpe Ratio']),
+            max_drawdown=float(metrics['Max Drawdown'])
         )
 
         db.add(simulation)
