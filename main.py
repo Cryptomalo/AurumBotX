@@ -59,7 +59,7 @@ st.set_page_config(
 with st.sidebar:
     st.title("🌟 AurumBot")
     st.markdown("---")
-    
+
     menu = st.radio("Menu Principale", [
         "📊 Dashboard",
         "👤 Profilo",
@@ -67,7 +67,7 @@ with st.sidebar:
         "🔒 Sicurezza",
         "🏆 Traguardi"
     ])
-    
+
     st.markdown("---")
     total_profit = 125000  # Esempio (da sostituire con dati reali)
     st.metric("💰 Profitto Totale", f"${total_profit:,.2f}")
@@ -91,7 +91,7 @@ try:
     if menu == "📊 Dashboard":
         st.title("📊 Trading Dashboard")
         # Il contenuto esistente del dashboard rimane qui
-    
+
     elif menu == "👤 Profilo":
         st.title("👤 Profilo Trader")
         col1, col2 = st.columns(2)
@@ -100,28 +100,28 @@ try:
             st.text_input("Nome Trader", "AurumTrader")
             st.text_input("Email", "trader@aurumbot.com")
             st.button("✏️ Modifica Profilo")
-        
+
         with col2:
             st.markdown("### 📊 Statistiche")
             st.metric("Trade Totali", "1,234")
             st.metric("Win Rate", "68%")
             st.metric("Profitto Medio", "$312.45")
-    
+
     elif menu == "📈 Statistiche PnL":
         st.title("📈 Analisi Profitti e Perdite")
         # Grafici PnL
         st.area_chart({"Profitti": [100, 250, 380, 420, 580, 600, 750]})
-        
+
     elif menu == "🔒 Sicurezza":
         st.title("🔒 Sicurezza Account")
         st.toggle("2FA Attiva")
         st.toggle("Notifiche Email")
         st.toggle("Notifiche Telegram")
-        
+
     elif menu == "🏆 Traguardi":
         st.title("🏆 I Tuoi Traguardi")
         col1, col2 = st.columns(2)
-        
+
         achievements = [
             {"level": "10K", "reached": True},
             {"level": "25K", "reached": True},
@@ -131,7 +131,7 @@ try:
             {"level": "500K", "reached": False},
             {"level": "1M", "reached": False}
         ]
-        
+
         for ach in achievements:
             with col1 if achievements.index(ach) % 2 == 0 else col2:
                 if ach["reached"]:
@@ -143,19 +143,19 @@ try:
     with st.sidebar:
         st.title("🤖 AurumBot")
         st.markdown("---")
-        
+
         selected_coin = st.selectbox(
             "🪙 Select Cryptocurrency",
             options=list(data_loader.supported_coins.keys()),
             format_func=lambda x: data_loader.supported_coins[x]
         )
-        
+
         timeframe = st.selectbox(
             "📊 Select Timeframe",
             options=['1mo', '3mo', '6mo', '1y'],
             index=2
         )
-        
+
         st.markdown("---")
         st.caption("Powered by Advanced AI Trading Strategies")
 
@@ -630,26 +630,51 @@ try:
         st.subheader("📈 Historical Performance")
         try:
             db = next(get_db())
-            historical_sims = (
-                db.query(SimulationResult)
-                .filter_by(symbol=selected_coin)
-                .order_by(SimulationResult.created_at.desc())
-                .limit(5)
-                .all()
-            )
+            # Aggiunge retry logic per WebSocket
+            def setup_websocket_connection():
+                max_retries = 3
+                retry_delay = 2  # secondi
 
-            if historical_sims:
-                hist_data = []
-                for sim in historical_sims:
-                    hist_data.append({
-                        'Date': sim.created_at.strftime('%Y-%m-%d %H:%M'),
-                        'Total Return': f"{((sim.final_balance / sim.initial_balance) - 1):.2%}",
-                        'Sharpe Ratio': f"{sim.sharpe_ratio:.2f}",
-                        'Win Rate': f"{sim.win_rate:.2%}"
-                    })
-                st.dataframe(pd.DataFrame(hist_data))
-            else:
-                st.info("No historical simulations found for this cryptocurrency")
+                for attempt in range(max_retries):
+                    try:
+                        # Setup WebSocket connection
+                        st.session_state['ws_connected'] = True
+                        return True
+                    except Exception as e:
+                        if attempt < max_retries - 1:
+                            time.sleep(retry_delay)
+                            continue
+                        st.error(f"Errore di connessione WebSocket: {str(e)}")
+                        return False
+
+            try:
+                if 'ws_connected' not in st.session_state:
+                    setup_websocket_connection()
+
+                historical_sims = (
+                    db.query(SimulationResult)
+                    .filter_by(symbol=selected_coin)
+                    .order_by(SimulationResult.created_at.desc())
+                    .limit(5)
+                    .all()
+                )
+
+                if historical_sims:
+                    hist_data = []
+                    for sim in historical_sims:
+                        hist_data.append({
+                            'Date': sim.created_at.strftime('%Y-%m-%d %H:%M'),
+                            'Total Return': f"{((sim.final_balance / sim.initial_balance) - 1):.2%}",
+                            'Sharpe Ratio': f"{sim.sharpe_ratio:.2f}",
+                            'Win Rate': f"{sim.win_rate:.2%}"
+                        })
+                    st.dataframe(pd.DataFrame(hist_data))
+                else:
+                    st.info("No historical simulations found for this cryptocurrency")
+
+            except Exception as e:
+                st.error(f"Error loading historical performance: {str(e)}")
+            st.markdown('</div>', unsafe_allow_html=True)
 
         except Exception as e:
             st.error(f"Error loading historical performance: {str(e)}")

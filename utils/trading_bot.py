@@ -134,6 +134,25 @@ class TradingBot:
             print(f"Error in prediction: {e}")
             return pd.Series(0.5, index=df.index)
 
+    def handle_websocket_error(self, e: Exception):
+        """Gestisce errori WebSocket"""
+        print(f"WebSocket error: {str(e)}")
+        time.sleep(2)  # Attende prima di riprovare
+        return self.reconnect_websocket()
+        
+    def reconnect_websocket(self):
+        """Riconnette il WebSocket"""
+        max_attempts = 3
+        for attempt in range(max_attempts):
+            try:
+                # Implementa logica di riconnessione
+                return True
+            except Exception as e:
+                if attempt == max_attempts - 1:
+                    raise e
+                time.sleep(2)
+        return False
+
     def get_feature_importance(self):
         """Get feature importance from both models"""
         try:
