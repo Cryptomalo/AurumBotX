@@ -213,39 +213,34 @@ try:
         col1, col2, col3 = st.columns(3)
 
         with col1:
-            st.markdown('<div class="strategy-card">', unsafe_allow_html=True)
-            st.markdown("### 🚀 Meme Coin Sniping")
-            use_meme = st.checkbox("Enable Strategy", key="meme_strategy")
-            if use_meme:
-                st.slider("Sentiment Threshold", 0.0, 1.0, 0.7, key="meme_sentiment")
-                st.slider("Min Liquidity (USD)", 50000, 500000, 100000, step=50000, key="meme_liquidity")
-            else:
-                st.info("Enable this strategy to trade trending meme coins with AI-powered sentiment analysis")
-            st.markdown('</div>', unsafe_allow_html=True)
+            with st.container():
+                st.markdown("### 🚀 Meme Coin Sniping")
+                use_meme = st.checkbox("Enable Strategy", key="meme_strategy")
+                if use_meme:
+                    st.slider("Sentiment Threshold", 0.0, 1.0, 0.7, key="meme_sentiment")
+                    st.slider("Min Liquidity (USD)", 50000, 500000, 100000, step=50000, key="meme_liquidity")
+                else:
+                    st.info("Enable to trade trending meme coins")
 
         with col2:
-            st.markdown('<div class="strategy-card">', unsafe_allow_html=True)
-            st.markdown("### ⚡ Scalping Strategy")
-            use_scalping = st.checkbox("Enable Strategy", key="scalp_strategy")
-            if use_scalping:
-                st.slider("Volume Threshold", 500000, 5000000, 1000000, step=500000, key="scalp_volume")
-                st.slider("Profit Target (%)", 0.1, 2.0, 0.5, 0.1, key="scalp_target")
-            else:
-                st.info("Enable this strategy for high-frequency trading with small profit targets")
-            st.markdown('</div>', unsafe_allow_html=True)
+            with st.container():
+                st.markdown("### ⚡ Scalping Strategy")
+                use_scalping = st.checkbox("Enable Strategy", key="scalp_strategy")
+                if use_scalping:
+                    st.slider("Volume Threshold", 500000, 5000000, 1000000, step=500000, key="scalp_volume")
+                    st.slider("Profit Target (%)", 0.1, 2.0, 0.5, 0.1, key="scalp_target")
+                else:
+                    st.info("Enable for high-frequency trading")
 
         with col3:
-            st.markdown('<div class="strategy-card">', unsafe_allow_html=True)
-            st.markdown("### 📈 Swing Trading")
-            use_swing = st.checkbox("Enable Strategy", key="swing_strategy")
-            if use_swing:
-                st.slider("Trend Period (days)", 10, 50, 20, key="swing_period")
-                st.slider("Profit Target (%)", 5.0, 30.0, 15.0, 1.0, key="swing_target")
-            else:
-                st.info("Enable this strategy for medium-term trades following market trends")
-            st.markdown('</div>', unsafe_allow_html=True)
-
-        st.markdown('</div>', unsafe_allow_html=True)
+            with st.container():
+                st.markdown("### 📈 Swing Trading")
+                use_swing = st.checkbox("Enable Strategy", key="swing_strategy")
+                if use_swing:
+                    st.slider("Trend Period (days)", 10, 50, 20, key="swing_period")
+                    st.slider("Profit Target (%)", 5.0, 30.0, 15.0, 1.0, key="swing_target")
+                else:
+                    st.info("Enable for medium-term trades")
 
         # Strategy simulation section
         st.markdown('<div class="chart-container">', unsafe_allow_html=True)
