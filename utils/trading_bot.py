@@ -70,18 +70,25 @@ class TradingBot:
         try:
             features = self.prepare_features(df)
             scaled_features = self.scaler.transform(features)
-
-            # Get class probabilities
+            
+            # Create a Series of predictions with the same index as the original dataframe
+            predictions = pd.Series(index=df.index, dtype=float)
+            
+            # Get class probabilities for the features we have
             probas = self.model.predict_proba(scaled_features)
-
-            # Check if we have probabilities for both classes
+            
+            # Fill predictions where we have features
             if probas.shape[1] == 2:
-                return probas[:, 1]  # Return probability of price increase
+                predictions[features.index] = probas[:, 1]
             else:
-                # Fallback to binary predictions
-                return self.model.predict(scaled_features).astype(float)
+                predictions[features.index] = self.model.predict(scaled_features).astype(float)
+                
+            # Fill missing values with 0.5 (neutral prediction)
+            predictions.fillna(0.5, inplace=True)
+            
+            return predictions
 
         except Exception as e:
             print(f"Error in prediction: {e}")
             # Return neutral predictions
-            return np.full(len(df), 0.5)
+            return pd.Series(0.5, index=df.index)
