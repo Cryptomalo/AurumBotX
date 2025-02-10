@@ -90,14 +90,14 @@ wheels = [
 
 [[package]]
 name = "aiohttp-retry"
-version = "2.9.1"
+version = "2.8.3"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "aiohttp" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/9d/61/ebda4d8e3d8cfa1fd3db0fb428db2dd7461d5742cea35178277ad180b033/aiohttp_retry-2.9.1.tar.gz", hash = "sha256:8eb75e904ed4ee5c2ec242fefe85bf04240f685391c4879d8f541d6028ff01f1", size = 13608 }
+sdist = { url = "https://files.pythonhosted.org/packages/01/c1/d57818a0ed5b0313ad8c620638225ddd44094d0d606ee33f3df5105572cd/aiohttp_retry-2.8.3.tar.gz", hash = "sha256:9a8e637e31682ad36e1ff9f8bcba912fcfc7d7041722bc901a4b948da4d71ea9", size = 10585 }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/1a/99/84ba7273339d0f3dfa57901b846489d2e5c2cd731470167757f1935fffbd/aiohttp_retry-2.9.1-py3-none-any.whl", hash = "sha256:66d2759d1921838256a05a3f80ad7e724936f083e35be5abb5e16eed6be6dc54", size = 9981 },
+    { url = "https://files.pythonhosted.org/packages/57/57/af573003eca6248a5cbc538fc46bea5b249c2ac86f27140b0a621bcd3fde/aiohttp_retry-2.8.3-py3-none-any.whl", hash = "sha256:3aeeead8f6afe48272db93ced9440cf4eda8b6fd7ee2abb25357b7eb28525b45", size = 9773 },
 ]
 
 [[package]]
@@ -1679,6 +1679,7 @@ dependencies = [
     { name = "tensorflow" },
     { name = "tweepy" },
     { name = "twilio" },
+    { name = "websocket-client" },
     { name = "xgboost" },
     { name = "yfinance" },
 ]
@@ -1687,29 +1688,30 @@ dependencies = [
 requires-dist = [
     { name = "alembic", specifier = ">=1.14.1" },
     { name = "anthropic", specifier = ">=0.45.2" },
-    { name = "beautifulsoup4", specifier = ">=4.13.3" },
-    { name = "joblib", specifier = ">=1.4.2" },
+    { name = "beautifulsoup4", specifier = "==4.13.3" },
+    { name = "joblib", specifier = "==1.4.2" },
     { name = "keras", specifier = ">=2.14.0" },
-    { name = "lightgbm", specifier = ">=4.5.0" },
-    { name = "numpy", specifier = ">=2.2.2" },
-    { name = "openai", specifier = ">=1.61.1" },
-    { name = "pandas", specifier = ">=2.2.3" },
-    { name = "plotly", specifier = ">=6.0.0" },
-    { name = "praw", specifier = ">=7.8.1" },
-    { name = "psycopg2-binary", specifier = ">=2.9.10" },
-    { name = "pyserum", specifier = ">=0.5.0a0" },
-    { name = "requests", specifier = ">=2.32.3" },
-    { name = "scikit-learn", specifier = ">=1.6.1" },
-    { name = "solana", specifier = ">=0.25.1" },
-    { name = "solana-sdk", specifier = ">=0.25.6" },
-    { name = "sqlalchemy", specifier = ">=2.0.38" },
-    { name = "streamlit", specifier = ">=1.42.0" },
-    { name = "telethon", specifier = ">=1.38.1" },
-    { name = "tensorflow", specifier = ">=2.14.0" },
-    { name = "tweepy", specifier = ">=4.15.0" },
-    { name = "twilio", specifier = ">=9.4.4" },
-    { name = "xgboost", specifier = ">=2.1.4" },
-    { name = "yfinance", specifier = ">=0.2.52" },
+    { name = "lightgbm", specifier = "==4.5.0" },
+    { name = "numpy", specifier = "==2.2.2" },
+    { name = "openai", specifier = "==1.61.1" },
+    { name = "pandas", specifier = "==2.2.3" },
+    { name = "plotly", specifier = "==6.0.0" },
+    { name = "praw", specifier = "==7.8.1" },
+    { name = "psycopg2-binary", specifier = "==2.9.10" },
+    { name = "pyserum", specifier = "==0.5.0a0" },
+    { name = "requests", specifier = "==2.32.3" },
+    { name = "scikit-learn", specifier = "==1.6.1" },
+    { name = "solana", specifier = "==0.25.1" },
+    { name = "solana-sdk", specifier = "==0.25.6" },
+    { name = "sqlalchemy", specifier = "==2.0.38" },
+    { name = "streamlit", specifier = "==1.42.0" },
+    { name = "telethon", specifier = "==1.38.1" },
+    { name = "tensorflow", specifier = "==2.14.0" },
+    { name = "tweepy", specifier = "==4.15.0" },
+    { name = "twilio", specifier = "==9.4.1" },
+    { name = "websocket-client", specifier = "==1.7.0" },
+    { name = "xgboost", specifier = "==2.1.4" },
+    { name = "yfinance", specifier = "==0.2.52" },
 ]
 
 [[package]]
@@ -2278,7 +2280,7 @@ wheels = [
 
 [[package]]
 name = "twilio"
-version = "9.4.4"
+version = "9.4.1"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "aiohttp" },
@@ -2286,9 +2288,9 @@ dependencies = [
     { name = "pyjwt" },
     { name = "requests" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/6d/0f/1ea92192bd16001dde01074b656002b755fde466de57acbc5176e109c12a/twilio-9.4.4.tar.gz", hash = "sha256:60dc5fbae13df9aa83b16025c6f953831c50fd2cb65d53d940bc2289f65211a2", size = 988134 }
+sdist = { url = "https://files.pythonhosted.org/packages/f2/4c/bd94644bf83bf67190a6668815fb7f77c91a087b5b7fe8e3f389ee9fa5ae/twilio-9.4.1.tar.gz", hash = "sha256:e24c640696ccc726bba14160951da3cfc6b4bcb772fdcb3e8c16dc3cc851ef12", size = 986984 }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/19/f6/2e77510ae3b713f3dc463eaf9fc311b7e6f788b036389dd254f13c68389f/twilio-9.4.4-py2.py3-none-any.whl", hash = "sha256:eea20c4d58ca7dd32d9763dbf4de19acba2eb8b543a761ea79efd455c94cfadf", size = 1875738 },
+    { url = "https://files.pythonhosted.org/packages/8f/6a/d8cc06a41436ffe0e2ef4a049d06ce88b904027581b82df3d7d13d34d57d/twilio-9.4.1-py2.py3-none-any.whl", hash = "sha256:2447e041cec11167d7765aaa62ab1dae3b82b712245ca9a966096acd8b9f426f", size = 1873180 },
 ]
 
 [[package]]
@@ -2368,11 +2370,11 @@ wheels = [
 
 [[package]]
 name = "websocket-client"
-version = "1.8.0"
+version = "1.7.0"
 source = { registry = "https://pypi.org/simple" }
-sdist = { url = "https://files.pythonhosted.org/packages/e6/30/fba0d96b4b5fbf5948ed3f4681f7da2f9f64512e1d303f94b4cc174c24a5/websocket_client-1.8.0.tar.gz", hash = "sha256:3239df9f44da632f96012472805d40a23281a991027ce11d2f45a6f24ac4c3da", size = 54648 }
+sdist = { url = "https://files.pythonhosted.org/packages/20/07/2a94288afc0f6c9434d6709c5320ee21eaedb2f463ede25ed9cf6feff330/websocket-client-1.7.0.tar.gz", hash = "sha256:10e511ea3a8c744631d3bd77e61eb17ed09304c413ad42cf6ddfa4c7787e8fe6", size = 54037 }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/5a/84/44687a29792a70e111c5c477230a72c4b957d88d16141199bf9acb7537a3/websocket_client-1.8.0-py3-none-any.whl", hash = "sha256:17b44cc997f5c498e809b22cdf2d9c7a9e71c02c8cc2b6c56e7c2d1239bfa526", size = 58826 },
+    { url = "https://files.pythonhosted.org/packages/1e/70/1e88138a9afbed1d37093b85f0bebc3011623c4f47c166431599fe9d6c93/websocket_client-1.7.0-py3-none-any.whl", hash = "sha256:f4c3d22fec12a2461427a29957ff07d35098ee2d976d3ba244e688b8b4057588", size = 58462 },
 ]
 
 [[package]]

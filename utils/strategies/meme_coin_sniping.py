@@ -1,4 +1,3 @@
-
 import pandas as pd
 from typing import Dict, Any
 import numpy as np
@@ -22,18 +21,18 @@ class MemeCoinSnipingStrategy(BaseStrategy):
         self.max_loss = config.get('max_loss', 0.05)
         self.volume_threshold = config.get('volume_threshold', 50000)
         self.momentum_period = config.get('momentum_period', 12)
-        
+
         # Solana setup
         self.solana_client = Client("https://api.mainnet-beta.solana.com")
         self.keypair = Keypair.from_secret_key(bytes(os.getenv('SOLANA_PRIVATE_KEY')))
-        
+
         # Initialize OpenAI
         self.client = OpenAI(api_key=os.getenv('OPENAI_API_KEY'))
-        
+
         # Trading parameters
         self.max_slippage = 0.02  # 2% max slippage
         self.min_volume_24h = 100000  # Minimum 24h volume in USD
-        
+
     def _analyze_liquidity(self, market_data: Dict) -> float:
         """Analyze market liquidity"""
         return min(1.0, market_data['volume_24h'] / self.min_liquidity)
@@ -48,7 +47,7 @@ class MemeCoinSnipingStrategy(BaseStrategy):
         try:
             market = Market.load(self.solana_client, token_address)
             orderbook = market.load_orderbook()
-            
+
             return {
                 'price': market.get_mid_price(),
                 'volume_24h': market.get_volume_quote_token(24),
@@ -65,7 +64,7 @@ class MemeCoinSnipingStrategy(BaseStrategy):
             market = Market.load(self.solana_client, market_address)
             order_type = 'buy' if is_buy else 'sell'
             price = market.get_mid_price() * (1 + self.max_slippage if is_buy else 1 - self.max_slippage)
-            
+
             transaction = Transaction()
             transaction.add(
                 market.place_order(
@@ -77,32 +76,53 @@ class MemeCoinSnipingStrategy(BaseStrategy):
                     max_quantity=size
                 )
             )
-            
+
             result = await self.solana_client.send_transaction(
                 transaction,
                 self.keypair
             )
             return 'result' in result
-            
+
         except Exception as e:
             print(f"Trade execution error: {e}")
             return False
+
+    def _scan_reddit_trending(self) -> Dict:
+        """Scan Reddit for trending tokens"""
+        subreddits = ['CryptoMoonShots', 'CryptoCurrency', 'SatoshiStreetBets']
+        # Implementa scanning Reddit
+        return {'trending_score': 0.8, 'mention_count': 150}
+
+    def _scan_telegram_groups(self) -> Dict:
+        """Monitor Telegram groups for early signals"""
+        # Implementa monitoring Telegram
+        return {'signal_strength': 0.7, 'group_momentum': 0.85}
+
+    def _analyze_twitter_sentiment(self) -> Dict:
+        """Analyze Twitter/X sentiment"""
+        # Implementa analisi Twitter
+        return {'sentiment': 0.75, 'viral_potential': 0.9}
+
+    def _scan_web_mentions(self) -> Dict:
+        """Scan web for token mentions"""
+        # Implementa web scanning
+        return {'mention_frequency': 0.65, 'growth_rate': 0.8}
 
     def _analyze_social_signals(self) -> Dict[str, float]:
         """Advanced social signal analysis"""
         try:
             # Analisi Reddit
             reddit_data = self._scan_reddit_trending()
-            
+
             # Analisi Telegram
             telegram_mentions = self._scan_telegram_groups()
-            
+
             # Analisi Twitter/X
             twitter_sentiment = self._analyze_twitter_sentiment()
-            
+
             # Analisi web generale
             web_mentions = self._scan_web_mentions()
-            
+
             # Analizza con GPT-4 per sentiment complessivo
             response = self.client.chat.completions.create(
                 model="gpt-4-turbo-preview",
@@ -113,7 +133,7 @@ class MemeCoinSnipingStrategy(BaseStrategy):
                     Telegram Mentions: {telegram_mentions}
                     Twitter Sentiment: {twitter_sentiment}
                     Web Mentions: {web_mentions}
-                    
+
                     Provide detailed sentiment analysis with:
                     1. Overall sentiment score (0-1)
                     2. Trend strength (0-1)
@@ -122,7 +142,7 @@ class MemeCoinSnipingStrategy(BaseStrategy):
                 }],
                 response_format={"type": "json_object"}
             )
-            
+
             result = response.choices[0].message.content
             return {
                 'sentiment': float(result.get('sentiment', 0.5)),
@@ -130,7 +150,7 @@ class MemeCoinSnipingStrategy(BaseStrategy):
                 'growth_potential': float(result.get('growth_potential', 0.5)),
                 'risk_factor': float(result.get('risk_factor', 0.5))
             }
-            
+
         except Exception as e:
             print(f"Social analysis error: {e}")
             return {
@@ -152,16 +172,15 @@ class MemeCoinSnipingStrategy(BaseStrategy):
             'volatility': df['Close'].rolling(window=24).std().iloc[-1],
             'liquidity_score': self._analyze_liquidity(market_data),
             'momentum_score': self._analyze_momentum(df),
-            'sentiment_score': self._analyze_sentiment(),
             'current_price': market_data['price']
         }
-        
+
         return analysis
 
     def generate_signals(self, analysis: Dict[str, Any]) -> Dict[str, Any]:
         """AI-powered signal generation"""
         social_signals = self._analyze_social_signals()
-        
+
         # Calcolo score avanzato con pesi dinamici
         score = (
             0.25 * analysis['liquidity_score'] +
@@ -171,14 +190,14 @@ class MemeCoinSnipingStrategy(BaseStrategy):
             0.15 * analysis['momentum_score'] +
             0.10 * (1 if analysis['volume_24h'] > self.volume_threshold else 0)
         )
-        
+
         # Risk adjustment
         risk_adjusted_score = score * (1 - social_signals['risk_factor'])
-        
+
         # Risk adjustment based on market conditions
         risk_factor = min(1.0, analysis['volume_24h'] / (self.volume_threshold * 2))
         adjusted_size = risk_factor * 0.8  # Max 80% of available position size
-        
+
         signal = {
             'action': 'buy' if score > 0.7 else 'hold',
             'confidence': score,
@@ -186,45 +205,25 @@ class MemeCoinSnipingStrategy(BaseStrategy):
             'stop_loss': analysis['current_price'] * (1 - self.max_loss),
             'size_factor': adjusted_size
         }
-        
+
         return signal
 
     def validate_trade(self, signal: Dict[str, Any], current_portfolio: Dict[str, Any]) -> bool:
         """Enhanced trade validation"""
         if signal['action'] != 'buy':
             return False
-            
+
         required_capital = current_portfolio.get('available_capital', 0) * signal['size_factor']
         min_required = 100  # Minimum capital required
-        
+
         if required_capital < min_required:
             return False
-            
+
         risk_amount = (signal['target_price'] - signal['stop_loss']) * required_capital
         max_risk_per_trade = current_portfolio.get('total_capital', 0) * 0.02
-        
+
         return (
             risk_amount <= max_risk_per_trade and
             signal['confidence'] > 0.7 and
             current_portfolio.get('market_trend', 0) > 0
         )
-def _scan_reddit_trending(self) -> Dict:
-        """Scan Reddit for trending tokens"""
-        subreddits = ['CryptoMoonShots', 'CryptoCurrency', 'SatoshiStreetBets']
-        # Implementa scanning Reddit
-        return {'trending_score': 0.8, 'mention_count': 150}
-        
-    def _scan_telegram_groups(self) -> Dict:
-        """Monitor Telegram groups for early signals"""
-        # Implementa monitoring Telegram
-        return {'signal_strength': 0.7, 'group_momentum': 0.85}
-        
-    def _analyze_twitter_sentiment(self) -> Dict:
-        """Analyze Twitter/X sentiment"""
-        # Implementa analisi Twitter
-        return {'sentiment': 0.75, 'viral_potential': 0.9}
-        
-    def _scan_web_mentions(self) -> Dict:
-        """Scan web for token mentions"""
-        # Implementa web scanning
-        return {'mention_frequency': 0.65, 'growth_rate': 0.8}
