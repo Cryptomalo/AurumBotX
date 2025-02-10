@@ -1,3 +1,4 @@
+
 import logging
 from datetime import datetime
 import time
@@ -8,7 +9,7 @@ from utils.strategies.base_strategy import BaseStrategy
 from utils.strategies.meme_coin_sniping import MemeCoinSnipingStrategy
 from utils.strategies.scalping import ScalpingStrategy
 from utils.strategies.swing_trading import SwingTradingStrategy
-from utils.database import get_db, TradingStrategy, SimulationResult #Retained from original
+from utils.database import get_db, TradingStrategy, SimulationResult
 from utils.notifications import TradingNotifier
 
 class AutoTrader:
@@ -80,7 +81,7 @@ class AutoTrader:
             best_confidence = 0
 
             for strategy_name, strategy in self.strategies.items():
-                if not strategy.is_strategy_active():
+                if not hasattr(strategy, 'is_strategy_active') or not strategy.is_strategy_active():
                     continue
 
                 analysis = strategy.analyze_market(df)
@@ -171,22 +172,9 @@ class AutoTrader:
             self.logger.error(f"Trade execution error: {str(e)}")
             self.notifier.send_error_notification(self.symbol, str(e))
 
-    def activate_strategy(self, strategy_name: str):
-        if strategy_name in self.strategies:
-            self.strategies[strategy_name].activate()
-            self.logger.info(f"Strategy {strategy_name} activated")
-
-    def deactivate_strategy(self, strategy_name: str):
-        if strategy_name in self.strategies:
-            self.strategies[strategy_name].deactivate()
-            self.logger.info(f"Strategy {strategy_name} deactivated")
-
     def run(self, interval=3600):
         self.logger.info(f"Starting trading bot for {self.symbol}")
         self.logger.info(f"Initial balance: {self.initial_balance}")
-
-        for strategy_name in self.strategies:
-            self.activate_strategy(strategy_name)
 
         try:
             while True:
