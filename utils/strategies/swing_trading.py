@@ -55,7 +55,7 @@ class SwingTradingStrategy(BaseStrategy):
         """
         try:
             response = self.client.chat.completions.create(
-                model="gpt-4o",  # Latest model as of May 13, 2024
+                model="gpt-4",  # Latest stable model
                 messages=[{
                     "role": "system",
                     "content": "Analyze the current market sentiment for long-term crypto trading and provide a sentiment score between 0 and 1."

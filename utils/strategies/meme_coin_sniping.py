@@ -99,4 +99,4 @@ class MemeCoinSnipingStrategy(BaseStrategy):
         risk_amount = (signal['target_price'] - signal['stop_loss']) * required_capital
         max_risk_per_trade = current_portfolio.get('total_capital', 0) * 0.02  # 2% max rischio
         
-        return risk_amount <= max_risk_per_trade
+        return risk_amount <= max_risk_per_traderade

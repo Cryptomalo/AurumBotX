@@ -1,6 +1,7 @@
 import pandas as pd
 import numpy as np
 from datetime import datetime
+import pytz
 from utils.database import SimulationResult, TradingStrategy, get_db
 
 class TradingSimulator:
@@ -80,7 +81,7 @@ class TradingSimulator:
             win_rate=float(metrics['Win Rate']),
             sharpe_ratio=float(metrics['Sharpe Ratio']),
             max_drawdown=float(metrics['Max Drawdown']),
-            created_at=datetime.utcnow()
+            created_at=datetime.now(pytz.UTC)
         )
 
         db.add(simulation)
