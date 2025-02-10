@@ -49,10 +49,27 @@ def stop_bot(symbol):
 
 # Page config
 st.set_page_config(
-    page_title="AurumBot - Crypto Trading Platform",
+    page_title="✨ AurumBot - Smart Trading Platform",
     layout="wide",
     initial_sidebar_state="expanded"
 )
+
+# Menu principale nella sidebar
+with st.sidebar:
+    st.title("🌟 AurumBot")
+    st.markdown("---")
+    
+    menu = st.radio("Menu Principale", [
+        "📊 Dashboard",
+        "👤 Profilo",
+        "📈 Statistiche PnL",
+        "🔒 Sicurezza",
+        "🏆 Traguardi"
+    ])
+    
+    st.markdown("---")
+    total_profit = 125000  # Esempio (da sostituire con dati reali)
+    st.metric("💰 Profitto Totale", f"${total_profit:,.2f}")
 
 # Load custom CSS
 with open('assets/style.css') as f:
@@ -64,6 +81,57 @@ try:
     indicators = TechnicalIndicators()
     trading_bot = TradingBot()
     simulator = TradingSimulator()
+
+    if menu == "📊 Dashboard":
+        st.title("📊 Trading Dashboard")
+        # Il contenuto esistente del dashboard rimane qui
+    
+    elif menu == "👤 Profilo":
+        st.title("👤 Profilo Trader")
+        col1, col2 = st.columns(2)
+        with col1:
+            st.markdown("### 📝 Informazioni")
+            st.text_input("Nome Trader", "AurumTrader")
+            st.text_input("Email", "trader@aurumbot.com")
+            st.button("✏️ Modifica Profilo")
+        
+        with col2:
+            st.markdown("### 📊 Statistiche")
+            st.metric("Trade Totali", "1,234")
+            st.metric("Win Rate", "68%")
+            st.metric("Profitto Medio", "$312.45")
+    
+    elif menu == "📈 Statistiche PnL":
+        st.title("📈 Analisi Profitti e Perdite")
+        # Grafici PnL
+        st.area_chart({"Profitti": [100, 250, 380, 420, 580, 600, 750]})
+        
+    elif menu == "🔒 Sicurezza":
+        st.title("🔒 Sicurezza Account")
+        st.toggle("2FA Attiva")
+        st.toggle("Notifiche Email")
+        st.toggle("Notifiche Telegram")
+        
+    elif menu == "🏆 Traguardi":
+        st.title("🏆 I Tuoi Traguardi")
+        col1, col2 = st.columns(2)
+        
+        achievements = [
+            {"level": "10K", "reached": True},
+            {"level": "25K", "reached": True},
+            {"level": "50K", "reached": True},
+            {"level": "100K", "reached": False},
+            {"level": "250K", "reached": False},
+            {"level": "500K", "reached": False},
+            {"level": "1M", "reached": False}
+        ]
+        
+        for ach in achievements:
+            with col1 if achievements.index(ach) % 2 == 0 else col2:
+                if ach["reached"]:
+                    st.markdown(f'<div class="achievement-badge">🏆 {ach["level"]} Raggiunto!</div>', unsafe_allow_html=True)
+                else:
+                    st.markdown(f'<div class="achievement-badge locked">🔒 Obiettivo {ach["level"]}</div>', unsafe_allow_html=True)
 
     # Sidebar configuration
     with st.sidebar:

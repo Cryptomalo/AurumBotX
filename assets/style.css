@@ -1,7 +1,49 @@
 .stApp {
     max-width: 1400px;
     margin: 0 auto;
-    background-color: #f8f9fa;
+    background: linear-gradient(135deg, #1a1f2c 0%, #2d3748 100%);
+    color: #e2e8f0;
+}
+
+/* Tema oro per AurumBot */
+.sidebar .stButton button {
+    background: linear-gradient(135deg, #ffd700 0%, #daa520 100%);
+    color: #1a1f2c;
+    border: none;
+    font-weight: 600;
+}
+
+.metric-card {
+    background: rgba(255, 255, 255, 0.05);
+    backdrop-filter: blur(10px);
+    border: 1px solid rgba(255, 215, 0, 0.1);
+    color: #e2e8f0;
+}
+
+[data-testid="stMetricValue"] {
+    color: #ffd700 !important;
+    font-size: 1.8rem !important;
+}
+
+[data-testid="stRadio"] label {
+    color: #e2e8f0 !important;
+}
+
+/* Achievement badges */
+.achievement-badge {
+    background: linear-gradient(135deg, #ffd700 0%, #daa520 100%);
+    padding: 1rem;
+    border-radius: 1rem;
+    text-align: center;
+    margin: 0.5rem 0;
+    color: #1a1f2c;
+    font-weight: 600;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+}
+
+.achievement-badge.locked {
+    background: linear-gradient(135deg, #4a5568 0%, #2d3748 100%);
+    color: #a0aec0;
 }
 
 .metric-card {
