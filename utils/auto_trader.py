@@ -38,10 +38,12 @@ class AutoTrader:
         # Inizializza le strategie
         self.strategies: Dict[str, BaseStrategy] = {
             'meme_coin': MemeCoinSnipingStrategy({
-                'min_liquidity': 100000,
-                'sentiment_threshold': 0.7,
-                'profit_target': 0.1,
-                'max_loss': 0.05
+                'min_liquidity': 200000,  # Increased minimum liquidity
+                'sentiment_threshold': 0.75,  # More strict sentiment requirement
+                'profit_target': 0.15,  # Higher profit target
+                'max_loss': 0.05,
+                'volume_threshold': 100000,  # Minimum volume requirement
+                'momentum_period': 12  # Momentum calculation period
             }),
             'scalping': ScalpingStrategy({
                 'volume_threshold': 1000000,
