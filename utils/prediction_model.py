@@ -108,8 +108,13 @@ class PredictionModel:
         return X, y
 
     def train(self, df, target_column='Close', prediction_horizon=5):
-        """Train ensemble of models"""
+        """Train ensemble of models with auto-optimization"""
         try:
+            # Auto-optimize hyperparameters
+            self.optimize_hyperparameters(df)
+            
+            # Dynamic ensemble weighting based on recent performance
+            self.ensemble_weights = self.calculate_dynamic_weights(df)
             X, y = self.prepare_data(df, target_column, prediction_horizon)
 
             # Scale features

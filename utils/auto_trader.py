@@ -68,7 +68,16 @@ class AutoTrader:
 
     def analyze_market(self):
         try:
-            df = self.data_loader.get_historical_data(self.symbol, period='7d')
+            # Analisi multi-timeframe
+            df_short = self.data_loader.get_historical_data(self.symbol, period='1d')
+            df_medium = self.data_loader.get_historical_data(self.symbol, period='7d')
+            df_long = self.data_loader.get_historical_data(self.symbol, period='30d')
+            
+            # Auto-adattamento delle strategie basato sulla volatilità
+            market_volatility = self.calculate_market_volatility(df_medium)
+            self.adjust_strategies_parameters(market_volatility)
+            
+            df = self.merge_timeframes(df_short, df_medium, df_long)
             if df is None or df.empty:
                 self.logger.error("Unable to get market data")
                 return None
