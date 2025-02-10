@@ -35,21 +35,33 @@
     border-radius: 0.75rem;
     margin: 1rem 0;
     box-shadow: 0 2px 4px rgba(0,0,0,0.05);
-    height: 100%;
-    min-height: 300px;
     display: flex;
     flex-direction: column;
+    gap: 1rem;
 }
 
 .strategy-card h3 {
     color: #1f2937;
-    margin-bottom: 1rem;
+    margin-bottom: 0.5rem;
     font-size: 1.25rem;
     font-weight: 600;
 }
 
+.strategy-card .stInfo {
+    padding: 0.75rem;
+    background-color: #f3f4f6;
+    border-radius: 0.5rem;
+    margin: 0.5rem 0;
+    font-size: 0.875rem;
+    line-height: 1.4;
+}
+
 .strategy-card .stSlider {
-    padding: 1rem 0;
+    padding: 0.75rem 0;
+}
+
+.strategy-card .stCheckbox {
+    margin-bottom: 0.5rem;
 }
 
 .status-active {
@@ -122,22 +134,13 @@
     overflow: hidden;
 }
 
-/* Slider styles */
-.stSlider {
-    padding: 1rem 0;
-}
-
-/* Make columns equal height */
-.row-widget.stHorizontal {
-    align-items: stretch;
-}
-
-/* Fix checkbox alignment */
-.stCheckbox {
-    padding: 0.5rem 0;
-}
-
-/* Strategy section spacing */
+/* Fix column heights */
 [data-testid="stHorizontalBlock"] > div {
-    height: 100%;
+    display: flex;
+    flex-direction: column;
+}
+
+/* Ensure strategy cards fill column height */
+[data-testid="stHorizontalBlock"] .element-container {
+    flex: 1;
 }
