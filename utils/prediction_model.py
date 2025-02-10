@@ -12,6 +12,35 @@ import lightgbm as lgb
 import joblib
 from datetime import datetime, timedelta
 
+
+class MemeCoinPredictionModel:
+    def __init__(self):
+        self.model = self._build_model()
+        self.scaler = StandardScaler()
+        
+    def _build_model(self):
+        model = Sequential([
+            LSTM(64, return_sequences=True, input_shape=(24, 10)),
+            Dropout(0.2),
+            LSTM(32),
+            Dense(16, activation='relu'),
+            Dense(1, activation='sigmoid')
+        ])
+        model.compile(optimizer='adam', loss='binary_crossentropy', metrics=['accuracy'])
+        return model
+        
+    def train(self, historical_data, social_signals):
+        X = self._prepare_features(historical_data, social_signals)
+        y = self._prepare_labels(historical_data)
+        
+        X_scaled = self.scaler.fit_transform(X)
+        self.model.fit(X_scaled, y, epochs=50, batch_size=32, validation_split=0.2)
+        
+    def predict(self, current_data, social_signals):
+        X = self._prepare_features(current_data, social_signals)
+        X_scaled = self.scaler.transform(X)
+        return self.model.predict(X_scaled)
+
 class PredictionModel:
     def __init__(self):
         self.models = {}

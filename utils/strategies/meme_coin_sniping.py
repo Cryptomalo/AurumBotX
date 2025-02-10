@@ -1,82 +1,101 @@
 import pandas as pd
 from typing import Dict, Any
-import numpy as np
-from utils.strategies.base_strategy import BaseStrategy
-from openai import OpenAI
-from solana.rpc.api import Client
-from solana.transaction import Transaction
-from solana.keypair import Keypair
-from pyserum.market import Market
-from pyserum.connection import conn
 import os
 import asyncio
-import time
+from datetime import datetime
+import numpy as np
+from solana.rpc.async_api import AsyncClient
+from solana.transaction import Transaction
+import tensorflow as tf
+from transformers import pipeline
+import praw
+import tweepy
+from telethon import TelegramClient
+import aiohttp
 
-class MemeCoinSnipingStrategy(BaseStrategy):
+class MemeCoinSnipingStrategy:
     def __init__(self, config: Dict[str, Any]):
-        super().__init__("Meme Coin Sniping", config)
-        self.min_liquidity = config.get('min_liquidity', 100000)
-        self.sentiment_threshold = config.get('sentiment_threshold', 0.7)
-        self.profit_target = config.get('profit_target', 0.15)  # Increased to 15%
-        self.max_loss = config.get('max_loss', 0.05)
-        self.volume_threshold = config.get('volume_threshold', 50000)
-        self.momentum_period = config.get('momentum_period', 12)
+        self.solana_client = AsyncClient(config.get('rpc_url', 'https://api.mainnet-beta.solana.com'))
+        self.keypair = config.get('solana_keypair')
+        self.sentiment_analyzer = pipeline('sentiment-analysis')
+        self.viral_prediction_model = self._load_viral_prediction_model()
+        self.min_confidence = config.get('min_confidence', 0.8)
+        self.max_position_size = config.get('max_position_size', 0.1)
 
-        # Solana setup
-        self.solana_client = Client("https://api.mainnet-beta.solana.com")
-        self.keypair = Keypair.from_secret_key(bytes(os.getenv('SOLANA_PRIVATE_KEY')))
+        # Initialize social media clients
+        self._init_social_clients()
 
-        # Initialize OpenAI
-        self.client = OpenAI(api_key=os.getenv('OPENAI_API_KEY'))
-
-        # Trading parameters
-        self.max_slippage = 0.02  # 2% max slippage
-        self.min_volume_24h = 100000  # Minimum 24h volume in USD
-
-    def _analyze_liquidity(self, market_data: Dict) -> float:
-        """Analyze market liquidity"""
-        return min(1.0, market_data['volume_24h'] / self.min_liquidity)
-
-    def _analyze_momentum(self, df: pd.DataFrame) -> float:
-        """Calculate price momentum"""
-        returns = df['Close'].pct_change(self.momentum_period)
-        return np.tanh(returns.mean() * 100)  # Normalize between -1 and 1
-
-    def _get_market_data(self, token_address: str) -> Dict:
-        """Get market data from Solana DEX"""
+    def _init_social_clients(self):
+        """Initialize social media API clients"""
         try:
-            market = Market.load(self.solana_client, token_address)
-            orderbook = market.load_orderbook()
-
-            return {
-                'price': market.get_mid_price(),
-                'volume_24h': market.get_volume_quote_token(24),
-                'bid_depth': sum(order.quantity for order in orderbook.bids),
-                'ask_depth': sum(order.quantity for order in orderbook.asks)
-            }
-        except Exception as e:
-            print(f"Error getting market data: {e}")
-            return None
-
-    async def _execute_trade(self, market_address: str, size: float, is_buy: bool) -> bool:
-        """Execute trade on Solana"""
-        try:
-            market = Market.load(self.solana_client, market_address)
-            order_type = 'buy' if is_buy else 'sell'
-            price = market.get_mid_price() * (1 + self.max_slippage if is_buy else 1 - self.max_slippage)
-
-            transaction = Transaction()
-            transaction.add(
-                market.place_order(
-                    payer=self.keypair.public_key,
-                    owner=self.keypair,
-                    side=order_type,
-                    order_type='limit',
-                    limit_price=price,
-                    max_quantity=size
-                )
+            # Reddit
+            self.reddit = praw.Reddit(
+                client_id=os.getenv('REDDIT_CLIENT_ID'),
+                client_secret=os.getenv('REDDIT_SECRET'),
+                user_agent="AurumBot/1.0"
             )
 
+            # Twitter/X
+            self.twitter = tweepy.Client(
+                bearer_token=os.getenv('TWITTER_BEARER_TOKEN')
+            )
+
+            # Telegram
+            self.telegram = TelegramClient(
+                'aurum_bot',
+                os.getenv('TELEGRAM_API_ID'),
+                os.getenv('TELEGRAM_API_HASH')
+            )
+        except Exception as e:
+            print(f"Social client initialization error: {e}")
+
+    def _load_viral_prediction_model(self):
+        """Load or create viral prediction model"""
+        try:
+            model = tf.keras.Sequential([
+                tf.keras.layers.Dense(64, activation='relu', input_shape=(10,)),
+                tf.keras.layers.Dropout(0.2),
+                tf.keras.layers.Dense(32, activation='relu'),
+                tf.keras.layers.Dense(1, activation='sigmoid')
+            ])
+            model.compile(optimizer='adam', loss='binary_crossentropy')
+            return model
+        except Exception as e:
+            print(f"Model loading error: {e}")
+            return None
+
+    async def analyze_token(self, token_address: str) -> Dict[str, Any]:
+        """Analyze token potential"""
+        social_signals = await self._analyze_social_signals()
+        on_chain_data = await self._analyze_on_chain_data(token_address)
+
+        # Combine signals
+        total_score = (
+            social_signals['social_score'] * 0.6 +
+            on_chain_data['chain_score'] * 0.4
+        )
+
+        viral_potential = self._predict_viral_potential(social_signals, on_chain_data)
+
+        return {
+            'total_score': total_score,
+            'viral_potential': viral_potential,
+            'confidence': self._calculate_confidence(total_score, viral_potential),
+            'social_signals': social_signals,
+            'chain_data': on_chain_data
+        }
+
+    async def execute_trade(self, token_address: str, analysis: Dict[str, Any]) -> bool:
+        """Execute trade if analysis meets criteria"""
+        if analysis['confidence'] < self.min_confidence:
+            return False
+
+        try:
+            # Create Solana transaction
+            transaction = Transaction()
+            # Add swap instruction here
+
+            # Send transaction
             result = await self.solana_client.send_transaction(
                 transaction,
                 self.keypair
@@ -87,143 +106,75 @@ class MemeCoinSnipingStrategy(BaseStrategy):
             print(f"Trade execution error: {e}")
             return False
 
-    def _scan_reddit_trending(self) -> Dict:
-        """Scan Reddit for trending tokens"""
-        subreddits = ['CryptoMoonShots', 'CryptoCurrency', 'SatoshiStreetBets']
-        # Implementa scanning Reddit
-        return {'trending_score': 0.8, 'mention_count': 150}
-
-    def _scan_telegram_groups(self) -> Dict:
-        """Monitor Telegram groups for early signals"""
-        # Implementa monitoring Telegram
-        return {'signal_strength': 0.7, 'group_momentum': 0.85}
-
-    def _analyze_twitter_sentiment(self) -> Dict:
-        """Analyze Twitter/X sentiment"""
-        # Implementa analisi Twitter
-        return {'sentiment': 0.75, 'viral_potential': 0.9}
-
-    def _scan_web_mentions(self) -> Dict:
-        """Scan web for token mentions"""
-        # Implementa web scanning
-        return {'mention_frequency': 0.65, 'growth_rate': 0.8}
-
-    def _analyze_social_signals(self) -> Dict[str, float]:
+    async def _analyze_social_signals(self) -> Dict[str, float]:
         """Advanced social signal analysis"""
         try:
-            # Analisi Reddit
-            reddit_data = self._scan_reddit_trending()
-
-            # Analisi Telegram
-            telegram_mentions = self._scan_telegram_groups()
-
-            # Analisi Twitter/X
-            twitter_sentiment = self._analyze_twitter_sentiment()
-
-            # Analisi web generale
-            web_mentions = self._scan_web_mentions()
-
-            # Analizza con GPT-4 per sentiment complessivo
-            response = self.client.chat.completions.create(
-                model="gpt-4-turbo-preview",
-                messages=[{
-                    "role": "system",
-                    "content": f"""Analyze comprehensive market data:
-                    Reddit Trends: {reddit_data}
-                    Telegram Mentions: {telegram_mentions}
-                    Twitter Sentiment: {twitter_sentiment}
-                    Web Mentions: {web_mentions}
-
-                    Provide detailed sentiment analysis with:
-                    1. Overall sentiment score (0-1)
-                    2. Trend strength (0-1)
-                    3. Growth potential (0-1)
-                    4. Risk factor (0-1)"""
-                }],
-                response_format={"type": "json_object"}
-            )
-
-            result = response.choices[0].message.content
-            return {
-                'sentiment': float(result.get('sentiment', 0.5)),
-                'trend_strength': float(result.get('trend_strength', 0.5)),
-                'growth_potential': float(result.get('growth_potential', 0.5)),
-                'risk_factor': float(result.get('risk_factor', 0.5))
+            signals = {
+                'reddit': await self._analyze_reddit(),
+                'telegram': await self._analyze_telegram(),
+                'twitter': await self._analyze_twitter(),
+                'web': await self._analyze_web_mentions()
             }
 
+            # Calculate weighted score
+            weights = {'reddit': 0.3, 'telegram': 0.3, 'twitter': 0.25, 'web': 0.15}
+            social_score = sum(signals[k]['score'] * weights[k] for k in weights)
+
+            return {
+                'social_score': social_score,
+                'signals': signals,
+                'timestamp': datetime.now().isoformat()
+            }
         except Exception as e:
-            print(f"Social analysis error: {e}")
+            print(f"Social signal analysis error: {e}")
+            return {'social_score': 0, 'signals': {}, 'error': str(e)}
+
+    async def _analyze_on_chain_data(self, token_address: str) -> Dict[str, Any]:
+        """Analyze on-chain metrics"""
+        try:
+            # Fetch token data from Solana
+            token_data = await self.solana_client.get_token_account_balance(token_address)
+
+            # Add more sophisticated on-chain analysis here
             return {
-                'sentiment': 0.5,
-                'trend_strength': 0.5,
-                'growth_potential': 0.5,
-                'risk_factor': 0.5
+                'chain_score': 0.85,
+                'liquidity': token_data.get('value', {}).get('uiAmount', 0),
+                'holder_count': await self._get_holder_count(token_address)
             }
+        except Exception as e:
+            print(f"On-chain analysis error: {e}")
+            return {'chain_score': 0, 'error': str(e)}
 
-    def analyze_market(self, df: pd.DataFrame) -> Dict[str, Any]:
-        """Enhanced market analysis"""
-        market_data = self._get_market_data(df['token_address'].iloc[-1])
-        if not market_data:
-            return {'action': 'hold', 'confidence': 0}
+    def _predict_viral_potential(self, social: Dict, chain: Dict) -> float:
+        """Predict viral potential using AI model"""
+        try:
+            features = self._extract_prediction_features(social, chain)
+            return float(self.viral_prediction_model.predict(features)[0])
+        except Exception as e:
+            print(f"Viral prediction error: {e}")
+            return 0.0
 
-        analysis = {
-            'volume_24h': market_data['volume_24h'],
-            'price_change_24h': (df['Close'].iloc[-1] / df['Close'].iloc[-24] - 1),
-            'volatility': df['Close'].rolling(window=24).std().iloc[-1],
-            'liquidity_score': self._analyze_liquidity(market_data),
-            'momentum_score': self._analyze_momentum(df),
-            'current_price': market_data['price']
-        }
+    def _calculate_confidence(self, total_score: float, viral_potential: float) -> float:
+        """Calculate overall confidence score"""
+        return (total_score * 0.7 + viral_potential * 0.3)
 
-        return analysis
 
-    def generate_signals(self, analysis: Dict[str, Any]) -> Dict[str, Any]:
-        """AI-powered signal generation"""
-        social_signals = self._analyze_social_signals()
+    # Placeholder functions -  Need actual implementations
+    async def _analyze_reddit(self) -> Dict[str, Any]:
+        return {'score': 0.5}
 
-        # Calcolo score avanzato con pesi dinamici
-        score = (
-            0.25 * analysis['liquidity_score'] +
-            0.20 * social_signals['sentiment'] +
-            0.15 * social_signals['trend_strength'] +
-            0.15 * social_signals['growth_potential'] +
-            0.15 * analysis['momentum_score'] +
-            0.10 * (1 if analysis['volume_24h'] > self.volume_threshold else 0)
-        )
+    async def _analyze_telegram(self) -> Dict[str, Any]:
+        return {'score': 0.5}
 
-        # Risk adjustment
-        risk_adjusted_score = score * (1 - social_signals['risk_factor'])
+    async def _analyze_twitter(self) -> Dict[str, Any]:
+        return {'score': 0.5}
 
-        # Risk adjustment based on market conditions
-        risk_factor = min(1.0, analysis['volume_24h'] / (self.volume_threshold * 2))
-        adjusted_size = risk_factor * 0.8  # Max 80% of available position size
+    async def _analyze_web_mentions(self) -> Dict[str, Any]:
+        return {'score': 0.5}
 
-        signal = {
-            'action': 'buy' if score > 0.7 else 'hold',
-            'confidence': score,
-            'target_price': analysis['current_price'] * (1 + self.profit_target),
-            'stop_loss': analysis['current_price'] * (1 - self.max_loss),
-            'size_factor': adjusted_size
-        }
+    async def _get_holder_count(self, token_address: str) -> int:
+        return 1000
 
-        return signal
-
-    def validate_trade(self, signal: Dict[str, Any], current_portfolio: Dict[str, Any]) -> bool:
-        """Enhanced trade validation"""
-        if signal['action'] != 'buy':
-            return False
-
-        required_capital = current_portfolio.get('available_capital', 0) * signal['size_factor']
-        min_required = 100  # Minimum capital required
-
-        if required_capital < min_required:
-            return False
-
-        risk_amount = (signal['target_price'] - signal['stop_loss']) * required_capital
-        max_risk_per_trade = current_portfolio.get('total_capital', 0) * 0.02
-
-        return (
-            risk_amount <= max_risk_per_trade and
-            signal['confidence'] > 0.7 and
-            current_portfolio.get('market_trend', 0) > 0
-        )
+    def _extract_prediction_features(self, social: Dict, chain: Dict) -> np.ndarray:
+        # Implement feature extraction logic here.  This is crucial for the model to work correctly.
+        return np.array([0.5] * 10)
