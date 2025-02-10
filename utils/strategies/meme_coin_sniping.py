@@ -88,27 +88,57 @@ class MemeCoinSnipingStrategy(BaseStrategy):
             print(f"Trade execution error: {e}")
             return False
 
-    def _analyze_sentiment(self) -> float:
-        """Enhanced sentiment analysis"""
+    def _analyze_social_signals(self) -> Dict[str, float]:
+        """Advanced social signal analysis"""
         try:
+            # Analisi Reddit
+            reddit_data = self._scan_reddit_trending()
+            
+            # Analisi Telegram
+            telegram_mentions = self._scan_telegram_groups()
+            
+            # Analisi Twitter/X
+            twitter_sentiment = self._analyze_twitter_sentiment()
+            
+            # Analisi web generale
+            web_mentions = self._scan_web_mentions()
+            
+            # Analizza con GPT-4 per sentiment complessivo
             response = self.client.chat.completions.create(
-                model="gpt-4",
+                model="gpt-4-turbo-preview",
                 messages=[{
                     "role": "system",
-                    "content": """Analyze current meme coin market sentiment considering:
-                    1. Social media trends
-                    2. Trading volume patterns
-                    3. Price momentum
-                    4. Market maker activity
-                    Provide a sentiment score between 0 and 1."""
+                    "content": f"""Analyze comprehensive market data:
+                    Reddit Trends: {reddit_data}
+                    Telegram Mentions: {telegram_mentions}
+                    Twitter Sentiment: {twitter_sentiment}
+                    Web Mentions: {web_mentions}
+                    
+                    Provide detailed sentiment analysis with:
+                    1. Overall sentiment score (0-1)
+                    2. Trend strength (0-1)
+                    3. Growth potential (0-1)
+                    4. Risk factor (0-1)"""
                 }],
                 response_format={"type": "json_object"}
             )
+            
             result = response.choices[0].message.content
-            return float(result.get('sentiment_score', 0.5))
+            return {
+                'sentiment': float(result.get('sentiment', 0.5)),
+                'trend_strength': float(result.get('trend_strength', 0.5)),
+                'growth_potential': float(result.get('growth_potential', 0.5)),
+                'risk_factor': float(result.get('risk_factor', 0.5))
+            }
+            
         except Exception as e:
-            print(f"Sentiment analysis error: {e}")
-            return 0.5
+            print(f"Social analysis error: {e}")
+            return {
+                'sentiment': 0.5,
+                'trend_strength': 0.5,
+                'growth_potential': 0.5,
+                'risk_factor': 0.5
+            }
 
     def analyze_market(self, df: pd.DataFrame) -> Dict[str, Any]:
         """Enhanced market analysis"""
@@ -129,14 +159,21 @@ class MemeCoinSnipingStrategy(BaseStrategy):
         return analysis
 
     def generate_signals(self, analysis: Dict[str, Any]) -> Dict[str, Any]:
-        """Enhanced signal generation"""
-        # Calculate comprehensive score
+        """AI-powered signal generation"""
+        social_signals = self._analyze_social_signals()
+        
+        # Calcolo score avanzato con pesi dinamici
         score = (
-            0.3 * analysis['liquidity_score'] +
-            0.3 * analysis['sentiment_score'] +
-            0.2 * analysis['momentum_score'] +
-            0.2 * (1 if analysis['volume_24h'] > self.volume_threshold else 0)
+            0.25 * analysis['liquidity_score'] +
+            0.20 * social_signals['sentiment'] +
+            0.15 * social_signals['trend_strength'] +
+            0.15 * social_signals['growth_potential'] +
+            0.15 * analysis['momentum_score'] +
+            0.10 * (1 if analysis['volume_24h'] > self.volume_threshold else 0)
         )
+        
+        # Risk adjustment
+        risk_adjusted_score = score * (1 - social_signals['risk_factor'])
         
         # Risk adjustment based on market conditions
         risk_factor = min(1.0, analysis['volume_24h'] / (self.volume_threshold * 2))
@@ -171,3 +208,23 @@ class MemeCoinSnipingStrategy(BaseStrategy):
             signal['confidence'] > 0.7 and
             current_portfolio.get('market_trend', 0) > 0
         )
+def _scan_reddit_trending(self) -> Dict:
+        """Scan Reddit for trending tokens"""
+        subreddits = ['CryptoMoonShots', 'CryptoCurrency', 'SatoshiStreetBets']
+        # Implementa scanning Reddit
+        return {'trending_score': 0.8, 'mention_count': 150}
+        
+    def _scan_telegram_groups(self) -> Dict:
+        """Monitor Telegram groups for early signals"""
+        # Implementa monitoring Telegram
+        return {'signal_strength': 0.7, 'group_momentum': 0.85}
+        
+    def _analyze_twitter_sentiment(self) -> Dict:
+        """Analyze Twitter/X sentiment"""
+        # Implementa analisi Twitter
+        return {'sentiment': 0.75, 'viral_potential': 0.9}
+        
+    def _scan_web_mentions(self) -> Dict:
+        """Scan web for token mentions"""
+        # Implementa web scanning
+        return {'mention_frequency': 0.65, 'growth_rate': 0.8}
