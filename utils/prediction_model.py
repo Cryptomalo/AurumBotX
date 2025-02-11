@@ -43,6 +43,38 @@ class MemeCoinPredictionModel:
 
 class PredictionModel:
 
+    def analyze_market_with_ai(self, market_data, social_data):
+        """Analisi avanzata del mercato usando AI"""
+        try:
+            # Analisi tecnica con AI
+            technical_analysis = self.model.predict(market_data)
+            
+            # Analisi sentiment social
+            sentiment_scores = self.analyze_sentiment(social_data)
+            
+            # Analisi on-chain
+            chain_metrics = self.analyze_blockchain_metrics(market_data['symbol'])
+            
+            # Combinazione segnali
+            combined_signal = {
+                'technical_score': technical_analysis['prediction'],
+                'sentiment_score': sentiment_scores['sentiment'],
+                'chain_score': chain_metrics['score'],
+                'confidence': (technical_analysis['confidence'] * 0.5 + 
+                             sentiment_scores['trend_strength'] * 0.3 +
+                             chain_metrics['confidence'] * 0.2),
+                'suggested_position_size': self._calculate_position_size(
+                    technical_analysis['volatility'],
+                    sentiment_scores['viral_potential']
+                )
+            }
+            
+            return combined_signal
+            
+        except Exception as e:
+            logger.error(f"AI analysis error: {str(e)}")
+            return None
+            
     def analyze_sentiment(self, social_data):
         """Analisi avanzata del sentiment con NLP"""
         try:

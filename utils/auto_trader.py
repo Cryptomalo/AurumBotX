@@ -97,6 +97,18 @@ class AutoTrader:
             df = self.indicators.add_rsi(df)
             df = self.indicators.add_macd(df)
 
+            # Analisi AI
+            ai_signal = self.prediction_model.analyze_market_with_ai(df, self._get_social_data())
+            
+            if ai_signal and ai_signal['confidence'] > 0.75:
+                return {
+                    'action': 'buy' if ai_signal['technical_score'] > 0.5 else 'sell',
+                    'confidence': ai_signal['confidence'],
+                    'size_factor': ai_signal['suggested_position_size'],
+                    'target_price': self._calculate_target_price(df, ai_signal),
+                    'stop_loss': self._calculate_stop_loss(df, ai_signal)
+                }
+                
             best_signal = None
             best_confidence = 0
 
