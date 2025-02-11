@@ -7,7 +7,7 @@ import concurrent.futures
 
 import pandas as pd
 import numpy as np
-import yfinance as yf
+import ccxt
 from sqlalchemy import create_engine, text
 from sqlalchemy.orm import Session
 
@@ -17,16 +17,16 @@ class CryptoDataLoader:
     def __init__(self):
         """Initialize the data loader with supported coins and advanced caching"""
         self.supported_coins = {
-            'BTC-USD': 'Bitcoin',
-            'ETH-USD': 'Ethereum',
-            'SOL-USD': 'Solana',
-            'DOGE-USD': 'Dogecoin',
-            'SHIB-USD': 'Shiba Inu',
-            'ADA-USD': 'Cardano',
-            'XRP-USD': 'Ripple',
-            'DOT-USD': 'Polkadot',
-            'MATIC-USD': 'Polygon',
-            'AVAX-USD': 'Avalanche'
+            'BTC/USD': 'Bitcoin',
+            'ETH/USD': 'Ethereum',
+            'SOL/USD': 'Solana',
+            'DOGE/USD': 'Dogecoin',
+            'SHIB/USD': 'Shiba Inu',
+            'ADA/USD': 'Cardano',
+            'XRP/USD': 'Ripple',
+            'DOT/USD': 'Polkadot',
+            'MATIC/USD': 'Polygon',
+            'AVAX/USD': 'Avalanche'
         }
 
         self._cache = {}
@@ -39,7 +39,23 @@ class CryptoDataLoader:
             '1d': 86400  # 1 day cache for daily data
         }
 
+        self._setup_exchange()
         self._setup_database()
+
+    def _setup_exchange(self):
+        """Setup ccxt exchange connection"""
+        try:
+            self.exchange = ccxt.binanceus({
+                'enableRateLimit': True,
+                'options': {
+                    'adjustForTimeDifference': True
+                }
+            })
+            self.exchange.load_markets()  # Load markets to validate symbols
+            logger.info("Exchange connection established and markets loaded")
+        except Exception as e:
+            logger.error(f"Exchange setup error: {e}", exc_info=True)
+            raise  # Re-raise to ensure proper initialization
 
     def _setup_database(self):
         """Setup database connection for persistent storage"""
@@ -54,6 +70,10 @@ class CryptoDataLoader:
         except Exception as e:
             logger.error(f"Database setup error: {e}", exc_info=True)
             self.engine = None
+
+    def _normalize_symbol(self, symbol: str) -> str:
+        """Normalize symbol format for exchange"""
+        return symbol.replace('-', '/') if '-' in symbol else symbol
 
     def _get_from_cache(self, key: str, interval: str = '1m') -> Optional[pd.DataFrame]:
         """Get data from cache if valid"""
@@ -74,7 +94,6 @@ class CryptoDataLoader:
     def _add_to_cache(self, key: str, data: pd.DataFrame):
         """Add data to cache with memory management"""
         try:
-            # Basic memory management - limit cache size
             if len(self._cache) > 100:  # Maximum 100 cached items
                 oldest_key = min(self._cache.items(), key=lambda x: x[1][1])[0]
                 del self._cache[oldest_key]
@@ -90,8 +109,12 @@ class CryptoDataLoader:
         period: str = '1d',
         interval: str = '1m'
     ) -> Optional[pd.DataFrame]:
-        """Fetch historical data with advanced error handling and retries"""
+        """Fetch historical data using ccxt"""
         try:
+            if not self.exchange:
+                raise ValueError("Exchange not initialized")
+
+            symbol = self._normalize_symbol(symbol)
             if symbol not in self.supported_coins:
                 logger.warning(f"Unsupported symbol: {symbol}")
                 return None
@@ -103,16 +126,39 @@ class CryptoDataLoader:
 
             logger.info(f"Fetching {symbol} data for period {period}")
 
+            # Convert period and interval to ccxt format
+            timeframe = interval
+            since = None
+            if period == '1d':
+                since = int((datetime.now() - timedelta(days=1)).timestamp() * 1000)
+            elif period == '7d':
+                since = int((datetime.now() - timedelta(days=7)).timestamp() * 1000)
+            elif period == '30d':
+                since = int((datetime.now() - timedelta(days=30)).timestamp() * 1000)
+
             # Implement retry logic
             max_retries = 3
             for attempt in range(max_retries):
                 try:
-                    ticker = yf.Ticker(symbol)
-                    df = ticker.history(period=period, interval=interval)
+                    ohlcv = self.exchange.fetch_ohlcv(
+                        symbol,
+                        timeframe=timeframe,
+                        since=since,
+                        limit=1000
+                    )
 
-                    if df.empty:
+                    if not ohlcv:
                         logger.warning(f"No data received for {symbol}")
-                        continue
+                        if attempt < max_retries - 1:
+                            continue
+                        return None
+
+                    df = pd.DataFrame(
+                        ohlcv,
+                        columns=['timestamp', 'Open', 'High', 'Low', 'Close', 'Volume']
+                    )
+                    df['timestamp'] = pd.to_datetime(df['timestamp'], unit='ms')
+                    df.set_index('timestamp', inplace=True)
 
                     # Add technical indicators
                     df = self._add_technical_indicators(df)
@@ -129,8 +175,6 @@ class CryptoDataLoader:
                         time.sleep(1)  # Wait before retry
                     else:
                         raise
-
-            return None
 
         except Exception as e:
             logger.error(f"Error fetching data for {symbol}: {e}", exc_info=True)
@@ -188,7 +232,7 @@ class CryptoDataLoader:
             return
 
         try:
-            table_name = f"market_data_{symbol.lower().replace('-', '_')}"
+            table_name = f"market_data_{symbol.lower().replace('/', '_')}"
             df.to_sql(
                 table_name,
                 self.engine,
@@ -200,25 +244,22 @@ class CryptoDataLoader:
             logger.error(f"Database error for {symbol}: {e}", exc_info=True)
 
     def get_current_price(self, symbol: str) -> Optional[float]:
-        """Get current price with validation"""
+        """Get current price using ccxt"""
         try:
+            if not self.exchange:
+                raise ValueError("Exchange not initialized")
+
+            symbol = self._normalize_symbol(symbol)
             if symbol not in self.supported_coins:
                 logger.warning(f"Unsupported symbol: {symbol}")
                 return None
 
-            cache_key = f"{symbol}_current_price"
-            cached_price = self._get_from_cache(cache_key)
-            if cached_price is not None:
-                return float(cached_price['Close'].iloc[-1])
+            ticker = self.exchange.fetch_ticker(symbol)
+            if ticker and ticker.get('last'):
+                return float(ticker['last'])
 
-            ticker = yf.Ticker(symbol)
-            current_price = ticker.info.get('regularMarketPrice')
-
-            if current_price is None:
-                logger.warning(f"No price available for {symbol}")
-                return None
-
-            return float(current_price)
+            logger.warning(f"No price available for {symbol}")
+            return None
 
         except Exception as e:
             logger.error(f"Error getting price for {symbol}: {e}", exc_info=True)
@@ -231,6 +272,7 @@ class CryptoDataLoader:
     def get_market_summary(self, symbol: str) -> Dict[str, Union[float, str]]:
         """Get comprehensive market summary"""
         try:
+            symbol = self._normalize_symbol(symbol)
             df = self.get_historical_data(symbol, period='1d')
             if df is None or df.empty:
                 return {}

@@ -19,37 +19,60 @@ class SentimentAnalyzer:
         self.initialize_social_clients()
 
     def initialize_social_clients(self):
-        """Inizializza i client per i social media"""
+        """Inizializza i client per i social media con gestione errori migliorata"""
         try:
-            # Reddit setup
-            self.reddit = praw.Reddit(
-                client_id=os.getenv("REDDIT_CLIENT_ID", "YOUR_CLIENT_ID"),
-                client_secret=os.getenv("REDDIT_CLIENT_SECRET", "YOUR_CLIENT_SECRET"),
-                user_agent="AurumBot Crypto Analyzer"
-            )
+            # Reddit setup with better error handling
+            try:
+                self.reddit = praw.Reddit(
+                    client_id=os.getenv("REDDIT_CLIENT_ID"),
+                    client_secret=os.getenv("REDDIT_CLIENT_SECRET"),
+                    user_agent="AurumBot/1.0 Crypto Market Analyzer"
+                )
+                # Verify credentials
+                self.reddit.user.me()
+                logger.info("Reddit client initialized successfully")
+            except Exception as reddit_e:
+                logger.error(f"Reddit initialization failed: {reddit_e}")
+                self.reddit = None
 
             # Twitter setup
-            self.twitter = tweepy.Client(
-                bearer_token=os.getenv("TWITTER_BEARER_TOKEN", "YOUR_BEARER_TOKEN"),
-                wait_on_rate_limit=True
-            )
+            try:
+                self.twitter = tweepy.Client(
+                    bearer_token=os.getenv("TWITTER_BEARER_TOKEN"),
+                    wait_on_rate_limit=True
+                )
+                logger.info("Twitter client initialized successfully")
+            except Exception as twitter_e:
+                logger.error(f"Twitter initialization failed: {twitter_e}")
+                self.twitter = None
 
-            # Telegram setup (using environment variables)
-            self.telegram = TelegramClient(
-                'aurum_bot',
-                api_id=os.getenv("TELEGRAM_API_ID", "YOUR_API_ID"),
-                api_hash=os.getenv("TELEGRAM_API_HASH", "YOUR_API_HASH")
-            )
+            # Telegram setup
+            try:
+                api_id = os.getenv("TELEGRAM_API_ID")
+                api_hash = os.getenv("TELEGRAM_API_HASH")
+                if api_id and api_hash:
+                    self.telegram = TelegramClient(
+                        'aurum_bot',
+                        int(api_id),
+                        api_hash
+                    )
+                    logger.info("Telegram client initialized successfully")
+                else:
+                    raise ValueError("Telegram API credentials not found")
+            except Exception as telegram_e:
+                logger.error(f"Telegram initialization failed: {telegram_e}")
+                self.telegram = None
 
         except Exception as e:
             logger.error(f"Error initializing social clients: {e}")
+            raise
 
     async def analyze_social_sentiment(self, symbol: str) -> Dict[str, Any]:
-        """Analizza il sentiment dai social media"""
+        """Analizza il sentiment dai social media con gestione errori migliorata"""
         try:
-            reddit_data = await self.get_reddit_sentiment(symbol)
-            twitter_data = await self.get_twitter_sentiment(symbol)
-            telegram_data = await self.get_telegram_sentiment(symbol)
+            reddit_data = await self.get_reddit_sentiment(symbol) if self.reddit else []
+            twitter_data = await self.get_twitter_sentiment(symbol) if self.twitter else []
+            telegram_data = await self.get_telegram_sentiment(symbol) if self.telegram else []
 
             combined_data = {
                 "reddit": reddit_data,
@@ -57,6 +80,15 @@ class SentimentAnalyzer:
                 "telegram": telegram_data,
                 "timestamp": datetime.now().isoformat()
             }
+
+            # Verifica se abbiamo dati sufficienti
+            if not any([reddit_data, twitter_data, telegram_data]):
+                logger.warning("No social media data available for analysis")
+                return {
+                    "error": "Insufficient social media data",
+                    "raw_data": combined_data,
+                    "score": 0.0
+                }
 
             # Analisi AI del sentiment combinato
             analysis = await self.analyze_with_ai(combined_data)
@@ -83,8 +115,11 @@ class SentimentAnalyzer:
             }
 
     async def get_reddit_sentiment(self, symbol: str) -> List[Dict[str, Any]]:
-        """Ottiene post e commenti da Reddit"""
+        """Ottiene post e commenti da Reddit con retry logic"""
         try:
+            if not self.reddit:
+                raise ValueError("Reddit client not initialized")
+
             subreddits = ['cryptocurrency', 'CryptoMarkets', symbol.lower()]
             posts = []
 
@@ -96,12 +131,16 @@ class SentimentAnalyzer:
                             "text": post.selftext,
                             "score": post.score,
                             "comments": post.num_comments,
-                            "created_utc": post.created_utc
+                            "created_utc": post.created_utc,
+                            "subreddit": subreddit
                         })
+                        logger.debug(f"Retrieved post from r/{subreddit}: {post.title[:50]}...")
                 except Exception as sub_e:
                     logger.warning(f"Error fetching from subreddit {subreddit}: {sub_e}")
+                    continue
 
             return posts
+
         except Exception as e:
             logger.error(f"Error getting Reddit sentiment: {e}")
             return []
