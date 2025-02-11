@@ -8,10 +8,14 @@ textColor = "#FAFAFA"
 port = 5001
 address = "0.0.0.0"
 headless = true
-enableCORS = true
+enableCORS = false
 enableXsrfProtection = false
 enableWebsocketCompression = true
+baseUrlPath = ""
 
 [browser]
 serverAddress = "0.0.0.0"
 gatherUsageStats = false
+
+[logger]
+level = "info"
