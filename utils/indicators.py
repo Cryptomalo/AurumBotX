@@ -11,6 +11,36 @@ class TechnicalIndicators:
     def __init__(self):
         self.cache = {}
 
+    def add_rsi(self, df: pd.DataFrame, period: int = 14) -> pd.DataFrame:
+        """Add RSI to the dataframe"""
+        try:
+            df = df.copy()
+            delta = df['Close'].diff()
+            gain = delta.where(delta > 0, 0)
+            loss = -delta.where(delta < 0, 0)
+            avg_gain = gain.rolling(window=period).mean()
+            avg_loss = loss.rolling(window=period).mean()
+            rs = avg_gain / avg_loss
+            df['RSI'] = 100 - (100 / (1 + rs))
+            return df
+        except Exception as e:
+            logger.error(f"Error adding RSI: {e}", exc_info=True)
+            return df
+
+    def add_macd(self, df: pd.DataFrame) -> pd.DataFrame:
+        """Add MACD components to the dataframe"""
+        try:
+            df = df.copy()
+            exp1 = df['Close'].ewm(span=12, adjust=False).mean()
+            exp2 = df['Close'].ewm(span=26, adjust=False).mean()
+            df['MACD'] = exp1 - exp2
+            df['Signal'] = df['MACD'].ewm(span=9, adjust=False).mean()
+            df['MACD_Hist'] = df['MACD'] - df['Signal']
+            return df
+        except Exception as e:
+            logger.error(f"Error adding MACD: {e}", exc_info=True)
+            return df
+
     @staticmethod
     def calculate_rsi(df: pd.DataFrame, period: int = 14) -> Optional[float]:
         """Calculate RSI with error handling"""
@@ -98,7 +128,11 @@ class TechnicalIndicators:
             }
         except Exception as e:
             logger.error(f"Error calculating Bollinger Bands: {e}", exc_info=True)
-            return None
+            return {
+                'middle': pd.Series(),
+                'upper': pd.Series(),
+                'lower': pd.Series()
+            }
 
     def calculate_momentum(
         self,
@@ -131,20 +165,10 @@ class TechnicalIndicators:
             df = self.add_ema(df, periods)
 
             # RSI
-            delta = df['Close'].diff()
-            gain = delta.where(delta > 0, 0)
-            loss = -delta.where(delta < 0, 0)
-            avg_gain = gain.rolling(window=14).mean()
-            avg_loss = loss.rolling(window=14).mean()
-            rs = avg_gain / avg_loss
-            df['RSI'] = 100 - (100 / (1 + rs))
+            df = self.add_rsi(df)
 
             # MACD
-            exp1 = df['Close'].ewm(span=12, adjust=False).mean()
-            exp2 = df['Close'].ewm(span=26, adjust=False).mean()
-            df['MACD'] = exp1 - exp2
-            df['Signal'] = df['MACD'].ewm(span=9, adjust=False).mean()
-            df['MACD_Hist'] = df['MACD'] - df['Signal']
+            df = self.add_macd(df)
 
             # Bollinger Bands
             bb = self.calculate_bollinger_bands(df)

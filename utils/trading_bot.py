@@ -3,6 +3,8 @@ import threading
 import logging
 import websocket
 import json
+import ssl
+from datetime import datetime
 
 class WebSocketHandler:
     def __init__(self, logger, db):
@@ -17,8 +19,8 @@ class WebSocketHandler:
         self.heartbeat_thread = None
         self.should_run = True
         self.db = db
-        self._initialize_db() # Initialize database connection
-
+        self.last_batch_process = time.time()
+        self._initialize_db()
 
     def connect_websocket(self):
         try:
@@ -34,11 +36,9 @@ class WebSocketHandler:
                 on_close=self._on_close,
                 on_open=self._on_open
             )
-
             self.ws_thread = threading.Thread(target=self.ws.run_forever)
             self.ws_thread.daemon = True
             self.ws_thread.start()
-
             return True
         except Exception as e:
             self.logger.error(f"Connection error: {str(e)}")
@@ -93,9 +93,6 @@ class WebSocketHandler:
 
     def reconnect_websocket(self):
         try:
-            # Your websocket reconnection code here. Example:
-            # self.ws = websocket.WebSocketApp(...)
-            # self.ws.run_forever()
             self.connected = True
             return True
         except Exception as e:
@@ -130,7 +127,7 @@ class WebSocketHandler:
     def check_connection(self):
         """Verifica stato connessione"""
         try:
-            return self.ws and self.ws.connected # Replace with your actual connection check
+            return self.ws and self.ws.connected
         except:
             return False
 
@@ -138,10 +135,17 @@ class WebSocketHandler:
         """Configura heartbeat per mantenere connessione"""
         def heartbeat():
             while self.check_connection():
-                self.ws.ping() # Replace with your actual ping method
-                time.sleep(30)
+                try:
+                    if self.ws and hasattr(self.ws, 'sock'):
+                        self.ws.sock.ping()
+                    time.sleep(30)
+                except Exception as e:
+                    self.logger.error(f"Errore durante il ping: {str(e)}")
+                    break
 
-        threading.Thread(target=heartbeat, daemon=True).start()
+        if self.heartbeat_thread is None or not self.heartbeat_thread.is_alive():
+            self.heartbeat_thread = threading.Thread(target=heartbeat, daemon=True)
+            self.heartbeat_thread.start()
 
     def _initialize_db(self):
         retries = 3
@@ -156,13 +160,10 @@ class WebSocketHandler:
                     time.sleep(5)
 
     def _preprocess_message(self, msg):
-        # Add your preprocessing logic here
         return msg
 
     def _handle_processed_batch(self, processed_data):
-        # Add your data handling logic here, including database interaction
         try:
-            # Example:  Insert processed_data into the database
             self.db.insert_many(processed_data) 
         except Exception as e:
             self.logger.error(f"Database insertion error: {str(e)}")
@@ -176,8 +177,6 @@ logging.basicConfig(level=logging.INFO)
 class MockDB:
     def connect(self):
         print("Connecting to mock database...")
-        # Simulate a connection error for testing purposes
-        #raise Exception("Mock Database Connection Error")
         pass
     def insert_many(self,data):
         print(f"Inserting {len(data)} records into mock database...")

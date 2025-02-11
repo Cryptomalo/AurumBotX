@@ -39,7 +39,6 @@ class AutoTrader:
         self.notifier = TradingNotifier()
         self.wallet_manager = WalletManager(user_id=1)  # user_id temporaneo
 
-
         # Initialize strategies
         self.strategies = {
             'meme_coin': MemeCoinSnipingStrategy({
@@ -70,6 +69,114 @@ class AutoTrader:
         self.current_position = None
         self.last_action_time = None
         self.active_strategy = None
+
+
+    def calculate_market_volatility(self, df):
+        """Calcola la volatilità del mercato utilizzando la deviazione standard"""
+        try:
+            returns = df['Close'].pct_change().dropna()
+            volatility = returns.std()
+            self.logger.info(f"Volatilità calcolata: {volatility}")
+            return volatility
+        except Exception as e:
+            self.logger.error(f"Errore nel calcolo della volatilità: {str(e)}")
+            return None
+
+    def adjust_strategies_parameters(self, volatility):
+        """Adatta i parametri delle strategie in base alla volatilità"""
+        if volatility is None:
+            return
+
+        try:
+            # Adjust scalping strategy
+            self.strategies['scalping'].params.update({
+                'profit_target': max(0.003, min(0.01, volatility * 2)),
+                'stop_loss': max(0.002, min(0.008, volatility * 1.5))
+            })
+
+            # Adjust swing trading strategy
+            self.strategies['swing'].params.update({
+                'profit_target': max(0.01, min(0.2, volatility * 10)),
+                'stop_loss': max(0.008, min(0.15, volatility * 8))
+            })
+
+            # Adjust meme coin strategy
+            self.strategies['meme_coin'].params.update({
+                'profit_target': max(0.05, min(0.3, volatility * 15)),
+                'max_loss': max(0.03, min(0.2, volatility * 10))
+            })
+
+            self.logger.info("Parametri delle strategie aggiornati in base alla volatilità")
+        except Exception as e:
+            self.logger.error(f"Errore nell'aggiustamento dei parametri: {str(e)}")
+
+    def merge_timeframes(self, df_short, df_medium, df_long):
+        """Unisce i dati da diversi timeframe"""
+        try:
+            if df_short is None or df_medium is None or df_long is None:
+                return None
+
+            # Resample to shortest timeframe
+            df_medium_resampled = df_medium.resample('1min').ffill()
+            df_long_resampled = df_long.resample('1min').ffill()
+
+            # Merge dataframes
+            df_merged = df_short.copy()
+            df_merged['sma_medium'] = df_medium_resampled['Close'].rolling(window=20).mean()
+            df_merged['sma_long'] = df_long_resampled['Close'].rolling(window=50).mean()
+
+            return df_merged
+
+        except Exception as e:
+            self.logger.error(f"Errore nella fusione dei timeframe: {str(e)}")
+            return None
+
+    def _get_social_data(self):
+        """Ottiene dati dai social media per l'analisi del sentiment"""
+        try:
+            # Placeholder for social data analysis
+            return {
+                'sentiment_score': 0.5,
+                'volume_score': 0.5,
+                'trend_score': 0.5
+            }
+        except Exception as e:
+            self.logger.error(f"Errore nell'ottenimento dei dati social: {str(e)}")
+            return None
+
+    def _calculate_target_price(self, df, ai_signal):
+        """Calcola il prezzo target basato sui segnali AI"""
+        try:
+            current_price = df['Close'].iloc[-1]
+            volatility = self.calculate_market_volatility(df)
+
+            if volatility is None:
+                return current_price * 1.02  # Default 2% target
+
+            # Adjust target based on AI confidence and volatility
+            target_multiplier = 1 + (ai_signal['confidence'] * volatility * 5)
+            return current_price * target_multiplier
+
+        except Exception as e:
+            self.logger.error(f"Errore nel calcolo del prezzo target: {str(e)}")
+            return df['Close'].iloc[-1] * 1.02  # Default 2% target
+
+    def _calculate_stop_loss(self, df, ai_signal):
+        """Calcola lo stop loss basato sui segnali AI"""
+        try:
+            current_price = df['Close'].iloc[-1]
+            volatility = self.calculate_market_volatility(df)
+
+            if volatility is None:
+                return current_price * 0.98  # Default 2% stop loss
+
+            # Adjust stop loss based on AI confidence and volatility
+            stop_multiplier = 1 - (ai_signal['confidence'] * volatility * 3)
+            return current_price * stop_multiplier
+
+        except Exception as e:
+            self.logger.error(f"Errore nel calcolo dello stop loss: {str(e)}")
+            return df['Close'].iloc[-1] * 0.98  # Default 2% stop loss
 
     def setup_logging(self):
         logging.basicConfig(
