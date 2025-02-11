@@ -126,11 +126,15 @@ class PredictionModel:
         return df
 
     def prepare_lstm_data(self, X, time_steps=10):
-        """Prepare data for LSTM model"""
-        X_lstm = []
+        """Prepare data for LSTM model with memory optimization"""
+        if len(X) <= time_steps:
+            return np.array([])
+            
+        # Pre-allocate array for better memory efficiency
+        X_lstm = np.zeros((len(X) - time_steps, time_steps, X.shape[1]))
         for i in range(len(X) - time_steps):
-            X_lstm.append(X[i:(i + time_steps)].values)
-        return np.array(X_lstm)
+            X_lstm[i] = X[i:(i + time_steps)].values
+        return X_lstm
 
     def create_lstm_model(self, input_shape):
         """Create LSTM model"""
