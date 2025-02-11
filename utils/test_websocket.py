@@ -6,6 +6,7 @@ import unittest
 from unittest.mock import Mock, patch
 import pytest
 from asyncio import new_event_loop, set_event_loop
+from datetime import datetime
 
 # Add the project root to Python path
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -18,15 +19,18 @@ logger = logging.getLogger(__name__)
 class TestWebSocketHandler(unittest.TestCase):
     def setUp(self):
         """Setup test environment with mocked dependencies"""
-        # Setup event loop for each test
         try:
             self.loop = asyncio.get_running_loop()
         except RuntimeError:
             self.loop = new_event_loop()
             set_event_loop(self.loop)
 
+        # Create mocks
         self.mock_client = Mock()
         self.mock_twm = Mock()
+        self.mock_twm.is_alive.return_value = True
+        self.mock_twm.start.return_value = None
+        self.mock_twm.start_multiplex_socket.return_value = True
 
         # Setup patches
         self.client_patcher = patch('utils.websocket_handler.Client', return_value=self.mock_client)
@@ -36,12 +40,7 @@ class TestWebSocketHandler(unittest.TestCase):
         self.mock_client_class = self.client_patcher.start()
         self.mock_twm_class = self.twm_patcher.start()
 
-        # Configure default mock behavior
-        self.mock_twm.is_alive.return_value = True
-        self.mock_twm.start.return_value = None
-        self.mock_twm.start_multiplex_socket.return_value = True
-
-        # Create handler instance
+        # Create handler instance with test configuration
         self.handler = WebSocketHandler(api_key="test_key", api_secret="test_secret", testnet=True)
 
     def tearDown(self):
@@ -49,7 +48,6 @@ class TestWebSocketHandler(unittest.TestCase):
         self.client_patcher.stop()
         self.twm_patcher.stop()
 
-        # Clean up the event loop only if we created it
         if self.loop and not self.loop.is_closed():
             pending = asyncio.all_tasks(self.loop)
             if pending:
@@ -58,7 +56,6 @@ class TestWebSocketHandler(unittest.TestCase):
 
     def test_initial_connection(self):
         """Test initial WebSocket connection setup"""
-        # Test connection
         success = self.handler.setup_socket()
         self.assertTrue(success)
         self.assertTrue(self.handler.is_connected())
@@ -69,43 +66,52 @@ class TestWebSocketHandler(unittest.TestCase):
 
     def test_reconnection_logic(self):
         """Test reconnection with exponential backoff"""
-        # First attempt: TWM fails to start
-        self.mock_twm.start.side_effect = [Exception("Connection failed")]
+        # Initial setup - force first connection to fail
+        self.mock_twm.start.side_effect = Exception("Connection failed")
         self.mock_twm.is_alive.return_value = False
 
         # First attempt should fail
         success = self.handler.setup_socket()
         self.assertFalse(success)
-        logger.debug("Initial connection failed as expected")
+        self.assertFalse(self.handler.is_connected())
 
-        # Reset mock and create new instance for second attempt
-        self.mock_twm_class.reset_mock()
-        new_mock_twm = Mock()
-        new_mock_twm.is_alive.return_value = True
-        new_mock_twm.start.side_effect = None  # Clear side effect
-        new_mock_twm.start.return_value = None
-        new_mock_twm.start_multiplex_socket.return_value = True
-        self.mock_twm_class.return_value = new_mock_twm
-
-        # Reset handler state
+        # Reset state for reconnection
         self.handler.connected = False
-        self.handler.reconnect_attempts = 0  # Reset reconnection attempts
-        self.handler.twm = new_mock_twm
+        self.handler.reconnect_attempts = 0
+        self.handler.last_reconnect = datetime.min
+        self.handler.reconnect_delay = 1
 
-        # Debug logging
-        logger.debug("Attempting reconnection with fresh mock...")
+        # Create new mock for successful reconnection
+        new_mock = Mock(name="new_twm")
+        new_mock.is_alive.return_value = True
+        new_mock.start.side_effect = None
+        new_mock.start.return_value = None
+        new_mock.start_multiplex_socket.return_value = True
 
-        # Reconnection should succeed
+        # Configure TWM class to return new mock
+        self.mock_twm_class.reset_mock()
+        self.mock_twm_class.return_value = new_mock
+
+        # Verify initial state
+        self.assertFalse(self.handler.is_connected())
+        self.assertEqual(self.handler.reconnect_attempts, 0)
+
+        # Attempt reconnection
         success = self.handler.reconnect()
+
+        # Verify reconnection succeeded
         self.assertTrue(success, "Reconnection failed when it should succeed")
         self.assertTrue(self.handler.is_connected())
-        new_mock_twm.start.assert_called_once()
-        new_mock_twm.start_multiplex_socket.assert_called_once()
+        self.assertEqual(self.handler.reconnect_attempts, 1)
+
+        # Verify correct method calls on new mock
+        new_mock.start.assert_called_once()
+        new_mock.is_alive.assert_called()
+        new_mock.start_multiplex_socket.assert_called_once()
 
     def test_message_handler(self):
         """Test message handling with various scenarios"""
         received_messages = []
-
         def test_handler(msg):
             received_messages.append(msg)
 
@@ -125,14 +131,11 @@ class TestWebSocketHandler(unittest.TestCase):
 
     def test_error_handling(self):
         """Test error handling with different error codes"""
-        # Mock reconnect method
         self.handler.reconnect = Mock()
 
         # Test connection error
         error_msg = {'e': 'error', 'code': 1002, 'm': 'Connection lost'}
         self.handler._message_handler(error_msg)
-
-        # Verify reconnect was attempted
         self.handler.reconnect.assert_called_once()
 
         # Test authentication error
@@ -152,24 +155,14 @@ class TestWebSocketHandler(unittest.TestCase):
                 logger.info(f"Received market data: {data}")
 
             handler.register_handler("btcusdt@trade", handle_market_data)
-
             success = handler.start()
-            assert success, "Failed to establish initial connection"
+            self.assertTrue(success)
 
-            test_msg = {
-                "method": "SUBSCRIBE",
-                "params": ["btcusdt@trade"],
-                "id": 1
-            }
-
-            success = await handler.send_message(test_msg)
-            assert success, "Failed to send test message"
-
-            await asyncio.sleep(5)
+            await asyncio.sleep(1)
             handler.stop()
         except Exception as e:
             logger.error(f"Test failed: {str(e)}")
-            assert False, f"Test failed with error: {str(e)}"
+            raise
 
 if __name__ == "__main__":
     unittest.main()

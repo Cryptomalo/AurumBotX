@@ -25,6 +25,7 @@ class WebSocketHandler:
         self.keep_running = True
         self.reconnect_attempts = 0
         self.max_reconnect_attempts = 10
+        self.twm = None
 
         # Setup Binance client
         self.client = Client(self.api_key, self.api_secret, testnet=self.testnet)
@@ -32,6 +33,12 @@ class WebSocketHandler:
 
     def _init_websocket_manager(self):
         """Initialize a new WebSocket manager"""
+        if self.twm:
+            try:
+                self.twm.stop()
+            except Exception as e:
+                logger.warning(f"Error stopping existing TWM: {e}")
+
         self.twm = ThreadedWebsocketManager(
             api_key=self.api_key,
             api_secret=self.api_secret,
@@ -46,17 +53,32 @@ class WebSocketHandler:
             if not self.api_key or not self.api_secret:
                 logger.warning("No API credentials provided, some features may be limited")
 
-            # Start threaded websocket manager
+            # Ensure we have a fresh TWM instance
+            if not self.twm:
+                logger.debug("Initializing new WebSocket manager")
+                self._init_websocket_manager()
+            elif not self.twm.is_alive():
+                logger.debug("TWM not alive, reinitializing")
+                self._init_websocket_manager()
+
+            logger.debug("Starting TWM...")
             self.twm.start()
+
             if not self.twm.is_alive():
                 logger.error("Failed to start ThreadedWebsocketManager")
                 return False
 
-            # Start socket with callback
-            self.twm.start_multiplex_socket(
+            logger.debug("Starting multiplex socket...")
+            success = self.twm.start_multiplex_socket(
                 callback=self._message_handler,
                 streams=['btcusdt@trade', 'btcusdt@depth']
             )
+
+            if not success:
+                logger.error("Failed to start multiplex socket")
+                self.twm.stop()  # Cleanup on failure
+                self.twm = None
+                return False
 
             self.connected = True
             logger.info("WebSocket connection established successfully")
@@ -68,8 +90,15 @@ class WebSocketHandler:
                 logger.critical("Authentication failed - please check your API credentials")
                 self.keep_running = False
             return False
+
         except Exception as e:
             logger.error(f"WebSocket setup error: {str(e)}")
+            if self.twm:
+                try:
+                    self.twm.stop()
+                except:
+                    pass
+                self.twm = None
             return False
 
     def _message_handler(self, msg: Dict):
@@ -123,7 +152,8 @@ class WebSocketHandler:
             logger.info("Reconnection stopped - service is shutting down")
             return False
 
-        if self.reconnect_attempts >= self.max_reconnect_attempts:
+        self.reconnect_attempts += 1  # Increment before attempting
+        if self.reconnect_attempts > self.max_reconnect_attempts:
             logger.critical(f"Maximum reconnection attempts ({self.max_reconnect_attempts}) reached")
             self.keep_running = False
             return False
@@ -134,43 +164,41 @@ class WebSocketHandler:
             return False
 
         try:
-            logger.info(f"Attempting to reconnect... (attempt {self.reconnect_attempts + 1}/{self.max_reconnect_attempts})")
+            logger.info(f"Attempting to reconnect... (attempt {self.reconnect_attempts}/{self.max_reconnect_attempts})")
 
-            # Stop existing connection
+            # Stop current TWM if exists
             if self.twm:
                 try:
                     self.twm.stop()
+                    self.twm = None  # Clear reference after stopping
                 except Exception as e:
-                    logger.warning(f"Error stopping existing connection: {e}")
-
-            # Create new connection
-            self._init_websocket_manager()
+                    logger.warning(f"Error stopping existing TWM: {e}")
+                    self.twm = None  # Ensure reference is cleared even on error
 
             # Reset connection state
             self.connected = False
 
-            # Increment attempts before trying
-            self.reconnect_attempts += 1
+            # Create and initialize new TWM
+            self._init_websocket_manager()
+            logger.debug("New TWM initialized, attempting setup...")
 
-            # Attempt reconnection
+            # Attempt reconnection with fresh TWM
             success = self.setup_socket()
+            self.last_reconnect = now
+
             if success:
                 logger.info("Reconnection successful")
-                self.last_reconnect = now
                 self.reconnect_delay = 1  # Reset delay on success
-                self.connected = True
                 return True
 
-            # Update state on failure
-            self.last_reconnect = now
-            # Exponential backoff with jitter
+            # Update backoff on failure
             jitter = random.uniform(0, 0.1) * self.reconnect_delay
             self.reconnect_delay = min(self.reconnect_delay * 2 + jitter, self.max_reconnect_delay)
             logger.warning(f"Reconnection failed. Next attempt in {self.reconnect_delay:.1f}s")
             return False
 
         except Exception as e:
-            logger.error(f"Reconnection attempt failed: {str(e)}")
+            logger.error(f"Reconnection attempt failed with error: {str(e)}")
             self.reconnect_delay = min(self.reconnect_delay * 2, self.max_reconnect_delay)
             self.last_reconnect = now
             return False
