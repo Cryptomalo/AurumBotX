@@ -8,7 +8,7 @@ deploymentTarget = "autoscale"
 run = ["sh", "-c", "streamlit run main.py --server.port=5001 --server.address=0.0.0.0 --server.headless=true"]
 
 [workflows]
-runButton = "Project"
+runButton = "Streamlit App"
 
 [[workflows.workflow]]
 name = "Project"
@@ -28,7 +28,7 @@ agentRequireRestartOnSave = false
 
 [[workflows.workflow.tasks]]
 task = "shell.exec"
-args = "streamlit run main.py --server.port=5000 --server.address=0.0.0.0 --server.headless=true"
+args = "streamlit run main.py --server.port=5000 --server.address=0.0.0.0 --server.headless=true --server.enableWebsocketCompression=true"
 
 [[ports]]
 localPort = 5000
