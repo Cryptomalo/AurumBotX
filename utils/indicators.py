@@ -1,4 +1,5 @@
 import pandas as pd
+import pandas_ta as ta
 import numpy as np
 import logging
 from typing import Optional, Dict, Union, List
@@ -15,13 +16,7 @@ class TechnicalIndicators:
         """Add RSI to the dataframe"""
         try:
             df = df.copy()
-            delta = df['Close'].diff()
-            gain = delta.where(delta > 0, 0)
-            loss = -delta.where(delta < 0, 0)
-            avg_gain = gain.rolling(window=period).mean()
-            avg_loss = loss.rolling(window=period).mean()
-            rs = avg_gain / avg_loss
-            df['RSI'] = 100 - (100 / (1 + rs))
+            df['RSI'] = df.ta.rsi(close='Close', length=period)
             return df
         except Exception as e:
             logger.error(f"Error adding RSI: {e}", exc_info=True)
@@ -31,11 +26,10 @@ class TechnicalIndicators:
         """Add MACD components to the dataframe"""
         try:
             df = df.copy()
-            exp1 = df['Close'].ewm(span=12, adjust=False).mean()
-            exp2 = df['Close'].ewm(span=26, adjust=False).mean()
-            df['MACD'] = exp1 - exp2
-            df['Signal'] = df['MACD'].ewm(span=9, adjust=False).mean()
-            df['MACD_Hist'] = df['MACD'] - df['Signal']
+            macd = df.ta.macd(close='Close')
+            df['MACD'] = macd['MACD_12_26_9']
+            df['Signal'] = macd['MACDs_12_26_9']
+            df['MACD_Hist'] = macd['MACDh_12_26_9']
             return df
         except Exception as e:
             logger.error(f"Error adding MACD: {e}", exc_info=True)
@@ -45,13 +39,7 @@ class TechnicalIndicators:
     def calculate_rsi(df: pd.DataFrame, period: int = 14) -> Optional[float]:
         """Calculate RSI with error handling"""
         try:
-            delta = df['Close'].diff()
-            gain = delta.where(delta > 0, 0)
-            loss = -delta.where(delta < 0, 0)
-            avg_gain = gain.rolling(window=period).mean()
-            avg_loss = loss.rolling(window=period).mean()
-            rs = avg_gain / avg_loss
-            rsi = 100 - (100 / (1 + rs))
+            rsi = df.ta.rsi(close='Close', length=period)
             return float(rsi.iloc[-1]) if not pd.isna(rsi.iloc[-1]) else 50.0
         except Exception as e:
             logger.error(f"Error calculating RSI: {e}", exc_info=True)
@@ -61,16 +49,11 @@ class TechnicalIndicators:
     def calculate_macd(df: pd.DataFrame) -> Dict[str, float]:
         """Calculate MACD components with error handling"""
         try:
-            exp1 = df['Close'].ewm(span=12, adjust=False).mean()
-            exp2 = df['Close'].ewm(span=26, adjust=False).mean()
-            macd = exp1 - exp2
-            signal = macd.ewm(span=9, adjust=False).mean()
-            histogram = macd - signal
-
+            macd = df.ta.macd(close='Close')
             return {
-                'macd': float(macd.iloc[-1]),
-                'signal': float(signal.iloc[-1]),
-                'histogram': float(histogram.iloc[-1])
+                'macd': float(macd['MACD_12_26_9'].iloc[-1]),
+                'signal': float(macd['MACDs_12_26_9'].iloc[-1]),
+                'histogram': float(macd['MACDh_12_26_9'].iloc[-1])
             }
         except Exception as e:
             logger.error(f"Error calculating MACD: {e}", exc_info=True)
@@ -85,7 +68,7 @@ class TechnicalIndicators:
                 periods = [periods]
 
             for period in periods:
-                df[f'SMA_{period}'] = df['Close'].rolling(window=period).mean()
+                df[f'SMA_{period}'] = df.ta.sma(close='Close', length=period)
 
             return df
         except Exception as e:
@@ -101,7 +84,7 @@ class TechnicalIndicators:
                 periods = [periods]
 
             for period in periods:
-                df[f'EMA_{period}'] = df['Close'].ewm(span=period, adjust=False).mean()
+                df[f'EMA_{period}'] = df.ta.ema(close='Close', length=period)
 
             return df
         except Exception as e:
@@ -116,15 +99,11 @@ class TechnicalIndicators:
     ) -> Dict[str, pd.Series]:
         """Calculate Bollinger Bands"""
         try:
-            middle = df['Close'].rolling(window=period).mean()
-            std = df['Close'].rolling(window=period).std()
-            upper = middle + (std * std_dev)
-            lower = middle - (std * std_dev)
-
+            bbands = df.ta.bbands(close='Close', length=period, std=std_dev)
             return {
-                'middle': middle,
-                'upper': upper,
-                'lower': lower
+                'middle': bbands[f'BBM_{period}_{std_dev}'],
+                'upper': bbands[f'BBU_{period}_{std_dev}'],
+                'lower': bbands[f'BBL_{period}_{std_dev}']
             }
         except Exception as e:
             logger.error(f"Error calculating Bollinger Bands: {e}", exc_info=True)
@@ -141,7 +120,8 @@ class TechnicalIndicators:
     ) -> Optional[float]:
         """Calculate momentum indicator"""
         try:
-            return float(df['Close'].iloc[-1] - df['Close'].iloc[-period])
+            momentum = df.ta.mom(close='Close', length=period)
+            return float(momentum.iloc[-1])
         except Exception as e:
             logger.error(f"Error calculating momentum: {e}", exc_info=True)
             return 0.0
@@ -156,8 +136,9 @@ class TechnicalIndicators:
             df['Volatility'] = df['Returns'].rolling(window=20).std()
 
             # Volume indicators
-            df['Volume_MA'] = df['Volume'].rolling(window=20).mean()
-            df['Volume_Ratio'] = df['Volume'] / df['Volume_MA']
+            if 'Volume' in df.columns:
+                df['Volume_MA'] = df.ta.sma(close='Volume', length=20)
+                df['Volume_Ratio'] = df['Volume'] / df['Volume_MA']
 
             # Moving averages
             periods = [20, 50, 200]
@@ -178,7 +159,7 @@ class TechnicalIndicators:
                 df['BB_Lower'] = bb['lower']
 
             # Momentum
-            df['Momentum'] = df['Close'].diff(14)
+            df['Momentum'] = df.ta.mom(close='Close', length=14)
 
             # Clean up NaN values
             df = df.fillna(method='bfill').fillna(method='ffill').fillna(0)
