@@ -1,11 +1,8 @@
-
 import streamlit as st
-import numpy as np
-import pandas as pd
 import plotly.graph_objects as go
-from datetime import datetime
-import ccxt
-import time
+import pandas as pd
+import numpy as np
+from datetime import datetime, timedelta
 import logging
 
 # Setup logging
@@ -18,34 +15,6 @@ logging.basicConfig(
     ]
 )
 logger = logging.getLogger(__name__)
-
-def initialize_exchange():
-    try:
-        exchange = ccxt.coinbasepro({
-            'enableRateLimit': True
-        })
-        return exchange
-    except Exception as e:
-        logger.error(f"Error initializing exchange: {str(e)}")
-        return None
-
-def get_market_data(symbol, exchange):
-    try:
-        ticker = exchange.fetch_ticker(symbol)
-        ohlcv = exchange.fetch_ohlcv(symbol, '1h', limit=100)
-        df = pd.DataFrame(ohlcv, columns=['timestamp', 'open', 'high', 'low', 'close', 'volume'])
-        df['timestamp'] = pd.to_datetime(df['timestamp'], unit='ms')
-        return {
-            'price': ticker['last'],
-            'change_24h': ticker['percentage'],
-            'volume': ticker['quoteVolume'],
-            'high': ticker['high'],
-            'low': ticker['low'],
-            'ohlcv': df
-        }
-    except Exception as e:
-        logger.error(f"Error fetching market data: {str(e)}")
-        return None
 
 # Page config
 st.set_page_config(
@@ -61,139 +30,139 @@ with open('assets/style.css') as f:
 
 # Initialize session state
 if 'balance' not in st.session_state:
-    st.session_state.balance = 10000
-if 'positions' not in st.session_state:
-    st.session_state.positions = []
-if 'trade_history' not in st.session_state:
-    st.session_state.trade_history = []
-
-# Initialize session state for trading controls
+    st.session_state.balance = 10000.0
 if 'trading_active' not in st.session_state:
     st.session_state.trading_active = False
-if 'selected_strategy' not in st.session_state:
-    st.session_state.selected_strategy = 'swing_trading'
+if 'positions' not in st.session_state:
+    st.session_state.positions = []
 
-# Header
-st.markdown("""
-    <div class="header" style="text-align: center; padding: 1rem;">
-        <h1 style="color: #FFD700;">AurumBot</h1>
-        <p style="color: #FFF;">AI-Powered Trading Platform</p>
-    </div>
-""", unsafe_allow_html=True)
-
-# Trading Controls
+# Sidebar
 with st.sidebar:
-    st.markdown("### 🎮 Trading Controls")
-    if st.button("🟢 Start Trading" if not st.session_state.trading_active else "🔴 Stop Trading"):
+    st.image("generated-icon.png", width=50)
+    st.title("AurumBot")
+
+    # Trading Controls
+    st.subheader("🎮 Trading Controls")
+    start_stop = st.button("🟢 Start Trading" if not st.session_state.trading_active else "🔴 Stop Trading")
+    if start_stop:
         st.session_state.trading_active = not st.session_state.trading_active
-        
-    st.markdown("### 📊 Trading Strategy")
-    st.session_state.selected_strategy = st.selectbox(
+
+    # Strategy Selection
+    st.subheader("📊 Strategy")
+    strategy = st.selectbox(
         "Select Strategy",
-        ["swing_trading", "scalping", "grid_trading", "momentum", "meme_coin_sniping"]
+        ["Scalping", "Grid Trading", "Momentum", "DexScreener Sniping", "MEV Bot"]
     )
-    
-    st.markdown("### 👤 Profile")
-    total_balance = st.session_state.balance
-    available_balance = total_balance * 0.8  # Example
-    locked_balance = total_balance * 0.2     # Example
-    
-    st.metric("Total Balance", f"${total_balance:,.2f}")
-    st.metric("Available Balance", f"${available_balance:,.2f}")
-    st.metric("Locked in Trades", f"${locked_balance:,.2f}")
-    
-    if st.button("⚡ Withdraw Funds"):
-        st.info("Connect your wallet to withdraw funds")
 
-# Main layout
-left_col, center_col, right_col = st.columns([1,2,1])
+    # Risk Level
+    risk_level = st.select_slider(
+        "Risk Level",
+        options=["Low", "Medium", "High"],
+        value="Medium"
+    )
 
-with left_col:
-    st.markdown("### 📊 Market Overview")
-    exchange = initialize_exchange()
-    if exchange:
-        try:
-            market_data_btc = get_market_data("BTC/USDT", exchange)
-            market_data_eth = get_market_data("ETH/USDT", exchange)
-            market_data_sol = get_market_data("SOL/USDT", exchange)
+# Main Layout
+col1, col2, col3 = st.columns([2,5,2])
 
-            if market_data_btc and market_data_eth and market_data_sol:
-                st.metric("BTC/USDT", f"${market_data_btc['price']:,.2f}", f"{market_data_btc['change_24h']:.2f}%")
-                st.metric("ETH/USDT", f"${market_data_eth['price']:,.2f}", f"{market_data_eth['change_24h']:.2f}%")
-                st.metric("SOL/USDT", f"${market_data_sol['price']:,.2f}", f"{market_data_sol['change_24h']:.2f}%")
-        except Exception as e:
-            st.error(f"Error fetching market data: {str(e)}")
-    else:
-        st.error("Error initializing exchange")
-
-    st.markdown("### 💼 Portfolio")
+# Left Column - Portfolio Overview
+with col1:
+    st.subheader("💼 Portfolio")
     st.metric("Total Balance", f"${st.session_state.balance:,.2f}")
-    pnl = sum(pos.get('profit', 0) for pos in st.session_state.positions)
-    st.metric("24h P/L", f"${pnl:,.2f}", f"{(pnl/st.session_state.balance)*100:+.2f}%")
-    st.metric("Open Positions", len(st.session_state.positions))
+    st.metric("24h PnL", "+$521.43", "+5.21%")
+    st.metric("Open Positions", "3")
 
-with center_col:
-    st.markdown("### 📈 Trading Chart")
-    selected_asset = st.selectbox("Select Asset", ["BTC/USDT", "ETH/USDT", "SOL/USDT"])
-    timeframe = st.select_slider("Timeframe", options=["1m", "5m", "15m", "1h", "4h", "1d"])
+    st.subheader("🎯 Active Trades")
+    for i in range(3):
+        with st.container():
+            st.markdown(f"""
+            <div class="trade-card">
+                <small>BTC/USDT</small><br>
+                Long @ $48,235
+            </div>
+            """, unsafe_allow_html=True)
 
-    if exchange:
-        market_data = get_market_data(selected_asset, exchange)
-        if market_data and 'ohlcv' in market_data:
-            fig = go.Figure(data=[go.Candlestick(
-                x=market_data['ohlcv']['timestamp'],
-                open=market_data['ohlcv']['open'],
-                high=market_data['ohlcv']['high'],
-                low=market_data['ohlcv']['low'],
-                close=market_data['ohlcv']['close']
-            )])
+# Center Column - Charts
+with col2:
+    st.subheader("📈 Market Overview")
 
-            fig.update_layout(
-                title=f"{selected_asset} Price Chart",
-                yaxis_title="Price (USDT)",
-                xaxis_title="Time",
-                template="plotly_dark",
-                height=500,
-                plot_bgcolor='rgba(0,0,0,0)',
-                paper_bgcolor='rgba(0,0,0,0)'
-            )
+    # Timeframe selector
+    timeframe = st.select_slider(
+        "Timeframe",
+        options=["1m", "5m", "15m", "1h", "4h", "1d"],
+        value="1h"
+    )
 
-            st.plotly_chart(fig, use_container_width=True)
+    # Generate sample data
+    dates = pd.date_range(start="2024-01-01", end="2024-02-11", freq="1H")
+    prices = np.random.normal(48000, 1000, size=len(dates))
+    df = pd.DataFrame({
+        'timestamp': dates,
+        'price': prices,
+        'volume': np.random.uniform(100, 1000, size=len(dates))
+    })
 
-            volume_fig = go.Figure(data=[go.Bar(
-                x=market_data['ohlcv']['timestamp'],
-                y=market_data['ohlcv']['volume'],
-                name="Volume"
-            )])
+    # Candlestick chart
+    fig = go.Figure(data=[go.Candlestick(
+        x=df['timestamp'],
+        open=df['price'],
+        high=df['price']*1.001,
+        low=df['price']*0.999,
+        close=df['price']
+    )])
 
-            volume_fig.update_layout(
-                title=f"{selected_asset} Volume",
-                yaxis_title="Volume (USDT)",
-                xaxis_title="Time",
-                template="plotly_dark",
-                height=200,
-                plot_bgcolor='rgba(0,0,0,0)',
-                paper_bgcolor='rgba(0,0,0,0)'
-            )
+    fig.update_layout(
+        template="plotly_dark",
+        height=500,
+        margin=dict(l=0, r=0, t=0, b=0)
+    )
 
-            st.plotly_chart(volume_fig, use_container_width=True)
+    st.plotly_chart(fig, use_container_width=True)
 
-with right_col:
-    st.markdown("### 🤖 AI Signals")
-    st.markdown("""
-        <div style="background-color: rgba(0,255,0,0.1); padding: 1rem; border-radius: 5px; margin-bottom: 1rem;">
-            <h4 style="color: #FFD700;">BTC/USDT</h4>
-            <p style="color: #00FF00;">Strong Buy</p>
-            <div>Confidence: 85%</div>
+# Right Column - AI Signals & Stats
+with col3:
+    st.subheader("🤖 AI Signals")
+
+    signals = [
+        {"pair": "BTC/USDT", "action": "Buy", "confidence": 85},
+        {"pair": "ETH/USDT", "action": "Sell", "confidence": 73},
+        {"pair": "SOL/USDT", "action": "Hold", "confidence": 65}
+    ]
+
+    for signal in signals:
+        st.markdown(f"""
+        <div class="signal-card">
+            <div class="signal-pair">{signal['pair']}</div>
+            <div class="signal-action">{signal['action']}</div>
+            <div class="signal-confidence">Confidence: {signal['confidence']}%</div>
         </div>
-    """, unsafe_allow_html=True)
+        """, unsafe_allow_html=True)
 
-    st.markdown("### 📝 Recent Trades")
-    if st.session_state.trade_history:
-        for trade in st.session_state.trade_history[-5:]:
-            st.markdown(f"**{trade['symbol']}** - {trade['type']}")
-            st.caption(f"P/L: {trade['profit']:+.2f} USDT")
-    else:
-        st.info("No recent trades")
+    st.subheader("📊 Statistics")
+    col3a, col3b = st.columns(2)
+    with col3a:
+        st.metric("Win Rate", "68%")
+        st.metric("Avg Profit", "$142")
+    with col3b:
+        st.metric("Trades", "156")
+        st.metric("Success", "106")
+
+# Bottom section - Recent Activity
+st.subheader("📝 Recent Activity")
+col_logs1, col_logs2 = st.columns([3,2])
+
+with col_logs1:
+    st.markdown("""
+    | Time | Action | Pair | Price | Status |
+    |------|--------|------|-------|--------|
+    | 12:45 | Buy | BTC/USDT | 48,235 | Completed |
+    | 12:30 | Sell | ETH/USDT | 2,890 | Completed |
+    | 12:15 | Buy | SOL/USDT | 98.5 | Pending |
+    """)
+
+with col_logs2:
+    st.subheader("System Status")
+    st.markdown("✅ All systems operational")
+    st.markdown("✅ Connected to exchanges")
+    st.markdown("✅ AI models running")
 
 logger.info("Application rendered successfully")
