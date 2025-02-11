@@ -21,11 +21,8 @@ logger = logging.getLogger(__name__)
 
 def initialize_exchange():
     try:
-        exchange = ccxt.binance({
-            'enableRateLimit': True,
-            'options': {
-                'defaultType': 'future'
-            }
+        exchange = ccxt.coinbasepro({
+            'enableRateLimit': True
         })
         return exchange
     except Exception as e:
