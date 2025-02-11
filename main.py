@@ -17,6 +17,7 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
+@st.cache_data(ttl=60)  # Cache per 60 secondi
 def safe_metric_change(current, previous):
     """Calculate percentage change safely"""
     try:
@@ -94,7 +95,8 @@ tab1, tab2, tab3, tab4 = st.tabs([
 with tab1:
     st.subheader("Market Overview")
     try:
-        df = data_loader.get_historical_data(selected_coin, period=timeframe)
+        with st.spinner(f'Caricamento dati per {selected_coin}...'):
+                df = data_loader.get_historical_data(selected_coin, period=timeframe)
         if df is not None and not df.empty:
             fig = go.Figure(data=[go.Candlestick(
                 x=df.index,
@@ -151,5 +153,7 @@ st.sidebar.info("Version: 1.0.0")
 logger.info("Application setup completed successfully")
 
 except Exception as e:
-    logger.error(f"Critical error in main app: {str(e)}")
-    st.error("An unexpected error occurred. Please try again later.")
+    logger.error(f"Critical error in main app: {str(e)}", exc_info=True)
+    st.error(f"Errore: {str(e)}")
+    if st.checkbox("Mostra dettagli errore"):
+        st.exception(e)
