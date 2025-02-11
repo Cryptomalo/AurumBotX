@@ -108,9 +108,13 @@ class AutoTrader:
                 self.logger.error("Unable to get market data")
                 return None
 
-            df = self.indicators.add_sma(df)
-            df = self.indicators.add_rsi(df)
-            df = self.indicators.add_macd(df)
+            if df is not None and not df.empty:
+                df = self.indicators.add_sma(df)
+                df = self.indicators.add_rsi(df)
+                df = self.indicators.add_macd(df)
+            else:
+                self.logger.error("DataFrame vuoto o None")
+                return None
 
             # Analisi AI
             ai_signal = self.prediction_model.analyze_market_with_ai(df, self._get_social_data())

@@ -17,6 +17,16 @@ def test_testnet():
     try:
         logger.info("Avvio test in modalità testnet")
         
+        # Verifica connessione
+        data_loader = CryptoDataLoader()
+        if not data_loader:
+            raise Exception("Errore inizializzazione data loader")
+            
+        # Verifica dati
+        df = data_loader.get_historical_data("BTC-USD", period='1d')
+        if df is None or df.empty:
+            raise Exception("Impossibile ottenere dati storici")
+        
         # Test connessione dati
         logger.info("Test connessione dati...")
         data_loader = CryptoDataLoader()

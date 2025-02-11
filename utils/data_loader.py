@@ -145,11 +145,14 @@ class CryptoDataLoader:
         """Fetches the current price from yfinance"""
         try:
             ticker = yf.Ticker(symbol)
-            price = ticker.info.get('regularMarketPrice')
-            if price is None:
-                logger.warning(f"No price available for {symbol}")
+            hist = ticker.history(period='1d')
+            if hist.empty:
+                self.logger.warning(f"No historical data available for {symbol}")
                 return None
-            return float(price)
+            return float(hist['Close'].iloc[-1])
+        except Exception as e:
+            self.logger.error(f"Error fetching price for {symbol}: {str(e)}")
+            return None
         except Exception as e:
             logger.error(f"Error getting price for {symbol}: {str(e)}")
             return None
