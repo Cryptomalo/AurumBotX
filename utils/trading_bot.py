@@ -1,9 +1,11 @@
 import time
 import threading
 import logging
+import websocket
+import json
 
 class WebSocketHandler:
-    def __init__(self, logger):
+    def __init__(self, logger, db):
         self.ws = None
         self.connected = False
         self.logger = logger
@@ -14,13 +16,15 @@ class WebSocketHandler:
         self.reconnect_lock = threading.Lock()
         self.heartbeat_thread = None
         self.should_run = True
+        self.db = db
+        self._initialize_db() # Initialize database connection
 
 
     def connect_websocket(self):
         try:
             if self.ws:
                 self.ws.close()
-            
+
             self.ws = websocket.WebSocketApp(
                 "wss://stream.binance.com:9443/ws/!ticker@arr",
                 on_message=self._on_message,
@@ -28,11 +32,11 @@ class WebSocketHandler:
                 on_close=self._on_close,
                 on_open=self._on_open
             )
-            
+
             self.ws_thread = threading.Thread(target=self.ws.run_forever)
             self.ws_thread.daemon = True
             self.ws_thread.start()
-            
+
             return True
         except Exception as e:
             self.logger.error(f"Connection error: {str(e)}")
@@ -42,24 +46,24 @@ class WebSocketHandler:
         try:
             data = json.loads(message)
             self.last_heartbeat = time.time()
-            
+
             # Enhanced message buffering with memory limit
             if not hasattr(self, '_message_buffer'):
                 self._message_buffer = []
-            
+
             # Add message with memory management
             if len(self._message_buffer) < 1000:  # Prevent memory leaks
                 self._message_buffer.append(data)
-            
+
             # Process in optimized batches
             if len(self._message_buffer) >= 10 or (time.time() - self.last_batch_process) > 1.0:
                 self._process_message_batch(self._message_buffer)
                 self._message_buffer = []
                 self.last_batch_process = time.time()
-                
+
         except Exception as e:
             self.logger.error(f"Message processing error: {str(e)}")
-            
+
     def _process_message_batch(self, messages):
         """Processa messaggi in batch per migliori performance"""
         try:
@@ -137,12 +141,48 @@ class WebSocketHandler:
 
         threading.Thread(target=heartbeat, daemon=True).start()
 
+    def _initialize_db(self):
+        retries = 3
+        while retries > 0:
+            try:
+                self.db.connect()
+                break
+            except Exception as e:
+                retries -= 1
+                self.logger.error(f"Database error: {str(e)}")
+                if retries > 0:
+                    time.sleep(5)
+
+    def _preprocess_message(self, msg):
+        # Add your preprocessing logic here
+        return msg
+
+    def _handle_processed_batch(self, processed_data):
+        # Add your data handling logic here, including database interaction
+        try:
+            # Example:  Insert processed_data into the database
+            self.db.insert_many(processed_data) 
+        except Exception as e:
+            self.logger.error(f"Database insertion error: {str(e)}")
+
 
 # Example usage (adapt to your application)
 logger = logging.getLogger(__name__)
 logging.basicConfig(level=logging.INFO)
 
-websocket_handler = WebSocketHandler(logger)
+# Replace with your actual database object
+class MockDB:
+    def connect(self):
+        print("Connecting to mock database...")
+        # Simulate a connection error for testing purposes
+        #raise Exception("Mock Database Connection Error")
+        pass
+    def insert_many(self,data):
+        print(f"Inserting {len(data)} records into mock database...")
+        pass
+
+db = MockDB()
+websocket_handler = WebSocketHandler(logger, db)
 if websocket_handler.connect_websocket():
     print("WebSocket connection established successfully.")
 else:
