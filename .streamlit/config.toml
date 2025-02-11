@@ -3,10 +3,12 @@
 port = 8501
 address = "0.0.0.0"
 headless = true
-enableCORS = true
+enableCORS = false
 enableXsrfProtection = false
+enableWebsocketCompression = false
 maxUploadSize = 200
 maxMessageSize = 200
+maxMessageSizeBytes = 200000000
 
 [browser]
 serverAddress = "0.0.0.0"
