@@ -77,7 +77,7 @@ task = "packager.installForAll"
 
 [[workflows.workflow.tasks]]
 task = "shell.exec"
-args = "python -m pytest utils/test_suite.py -v"
+args = "python -m pytest utils/test_websocket.py -v"
 
 [[workflows.workflow]]
 name = "Test Sentiment"
