@@ -1,17 +1,19 @@
-[theme]
-primaryColor = "#FFD700"
-backgroundColor = "#0E1117"
-secondaryBackgroundColor = "#262730"
-textColor = "#FAFAFA"
 
 [server]
-headless = true
-address = "0.0.0.0"
 port = 8501
+address = "0.0.0.0"
+headless = true
+enableCORS = true
+enableXsrfProtection = false
+maxUploadSize = 200
+maxMessageSize = 200
 
 [browser]
 serverAddress = "0.0.0.0"
 gatherUsageStats = false
 
-[logger]
-level = "info"
+[theme]
+primaryColor = "#FFD700"
+backgroundColor = "#0E1117"
+secondaryBackgroundColor = "#262730"
+textColor = "#FAFAFA"
