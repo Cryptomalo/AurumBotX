@@ -348,6 +348,33 @@ class PredictionModel:
         # This is a placeholder that returns the middle of the range
         return sum(param_range) / 2
 
+    def analyze_with_advanced_ai(self, market_data, social_data):
+        """Advanced AI market analysis"""
+        try:
+            # Multi-model ensemble analysis
+            technical_signals = self._get_technical_predictions(market_data)
+            sentiment_signals = self._analyze_social_sentiment(social_data)
+            on_chain_signals = self._analyze_blockchain_metrics(market_data['symbol'])
+            
+            # Combine signals with weighted importance
+            combined_signal = {
+                'technical_score': technical_signals['score'] * 0.4,
+                'sentiment_score': sentiment_signals['score'] * 0.3,
+                'chain_score': on_chain_signals['score'] * 0.3,
+                'confidence': self._calculate_confidence([
+                    technical_signals, 
+                    sentiment_signals,
+                    on_chain_signals
+                ])
+            }
+            
+            return combined_signal
+            
+        except Exception as e:
+            logger.error(f"Advanced AI analysis error: {str(e)}")
+            return None
+
+
     def predict(self, df, target_column='Close', prediction_horizon=5):
         """Generate ensemble predictions with error handling"""
         try:
