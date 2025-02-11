@@ -1,20 +1,28 @@
-/* Main theme */
+/* Main theme colors */
+:root {
+    --aurum-gold: #FFD700;
+    --aurum-dark: #1E1E1E;
+    --aurum-text: #FFFFFF;
+}
+
+/* General styles */
 .stApp {
-    background: linear-gradient(135deg, #0a0f18 0%, #1a1f2c 100%);
-    color: #e0e0e0;
+    background-color: var(--aurum-dark);
+    color: var(--aurum-text);
 }
 
 /* Header styling */
 .header {
-    text-align: center;
+    background: linear-gradient(45deg, #1E1E1E, #2D2D2D);
+    border-bottom: 2px solid var(--aurum-gold);
     padding: 1rem;
     margin-bottom: 2rem;
 }
 
 .header h1 {
-    color: #ffd700;
+    color: var(--aurum-gold);
     font-size: 2.5rem;
-    font-weight: 700;
+    font-weight: bold;
     margin-bottom: 0.5rem;
 }
 
@@ -35,7 +43,7 @@
 
 /* Metrics styling */
 [data-testid="stMetricValue"] {
-    color: #ffd700 !important;
+    color: var(--aurum-gold) !important;
     font-size: 1.5rem !important;
     font-weight: 600 !important;
 }
@@ -63,9 +71,9 @@
 
 /* Buttons styling */
 .stButton > button {
-    background: linear-gradient(135deg, #ffd700 0%, #b8860b 100%);
-    color: #000000;
-    font-weight: 600;
+    background-color: var(--aurum-gold);
+    color: var(--aurum-dark);
+    font-weight: bold;
     border: none;
     padding: 0.5rem 1rem;
     border-radius: 5px;
@@ -78,13 +86,13 @@
 
 /* Select boxes styling */
 .stSelectbox > div > div {
-    background-color: #1a202c !important;
+    background-color: rgba(255, 255, 255, 0.1);
     border: 1px solid #2d3748 !important;
 }
 
 /* Sliders styling */
 .stSlider > div > div > div > div {
-    background-color: #ffd700 !important;
+    background-color: var(--aurum-gold) !important;
 }
 
 /* Tables styling */
@@ -101,13 +109,13 @@
 }
 
 .stTabs [data-baseweb="tab"] {
-    color: #ffd700 !important;
+    color: var(--aurum-gold) !important;
     font-weight: 600;
 }
 
 /* Headers styling */
 h1, h2, h3 {
-    color: #ffd700;
+    color: var(--aurum-gold);
 }
 
 /* Expander styling */
@@ -121,12 +129,12 @@ h1, h2, h3 {
 .stTextInput > div > div > input {
     background-color: #1a202c !important;
     border: 1px solid #2d3748 !important;
-    color: #e0e0e0 !important;
+    color: var(--aurum-text) !important;
 }
 
 /* Toggle switch styling */
 .stCheckbox > label > div {
-    background-color: #ffd700 !important;
+    background-color: var(--aurum-gold) !important;
 }
 
 /* Responsive design */
@@ -192,7 +200,7 @@ h1, h2, h3 {
 }
 
 [data-testid="stRadio"] label {
-    color: #ffd700 !important;
+    color: var(--aurum-gold) !important;
 }
 
 .achievement-badge {
@@ -239,7 +247,7 @@ h1, h2, h3 {
 
 .dataframe th {
     background-color: #1a1a1a !important;
-    color: #ffd700 !important;
+    color: var(--aurum-gold) !important;
     padding: 1rem !important;
     font-weight: 600 !important;
 }
@@ -253,11 +261,11 @@ h1, h2, h3 {
 .stTabs [data-baseweb="tab-list"] {
     gap: 2rem;
     margin-bottom: 2rem;
-    border-color: #ffd700;
+    border-color: var(--aurum-gold);
 }
 
 .stTabs [data-baseweb="tab"] {
-    color: #ffd700 !important;
+    color: var(--aurum-gold) !important;
     padding: 1rem 2rem;
     font-weight: 600;
 }
@@ -267,17 +275,17 @@ h1, h2, h3 {
 }
 
 .stSlider [data-baseweb="slider"] div[role="slider"] {
-    background-color: #ffd700 !important;
+    background-color: var(--aurum-gold) !important;
 }
 
 .stCheckbox {
-    color: #ffd700 !important;
+    color: var(--aurum-gold) !important;
 }
 
 input[type="number"] {
-    color: #ffd700 !important;
+    color: var(--aurum-gold) !important;
     background-color: #1a1a1a !important;
-    border-color: #ffd700 !important;
+    border-color: var(--aurum-gold) !important;
 }
 
 @media (max-width: 768px) {
@@ -303,7 +311,7 @@ input[type="number"] {
     padding: 1.5rem;
     border-radius: 0.75rem;
     margin: 1rem 0;
-    border: 1px solid #ffd700;
+    border: 1px solid var(--aurum-gold);
     display: flex;
     flex-direction: column;
     gap: 1rem;
@@ -313,7 +321,7 @@ input[type="number"] {
 }
 
 .strategy-card h3 {
-    color: #ffd700;
+    color: var(--aurum-gold);
     margin-bottom: 0.5rem;
     font-size: 1.25rem;
     font-weight: 600;
@@ -330,7 +338,7 @@ input[type="number"] {
 }
 
 .status-active {
-    color: #ffd700;
+    color: var(--aurum-gold);
     font-weight: 600;
 }
 
@@ -341,24 +349,24 @@ input[type="number"] {
 
 /* Signal cards */
 .signal-card {
-    background: rgba(26, 32, 44, 0.95);
-    border: 1px solid #2d3748;
-    border-radius: 8px;
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: 5px;
     padding: 1rem;
-    margin: 0.5rem 0;
+    margin-bottom: 1rem;
+    border-left: 4px solid var(--aurum-gold);
 }
 
 .signal-card h4 {
-    color: #ffd700;
+    color: var(--aurum-gold);
     margin: 0;
 }
 
 .signal-card.bullish {
-    border-left: 4px solid #4caf50;
+    border-left-color: #00FF00;
 }
 
 .signal-card.bearish {
-    border-left: 4px solid #f44336;
+    border-left-color: #FF0000;
 }
 
 .confidence {
@@ -370,7 +378,7 @@ input[type="number"] {
 /* Controls */
 .stSelectbox select {
     background-color: #1a202c !important;
-    color: #ffd700 !important;
+    color: var(--aurum-gold) !important;
     border: 1px solid #2d3748 !important;
 }
 
