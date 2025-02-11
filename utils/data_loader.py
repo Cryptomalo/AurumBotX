@@ -15,7 +15,7 @@ class CryptoDataLoader:
         """Initialize the data loader with supported coins"""
         self.supported_coins = {
             'BTC-USD': 'Bitcoin',
-            'ETH-USD': 'Ethereum',
+            'ETH-USD': 'Ethereum', 
             'SOL-USD': 'Solana',
             'DOGE-USD': 'Dogecoin',
             'SHIB-USD': 'Shiba Inu',
@@ -35,7 +35,7 @@ class CryptoDataLoader:
         """Fetch historical data for a cryptocurrency"""
         try:
             if symbol not in self.supported_coins:
-                logger.warning(f"Simbolo non supportato: {symbol}")
+                logger.warning(f"Unsupported symbol: {symbol}")
                 return None
 
             cache_key = f"{symbol}_{period}_{interval}"
@@ -43,31 +43,27 @@ class CryptoDataLoader:
             if cached_data is not None:
                 return cached_data
 
-            logger.info(f"Scaricamento dati per {symbol}")
-            df = yf.download(
-                symbol,
-                period=period,
-                interval=interval,
-                progress=False
-            )
+            logger.info(f"Downloading data for {symbol}")
+            ticker = yf.Ticker(symbol)
+            df = ticker.history(period=period, interval=interval)
 
             if df.empty:
-                logger.warning(f"Nessun dato ricevuto per {symbol}")
+                logger.warning(f"No data received for {symbol}")
                 return None
 
-            # Aggiungi indicatori tecnici
+            # Add technical indicators
             df = self._add_technical_indicators(df)
 
-            # Salva in cache
+            # Save to cache
             self._add_to_cache(cache_key, df)
             return df
 
         except Exception as e:
-            logger.error(f"Errore nel caricamento dei dati per {symbol}: {str(e)}")
+            logger.error(f"Error loading data for {symbol}: {str(e)}")
             return None
 
     def _get_from_cache(self, key: str) -> Optional[pd.DataFrame]:
-        """Recupera dati dalla cache se validi"""
+        """Get data from cache if valid"""
         if key in self._cache:
             data, timestamp = self._cache[key]
             if time.time() - timestamp < self._cache_duration:
@@ -76,21 +72,21 @@ class CryptoDataLoader:
         return None
 
     def _add_to_cache(self, key: str, data: pd.DataFrame):
-        """Aggiunge dati alla cache"""
+        """Add data to cache"""
         try:
             self._cache[key] = (data.copy(), time.time())
         except Exception as e:
-            logger.error(f"Errore nel salvataggio in cache per {key}: {str(e)}")
+            logger.error(f"Cache error for {key}: {str(e)}")
 
     def _add_technical_indicators(self, df: pd.DataFrame) -> pd.DataFrame:
-        """Calcola gli indicatori tecnici"""
+        """Calculate technical indicators"""
         try:
             df = df.copy()
 
-            # Calcolo rendimenti
+            # Calculate returns
             df['Returns'] = df['Close'].pct_change()
 
-            # Media mobile volumi
+            # Volume moving average
             df['Volume_MA'] = df['Volume'].rolling(window=20).mean()
 
             # RSI
@@ -108,34 +104,35 @@ class CryptoDataLoader:
             df['MACD'] = exp1 - exp2
             df['Signal'] = df['MACD'].ewm(span=9, adjust=False).mean()
 
-            # Riempi i valori NaN con 0
+            # Fill NaN values with 0
             df = df.fillna(0)
             return df
 
         except Exception as e:
-            logger.error(f"Errore nel calcolo degli indicatori: {str(e)}")
+            logger.error(f"Error calculating indicators: {str(e)}")
             return df
 
     def get_current_price(self, symbol: str) -> Optional[float]:
-        """Ottiene il prezzo corrente"""
+        """Get current price"""
         try:
             if symbol not in self.supported_coins:
-                logger.warning(f"Simbolo non supportato: {symbol}")
+                logger.warning(f"Unsupported symbol: {symbol}")
                 return None
 
-            logger.info(f"Caricamento prezzo per {symbol}")
-            df = yf.download(symbol, period='1d', interval='1m', progress=False)
+            logger.info(f"Loading price for {symbol}")
+            ticker = yf.Ticker(symbol)
+            current_price = ticker.info.get('regularMarketPrice')
 
-            if df.empty:
-                logger.warning(f"Nessun dato disponibile per {symbol}")
+            if current_price is None:
+                logger.warning(f"No price available for {symbol}")
                 return None
 
-            return float(df['Close'].iloc[-1])
+            return float(current_price)
 
         except Exception as e:
-            logger.error(f"Errore nel caricamento del prezzo per {symbol}: {str(e)}")
+            logger.error(f"Error loading price for {symbol}: {str(e)}")
             return None
 
     def get_available_coins(self) -> Dict[str, str]:
-        """Restituisce il dizionario delle criptovalute supportate"""
+        """Return dictionary of supported cryptocurrencies"""
         return self.supported_coins.copy()

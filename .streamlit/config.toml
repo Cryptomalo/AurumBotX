@@ -17,4 +17,4 @@ secondaryBackgroundColor = "#262730"
 textColor = "#FAFAFA"
 
 [logger]
-level = "info"
+level = "debug"
