@@ -1,40 +1,47 @@
+
 import streamlit as st
 import logging
 import sys
+from datetime import datetime
+from utils.data_loader import CryptoDataLoader
 
 # Setup logging
 logging.basicConfig(
-    level=logging.INFO,
+    level=logging.DEBUG,
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
     handlers=[
         logging.StreamHandler(sys.stdout),
-        logging.FileHandler('app.log')
+        logging.FileHandler('streamlit_test.log', mode='w')
     ]
 )
 logger = logging.getLogger(__name__)
 
 def main():
     try:
-        # Basic title
-        st.title("Test Editor")
-        st.write("Se vedi questo messaggio, l'app sta funzionando!")
-
-        # Editor di base
-        code = st.text_area(
-            "Inserisci il tuo codice qui",
-            value="""def esempio():
-    print("Hello World!")
-""",
-            height=200
+        logger.info("Starting minimal test app")
+        
+        # Basic page config
+        st.set_page_config(
+            page_title="AurumBot Test",
+            layout="wide"
         )
+        
+        st.title("🤖 AurumBot Test")
+        st.write("Test di funzionalità base")
 
-        if st.button("Analizza Codice"):
-            st.info("Analisi del codice in corso...")
+        # Initialize data loader
+        data_loader = CryptoDataLoader()
+        
+        # Test cryptocurrency data loading
+        btc_price = data_loader.get_current_price("BTC-USD")
+        if btc_price:
+            st.success(f"✅ Data Loader funzionante - Prezzo BTC: ${btc_price:,.2f}")
+        else:
+            st.error("❌ Errore nel caricamento dei dati")
 
     except Exception as e:
-        logger.error(f"Errore nell'app: {str(e)}", exc_info=True)
-        st.error("Si è verificato un errore")
+        logger.error(f"Error in app: {str(e)}", exc_info=True)
+        st.error(f"Si è verificato un errore: {str(e)}")
 
 if __name__ == "__main__":
-    logger.info("Avvio dell'applicazione")
     main()
