@@ -75,8 +75,15 @@ with st.sidebar:
     # Navigation Menu
     selected_tab = st.radio("Navigation", ["Dashboard", "Trading", "Portfolio", "Settings"])
     
-    # Crypto selection
-    crypto = st.selectbox("Select Cryptocurrency", ["BTC/USDT", "ETH/USDT", "SOL/USDT"])
+    # Trading mode selection
+    trading_mode = st.selectbox("Trading Mode", ["Spot Trading", "DEX Sniping"])
+    
+    if trading_mode == "Spot Trading":
+        crypto = st.selectbox("Select Cryptocurrency", ["BTC/USDT", "ETH/USDT", "SOL/USDT"])
+    else:
+        chain = st.selectbox("Select Chain", ["BSC", "ETH", "SOL"])
+        min_liquidity = st.slider("Min Liquidity (USD)", 1000, 100000, 5000)
+        max_buy_tax = st.slider("Max Buy Tax (%)", 1, 20, 10)
     
     # Account Info
     st.subheader("💰 Account")
