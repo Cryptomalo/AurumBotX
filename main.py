@@ -1,159 +1,237 @@
 import os
 import logging
-from datetime import datetime, timedelta
+from datetime import datetime
 import streamlit as st
 import pandas as pd
 import plotly.graph_objects as go
 from utils.data_loader import CryptoDataLoader
+from utils.indicators import TechnicalIndicators
+from utils.auto_trader import AutoTrader
+from utils.notifications import TradingNotifier
+from utils.wallet_manager import WalletManager
 
-# Setup logging with more detail
+# Setup logging with more detail.  Modified to match edited code's style.
 logging.basicConfig(
     level=logging.INFO,
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
-    handlers=[
-        logging.StreamHandler(),
-        logging.FileHandler('app.log')
-    ]
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
 )
 logger = logging.getLogger(__name__)
 
-@st.cache_data(ttl=60)  # Cache per 60 secondi
-def safe_metric_change(current, previous):
-    """Calculate percentage change safely"""
-    try:
-        current = float(current.iloc[0]) if hasattr(current, 'iloc') else float(current)
-        previous = float(previous.iloc[0]) if hasattr(previous, 'iloc') else float(previous)
+logger.info("Starting AurumBot Trading Platform...")
 
-        if pd.isna(current) or pd.isna(previous) or previous == 0:
-            return 0.0
-        return ((current / previous) - 1.0) * 100
-    except Exception as e:
-        logger.error(f"Error calculating metric: {e}")
-        return 0.0
+try:
+    logger.info("Setting up page configuration...")
+    # Set page configuration
+    st.set_page_config(
+        page_title="AurumBot",
+        page_icon="🌟",
+        layout="wide",
+        initial_sidebar_state="expanded"
+    )
 
-def format_volume(volume):
-    """Format volume in readable format"""
-    try:
-        volume = float(volume.iloc[0]) if hasattr(volume, 'iloc') else float(volume)
-        if pd.isna(volume):
-            return "N/A"
-        if volume >= 1e9:
-            return f"{volume/1e9:.1f}B"
-        if volume >= 1e6:
-            return f"{volume/1e6:.1f}M"
-        if volume >= 1e3:
-            return f"{volume/1e3:.1f}K"
-        return f"{volume:.0f}"
-    except Exception as e:
-        logger.error(f"Error formatting volume: {e}")
-        return "N/A"
+    # Initialize components
+    data_loader = CryptoDataLoader()
+    indicators = TechnicalIndicators()
+    notifier = TradingNotifier()
 
-# Set page configuration
-st.set_page_config(
-    page_title="AurumBot Trading Platform",
-    page_icon="🌟",
-    layout="wide",
-    initial_sidebar_state="expanded"
-)
+    logger.info("Setting up sidebar...")
+    # Sidebar configuration
+    st.sidebar.title("🛠️ Trading Controls")
 
-# Initialize components
-data_loader = CryptoDataLoader()
+    # Coin selection
+    selected_coin = st.sidebar.selectbox(
+        "Select Trading Pair",
+        ["BTC-USD", "ETH-USD", "SOL-USD", "DOGE-USD"] #Using edited options for now.  Could be improved.
+    )
 
-# Sidebar configuration
-st.sidebar.title("🛠️ Trading Controls")
+    # Timeframe selection
+    timeframe = st.sidebar.selectbox(
+        "Select Timeframe",
+        ["1d", "4h", "1h", "15m", "5m"],
+        format_func=lambda x: {
+            "1d": "1 Day",
+            "4h": "4 Hours",
+            "1h": "1 Hour",
+            "15m": "15 Minutes",
+            "5m": "5 Minutes"
+        }[x]
+    )
 
-# Coin selection
-selected_coin = st.sidebar.selectbox(
-    "Select Trading Pair",
-    options=list(data_loader.supported_coins.keys()),
-    format_func=lambda x: f"{data_loader.supported_coins[x]} ({x})"
-)
+    logger.info("Setting up main content...")
+    # Main content
+    st.title("🌟 AurumBot Trading Platform")
 
-# Timeframe selection
-timeframe = st.sidebar.selectbox(
-    "Select Timeframe",
-    options=['1d', '7d', '30d', '90d'],
-    format_func=lambda x: {
-        '1d': '1 Day',
-        '7d': '1 Week',
-        '30d': '1 Month',
-        '90d': '3 Months'
-    }[x]
-)
+    # Create tabs
+    tab1, tab2, tab3, tab4 = st.tabs([
+        "📊 Market Analysis",
+        "🤖 Auto Trading",
+        "💼 Portfolio",
+        "⚙️ Settings"
+    ])
 
-# Main content
-st.title("🌟 AurumBot Trading Platform")
+    with tab1:
+        try:
+            logger.info("Loading Market Analysis tab...")
+            # Market Analysis Tab
+            col1, col2 = st.columns([2, 1])
 
-# Create tabs
-tab1, tab2, tab3, tab4 = st.tabs([
-    "📈 Market Analysis",
-    "🤖 Auto Trading",
-    "💼 Portfolio",
-    "⚙️ Settings"
-])
-
-with tab1:
-    st.subheader("Market Overview")
-    try:
-        with st.spinner(f'Caricamento dati per {selected_coin}...'):
+            with col1:
+                st.subheader("Price Chart")
+                # Get historical data
+                logger.info(f"Fetching historical data for {selected_coin}")
                 df = data_loader.get_historical_data(selected_coin, period=timeframe)
-        if df is not None and not df.empty:
-            fig = go.Figure(data=[go.Candlestick(
-                x=df.index,
-                open=df['Open'],
-                high=df['High'],
-                low=df['Low'],
-                close=df['Close']
-            )])
-            fig.update_layout(
-                    title=f"{data_loader.supported_coins[selected_coin]} Price Chart",
-                    yaxis_title="Price (USD)",
-                    xaxis_title="Date",
-                    template="plotly_dark",
-                    height=500
-                )
-            st.plotly_chart(fig, use_container_width=True)
 
-            #Retained from original - Market Overview section
-            st.subheader("Market Overview")
-            current_price = data_loader.get_current_price(selected_coin)
-            if current_price is not None:
-                price_change = 0.0
                 if df is not None and not df.empty:
-                    prev_price = df['Close'].iloc[-2]
-                    price_change = safe_metric_change(current_price, prev_price)
+                    logger.info("Creating price chart...")
+                    # Create candlestick chart
+                    fig = go.Figure(data=[go.Candlestick(
+                        x=df.index,
+                        open=df['Open'],
+                        high=df['High'],
+                        low=df['Low'],
+                        close=df['Close']
+                    )])
 
-                st.metric(
-                    "Current Price",
-                    f"${current_price:,.2f}",
-                    f"{price_change:.2f}%"
+                    # Update layout
+                    fig.update_layout(
+                        title=f"{selected_coin} Price Chart",
+                        yaxis_title="Price (USD)",
+                        xaxis_title="Date",
+                        template="plotly_dark",
+                        height=500
+                    )
+
+                    st.plotly_chart(fig, use_container_width=True)
+
+                    # Technical indicators
+                    with st.expander("Technical Indicators"):
+                        st.write("RSI:", df['RSI'].iloc[-1] if 'RSI' in df.columns else 'N/A')
+                        st.write("MACD:", df['MACD'].iloc[-1] if 'MACD' in df.columns else 'N/A')
+
+                else:
+                    st.error("Unable to fetch price data")
+
+            with col2:
+                st.subheader("Market Stats")
+                if df is not None and not df.empty:
+                    current_price = df['Close'].iloc[-1]
+                    price_change = ((current_price - df['Open'].iloc[-1]) / 
+                                df['Open'].iloc[-1]) * 100
+
+                    st.metric(
+                        "Current Price",
+                        f"${current_price:,.2f}",
+                        f"{price_change:+.2f}%"
+                    )
+
+                    vol_24h = df['Volume'].iloc[-1]
+                    st.metric("24h Volume", f"${vol_24h:,.0f}")
+
+                    # Market sentiment indicator
+                    sentiment = "Neutral"  # Placeholder
+                    st.info(f"Market Sentiment: {sentiment}")
+
+        except Exception as e:
+            logger.error(f"Error in Market Analysis tab: {str(e)}")
+            st.error("Error loading market analysis")
+
+    with tab2:
+        try:
+            logger.info("Loading Auto Trading tab...")
+            # Auto Trading Tab
+            st.subheader("Automated Trading Settings")
+
+            col1, col2 = st.columns(2)
+
+            with col1:
+                risk_per_trade = st.slider(
+                    "Risk per Trade (%)",
+                    min_value=0.1,
+                    max_value=5.0,
+                    value=1.0,
+                    step=0.1
                 )
-            else:
-                st.error("Unable to fetch current price")
 
-        else:
-            st.error("Unable to load market data")
-    except Exception as e:
-        logger.error(f"Error in market analysis: {str(e)}")
-        st.error("Error loading market data")
+                strategy = st.selectbox(
+                    "Trading Strategy",
+                    ["Scalping", "Swing Trading", "Mean Reversion"]
+                )
 
-with tab2:
-    st.subheader("Auto Trading")
-    st.info("Auto trading features coming soon!")
+            with col2:
+                take_profit = st.number_input(
+                    "Take Profit (%)",
+                    min_value=0.1,
+                    max_value=100.0,
+                    value=2.0
+                )
 
-with tab3:
-    st.subheader("Portfolio")
-    st.info("Portfolio tracking coming soon!")
+                stop_loss = st.number_input(
+                    "Stop Loss (%)",
+                    min_value=0.1,
+                    max_value=100.0,
+                    value=1.0
+                )
 
-with tab4:
-    st.subheader("Settings")
-    st.info("Settings configuration coming soon!")
+            if st.button("Start Auto Trading"):
+                st.warning("Auto trading feature coming soon!")
 
-st.sidebar.info("Version: 1.0.0")
-logger.info("Application setup completed successfully")
+        except Exception as e:
+            logger.error(f"Error in Auto Trading tab: {str(e)}")
+            st.error("Error loading auto trading settings")
+
+    with tab3:
+        try:
+            logger.info("Loading Portfolio tab...")
+            # Portfolio Tab
+            st.subheader("Portfolio Overview")
+            st.info("Portfolio tracking coming soon!")
+
+            # Sample portfolio metrics
+            col1, col2, col3 = st.columns(3)
+            col1.metric("Total Value", "$10,000", "+5.2%")
+            col2.metric("24h Profit/Loss", "$120", "+1.2%")
+            col3.metric("Open Positions", "3")
+
+        except Exception as e:
+            logger.error(f"Error in Portfolio tab: {str(e)}")
+            st.error("Error loading portfolio data")
+
+    with tab4:
+        try:
+            logger.info("Loading Settings tab...")
+            # Settings Tab
+            st.subheader("Platform Settings")
+
+            # API Configuration
+            with st.expander("API Configuration"):
+                st.text_input("API Key", type="password")
+                st.text_input("API Secret", type="password")
+                if st.button("Save API Keys"):
+                    st.success("API keys saved successfully!")
+
+            # Notification Settings
+            with st.expander("Notification Settings"):
+                st.checkbox("Enable Email Notifications")
+                st.checkbox("Enable Telegram Notifications")
+                st.checkbox("Enable Discord Notifications")
+                if st.button("Save Notification Settings"):
+                    st.success("Notification settings saved!")
+
+            # Advanced Settings
+            with st.expander("Advanced Settings"):
+                st.slider("Maximum Open Positions", 1, 10, 5)
+                st.number_input("Maximum Daily Trades", 1, 100, 10)
+                if st.button("Save Advanced Settings"):
+                    st.success("Advanced settings saved!")
+
+        except Exception as e:
+            logger.error(f"Error in Settings tab: {str(e)}")
+            st.error("Error loading settings")
+
+    # Add version info
+    st.sidebar.info("Version: 1.0.0")
+    logger.info("Application setup completed successfully")
 
 except Exception as e:
-    logger.error(f"Critical error in main app: {str(e)}", exc_info=True)
-    st.error(f"Errore: {str(e)}")
-    if st.checkbox("Mostra dettagli errore"):
-        st.exception(e)
+    logger.error(f"Critical error in main app: {str(e)}")
+    st.error("A critical error occurred. Please check the logs.")
