@@ -70,6 +70,12 @@ if 'positions' not in st.session_state:
 if 'trade_history' not in st.session_state:
     st.session_state.trade_history = []
 
+# Initialize session state for trading controls
+if 'trading_active' not in st.session_state:
+    st.session_state.trading_active = False
+if 'selected_strategy' not in st.session_state:
+    st.session_state.selected_strategy = 'swing_trading'
+
 # Header
 st.markdown("""
     <div class="header" style="text-align: center; padding: 1rem;">
@@ -77,6 +83,30 @@ st.markdown("""
         <p style="color: #FFF;">AI-Powered Trading Platform</p>
     </div>
 """, unsafe_allow_html=True)
+
+# Trading Controls
+with st.sidebar:
+    st.markdown("### 🎮 Trading Controls")
+    if st.button("🟢 Start Trading" if not st.session_state.trading_active else "🔴 Stop Trading"):
+        st.session_state.trading_active = not st.session_state.trading_active
+        
+    st.markdown("### 📊 Trading Strategy")
+    st.session_state.selected_strategy = st.selectbox(
+        "Select Strategy",
+        ["swing_trading", "scalping", "grid_trading", "momentum", "meme_coin_sniping"]
+    )
+    
+    st.markdown("### 👤 Profile")
+    total_balance = st.session_state.balance
+    available_balance = total_balance * 0.8  # Example
+    locked_balance = total_balance * 0.2     # Example
+    
+    st.metric("Total Balance", f"${total_balance:,.2f}")
+    st.metric("Available Balance", f"${available_balance:,.2f}")
+    st.metric("Locked in Trades", f"${locked_balance:,.2f}")
+    
+    if st.button("⚡ Withdraw Funds"):
+        st.info("Connect your wallet to withdraw funds")
 
 # Main layout
 left_col, center_col, right_col = st.columns([1,2,1])
