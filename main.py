@@ -1,6 +1,10 @@
 import os
 import logging
 from datetime import datetime, timedelta
+import streamlit as st
+import pandas as pd
+import plotly.graph_objects as go
+from utils.data_loader import CryptoDataLoader
 
 # Setup logging with more detail
 logging.basicConfig(
@@ -43,130 +47,74 @@ def format_volume(volume):
         logger.error(f"Error formatting volume: {e}")
         return "N/A"
 
-try:
-    import streamlit as st
-    import pandas as pd
-    import plotly.graph_objects as go
-    from utils.data_loader import CryptoDataLoader
+# Set page configuration
+st.set_page_config(
+    page_title="AurumBot Trading Platform",
+    page_icon="🌟",
+    layout="wide",
+    initial_sidebar_state="expanded"
+)
 
-    # Set page configuration
-    st.set_page_config(
-        page_title="AurumBot Trading Platform",
-        page_icon="🌟",
-        layout="wide",
-        initial_sidebar_state="expanded"
-    )
+# Initialize components
+data_loader = CryptoDataLoader()
 
-    # Initialize components
-    data_loader = CryptoDataLoader()
+# Sidebar configuration
+st.sidebar.title("🛠️ Trading Controls")
 
-    # Sidebar configuration
-    st.sidebar.title("🛠️ Trading Controls")
+# Coin selection
+selected_coin = st.sidebar.selectbox(
+    "Select Trading Pair",
+    options=list(data_loader.supported_coins.keys()),
+    format_func=lambda x: f"{data_loader.supported_coins[x]} ({x})"
+)
 
-    # Coin selection
-    selected_coin = st.sidebar.selectbox(
-        "Select Trading Pair",
-        options=list(data_loader.supported_coins.keys()),
-        format_func=lambda x: f"{data_loader.supported_coins[x]} ({x})"
-    )
+# Timeframe selection
+timeframe = st.sidebar.selectbox(
+    "Select Timeframe",
+    options=['1d', '7d', '30d', '90d'],
+    format_func=lambda x: {
+        '1d': '1 Day',
+        '7d': '1 Week',
+        '30d': '1 Month',
+        '90d': '3 Months'
+    }[x]
+)
 
-    # Timeframe selection
-    timeframe = st.sidebar.selectbox(
-        "Select Timeframe",
-        options=['1d', '7d', '30d', '90d'],
-        format_func=lambda x: {
-            '1d': '1 Day',
-            '7d': '1 Week',
-            '30d': '1 Month',
-            '90d': '3 Months'
-        }[x]
-    )
+# Main content
+st.title("🌟 AurumBot Trading Platform")
 
-    # Main content
-    st.title("🌟 AurumBot Trading Platform")
+# Create tabs
+tab1, tab2, tab3, tab4 = st.tabs([
+    "📈 Market Analysis",
+    "🤖 Auto Trading",
+    "💼 Portfolio",
+    "⚙️ Settings"
+])
 
-    # Create tabs
-    tab1, tab2, tab3, tab4 = st.tabs([
-        "📈 Market Analysis",
-        "🤖 Auto Trading",
-        "💼 Portfolio",
-        "⚙️ Settings"
-    ])
-
-    with tab1:
-        col1, col2 = st.columns([2, 1])
-
-        with col1:
-            st.subheader("Price Chart")
-            logger.info("Fetching historical data...")
-            df = data_loader.get_historical_data(selected_coin, period=timeframe)
-            logger.info(f"Data fetched: {'success' if df is not None else 'failed'}")
-
-            if df is not None and not df.empty:
-                logger.info("Creating price chart...")
-                fig = go.Figure(data=[go.Candlestick(
-                    x=df.index,
-                    open=df['Open'],
-                    high=df['High'],
-                    low=df['Low'],
-                    close=df['Close']
-                )])
-
-                fig.update_layout(
+with tab1:
+    st.subheader("Market Overview")
+    try:
+        df = data_loader.get_historical_data(selected_coin, period=timeframe)
+        if df is not None and not df.empty:
+            fig = go.Figure(data=[go.Candlestick(
+                x=df.index,
+                open=df['Open'],
+                high=df['High'],
+                low=df['Low'],
+                close=df['Close']
+            )])
+            fig.update_layout(
                     title=f"{data_loader.supported_coins[selected_coin]} Price Chart",
                     yaxis_title="Price (USD)",
                     xaxis_title="Date",
                     template="plotly_dark",
                     height=500
                 )
+            st.plotly_chart(fig, use_container_width=True)
 
-                st.plotly_chart(fig, use_container_width=True)
-                logger.info("Chart displayed successfully")
-
-                # Technical indicators
-                st.subheader("Technical Indicators")
-                col_a, col_b, col_c = st.columns(3)
-
-                with col_a:
-                    if 'RSI' in df.columns:
-                        current_rsi = df['RSI'].iloc[-1]
-                        prev_rsi = df['RSI'].iloc[-2]
-                        if not pd.isna(current_rsi) and not pd.isna(prev_rsi):
-                            st.metric(
-                                "RSI",
-                                f"{float(current_rsi):.2f}",
-                                f"{float(current_rsi - prev_rsi):.2f}"
-                            )
-
-                with col_b:
-                    if 'MACD' in df.columns:
-                        current_macd = df['MACD'].iloc[-1]
-                        prev_macd = df['MACD'].iloc[-2]
-                        if not pd.isna(current_macd) and not pd.isna(prev_macd):
-                            st.metric(
-                                "MACD",
-                                f"{float(current_macd):.2f}",
-                                f"{float(current_macd - prev_macd):.2f}"
-                            )
-
-                with col_c:
-                    if 'Volume' in df.columns:
-                        current_vol = df['Volume'].iloc[-1]
-                        prev_vol = df['Volume'].iloc[-2]
-                        vol_change = safe_metric_change(current_vol, prev_vol)
-                        st.metric(
-                            "Volume",
-                            format_volume(current_vol),
-                            f"{vol_change:.1f}%"
-                        )
-            else:
-                logger.error("Unable to load price data")
-                st.error("Unable to load price data. Please try again later.")
-
-        with col2:
+            #Retained from original - Market Overview section
             st.subheader("Market Overview")
             current_price = data_loader.get_current_price(selected_coin)
-
             if current_price is not None:
                 price_change = 0.0
                 if df is not None and not df.empty:
@@ -181,59 +129,26 @@ try:
             else:
                 st.error("Unable to fetch current price")
 
-    with tab2:
-        st.subheader("Auto Trading Settings")
-        col1, col2 = st.columns(2)
+        else:
+            st.error("Unable to load market data")
+    except Exception as e:
+        logger.error(f"Error in market analysis: {str(e)}")
+        st.error("Error loading market data")
 
-        with col1:
-            risk_per_trade = st.slider(
-                "Risk per Trade (%)",
-                min_value=0.1,
-                max_value=5.0,
-                value=1.0,
-                step=0.1
-            )
+with tab2:
+    st.subheader("Auto Trading")
+    st.info("Auto trading features coming soon!")
 
-            strategy = st.selectbox(
-                "Trading Strategy",
-                ["Scalping", "Swing Trading", "Mean Reversion"]
-            )
+with tab3:
+    st.subheader("Portfolio")
+    st.info("Portfolio tracking coming soon!")
 
-        with col2:
-            take_profit = st.number_input(
-                "Take Profit (%)",
-                min_value=0.1,
-                max_value=100.0,
-                value=2.0
-            )
+with tab4:
+    st.subheader("Settings")
+    st.info("Settings configuration coming soon!")
 
-            stop_loss = st.number_input(
-                "Stop Loss (%)",
-                min_value=0.1,
-                max_value=100.0,
-                value=1.0
-            )
-
-        if st.button("Start Auto Trading"):
-            st.warning("Auto trading feature coming soon!")
-
-    with tab3:
-        st.subheader("Portfolio Overview")
-        st.info("Connect your wallet to view portfolio details")
-
-        if st.button("Connect Wallet"):
-            st.warning("Wallet connection feature coming soon!")
-
-    with tab4:
-        st.subheader("Platform Settings")
-        with st.expander("Notification Settings"):
-            st.checkbox("Enable Email Notifications")
-            st.checkbox("Enable Telegram Notifications")
-            if st.button("Save Settings"):
-                st.success("Settings saved successfully!")
-
-    st.sidebar.info("Version: 1.0.0")
-    logger.info("Application setup completed successfully")
+st.sidebar.info("Version: 1.0.0")
+logger.info("Application setup completed successfully")
 
 except Exception as e:
     logger.error(f"Critical error in main app: {str(e)}")
