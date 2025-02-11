@@ -26,54 +26,58 @@ class CryptoDataLoader:
             'DOT-USD': 'Polkadot'
         }
 
-        self.timeframes = {
-            '1m': '1Min',
-            '5m': '5Min',
-            '15m': '15Min',
-            '30m': '30Min',
-            '1h': '1H',
-            '4h': '4H',
-            '1d': '1D',
-            '1w': '1W'
-        }
-
         self._cache = {}
         self._cache_duration = 300  # 5 minutes cache
+
+        # Setup logging
+        self._setup_logging()
+
+    def _setup_logging(self):
+        """Setup logging configuration"""
+        formatter = logging.Formatter(
+            '%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+        )
+        handler = logging.StreamHandler()
+        handler.setFormatter(formatter)
+        logger.addHandler(handler)
+        logger.setLevel(logging.INFO)
 
     def _get_from_cache(self, key: str) -> Optional[pd.DataFrame]:
         """Get data from cache if valid"""
         if key in self._cache:
             data, timestamp = self._cache[key]
             if time.time() - timestamp < self._cache_duration:
-                return data
+                logger.debug(f"Cache hit for {key}")
+                return data.copy()  # Return a copy to prevent modifications
             else:
+                logger.debug(f"Cache expired for {key}")
                 del self._cache[key]
         return None
 
     def _add_to_cache(self, key: str, data: pd.DataFrame):
         """Add data to cache with current timestamp"""
-        self._cache[key] = (data, time.time())
+        try:
+            self._cache[key] = (data.copy(), time.time())  # Store a copy
+            logger.debug(f"Added to cache: {key}")
+        except Exception as e:
+            logger.error(f"Cache error for {key}: {str(e)}")
 
     def get_historical_data(
-        self, 
-        symbol: str, 
-        period: str = '1y',
-        interval: str = '1d'
+        self,
+        symbol: str,
+        period: str = '1d',
+        interval: str = '1m'
     ) -> Optional[pd.DataFrame]:
-        """
-        Fetch historical data with caching and error handling
-
-        Args:
-            symbol: Trading pair symbol
-            period: Time period to fetch ('1d','5d','1mo','3mo','6mo','1y','2y','5y','10y','ytd','max')
-            interval: Data interval ('1m','2m','5m','15m','30m','60m','90m','1h','1d','5d','1wk','1mo','3mo')
-        """
+        """Fetch historical data with caching and error handling"""
         try:
+            if symbol not in self.supported_coins:
+                logger.warning(f"Unsupported symbol: {symbol}")
+                return None
+
             cache_key = f"{symbol}_{period}_{interval}"
             cached_data = self._get_from_cache(cache_key)
 
             if cached_data is not None:
-                logger.debug(f"Retrieved {symbol} data from cache")
                 return cached_data
 
             logger.info(f"Fetching {symbol} data for period {period}")
@@ -97,8 +101,10 @@ class CryptoDataLoader:
             return None
 
     def _add_technical_indicators(self, df: pd.DataFrame) -> pd.DataFrame:
-        """Add basic technical indicators to the dataframe"""
+        """Add technical indicators with error handling"""
         try:
+            df = df.copy()  # Create a copy to avoid SettingWithCopyWarning
+
             # Calculate returns
             df['Returns'] = df['Close'].pct_change()
 
@@ -113,11 +119,43 @@ class CryptoDataLoader:
             df['Price_MA_50'] = df['Close'].rolling(window=50).mean()
             df['Price_MA_200'] = df['Close'].rolling(window=200).mean()
 
+            # RSI
+            delta = df['Close'].diff()
+            gain = delta.where(delta > 0, 0)
+            loss = -delta.where(delta < 0, 0)
+            avg_gain = gain.rolling(window=14).mean()
+            avg_loss = loss.rolling(window=14).mean()
+            rs = avg_gain / avg_loss
+            df['RSI'] = 100 - (100 / (1 + rs))
+
+            # MACD
+            exp1 = df['Close'].ewm(span=12, adjust=False).mean()
+            exp2 = df['Close'].ewm(span=26, adjust=False).mean()
+            df['MACD'] = exp1 - exp2
+            df['Signal'] = df['MACD'].ewm(span=9, adjust=False).mean()
+
             return df
 
         except Exception as e:
             logger.error(f"Error calculating indicators: {str(e)}")
             return df
+
+    def get_current_price(self, symbol: str) -> Optional[float]:
+        """Get current price with error handling"""
+        try:
+            ticker = yf.Ticker(symbol)
+            price = ticker.info.get('regularMarketPrice')
+            if price is None:
+                logger.warning(f"No price available for {symbol}")
+                return None
+            return float(price)
+        except Exception as e:
+            logger.error(f"Error getting price for {symbol}: {str(e)}")
+            return None
+
+    def get_available_coins(self) -> Dict[str, str]:
+        """Return dictionary of available coins"""
+        return self.supported_coins.copy()  # Return a copy to prevent modifications
 
     def get_market_data(
         self,
@@ -128,7 +166,6 @@ class CryptoDataLoader:
     ) -> Dict[str, pd.DataFrame]:
         """
         Fetch market data for multiple symbols
-
         Args:
             symbols: Single symbol or list of symbols
             start_date: Start date for historical data
@@ -158,19 +195,6 @@ class CryptoDataLoader:
 
         return market_data
 
-    def get_current_price(self, symbol: str) -> Optional[float]:
-        """Get current price for a symbol with error handling"""
-        try:
-            ticker = yf.Ticker(symbol)
-            return ticker.info.get('regularMarketPrice')
-        except Exception as e:
-            logger.error(f"Error getting price for {symbol}: {str(e)}")
-            return None
-
-    def get_available_coins(self) -> Dict[str, str]:
-        """Return dictionary of available coins"""
-        return self.supported_coins
-
     def save_historical_data(
         self,
         symbol: str,
@@ -179,7 +203,6 @@ class CryptoDataLoader:
     ) -> bool:
         """
         Save historical data to database
-
         Args:
             symbol: Trading pair symbol
             df: DataFrame with historical data
