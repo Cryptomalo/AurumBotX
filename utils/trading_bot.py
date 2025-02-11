@@ -43,15 +43,19 @@ class WebSocketHandler:
             data = json.loads(message)
             self.last_heartbeat = time.time()
             
-            # Buffer messaggi per processamento batch
+            # Enhanced message buffering with memory limit
             if not hasattr(self, '_message_buffer'):
                 self._message_buffer = []
-            self._message_buffer.append(data)
             
-            # Processa batch quando buffer pieno
-            if len(self._message_buffer) >= 10:
+            # Add message with memory management
+            if len(self._message_buffer) < 1000:  # Prevent memory leaks
+                self._message_buffer.append(data)
+            
+            # Process in optimized batches
+            if len(self._message_buffer) >= 10 or (time.time() - self.last_batch_process) > 1.0:
                 self._process_message_batch(self._message_buffer)
                 self._message_buffer = []
+                self.last_batch_process = time.time()
                 
         except Exception as e:
             self.logger.error(f"Message processing error: {str(e)}")

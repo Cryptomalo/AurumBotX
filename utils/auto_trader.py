@@ -149,8 +149,13 @@ class AutoTrader:
                 return
 
             current_time = datetime.now()
-            if self.last_action_time and (current_time - self.last_action_time).seconds < 3600:
+            # Reduced minimum time between trades for better opportunities
+            if self.last_action_time and (current_time - self.last_action_time).seconds < 300:
                 return
+                
+            # Add execution priority based on signal strength
+            if signal.get('confidence', 0) > 0.9:
+                self.last_action_time = current_time - timedelta(seconds=290)
 
             price = signal['price']
             action = signal['action']
