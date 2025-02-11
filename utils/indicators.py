@@ -1,5 +1,4 @@
 import pandas as pd
-import pandas_ta as ta
 import numpy as np
 import logging
 from typing import Optional, Dict, Union, List, Tuple
@@ -25,6 +24,55 @@ class TechnicalIndicators:
         self.momentum_indicators = ['RSI', 'Stochastic', 'MFI']
         self.volatility_indicators = ['BB', 'ATR', 'KC']
         self.volume_indicators = ['OBV', 'ADL', 'CMF']
+
+    def get_trading_signals(self, df: pd.DataFrame) -> List[Dict]:
+        """Generate trading signals based on technical analysis"""
+        try:
+            signals = []
+            current_price = df['Close'].iloc[-1]
+
+            # Check RSI conditions
+            if 'RSI_14' in df.columns:
+                rsi = df['RSI_14'].iloc[-1]
+                if rsi < 30:
+                    signals.append({
+                        'type': 'BUY',
+                        'indicator': 'RSI',
+                        'strength': 0.7,
+                        'price': current_price
+                    })
+                elif rsi > 70:
+                    signals.append({
+                        'type': 'SELL',
+                        'indicator': 'RSI',
+                        'strength': 0.7,
+                        'price': current_price
+                    })
+
+            # Check MACD crossover
+            if all(col in df.columns for col in ['MACD', 'MACD_Signal']):
+                macd = df['MACD'].iloc[-2:]
+                signal = df['MACD_Signal'].iloc[-2:]
+
+                if macd.iloc[0] < signal.iloc[0] and macd.iloc[1] > signal.iloc[1]:
+                    signals.append({
+                        'type': 'BUY',
+                        'indicator': 'MACD',
+                        'strength': 0.8,
+                        'price': current_price
+                    })
+                elif macd.iloc[0] > signal.iloc[0] and macd.iloc[1] < signal.iloc[1]:
+                    signals.append({
+                        'type': 'SELL',
+                        'indicator': 'MACD',
+                        'strength': 0.8,
+                        'price': current_price
+                    })
+
+            return signals
+        except Exception as e:
+            logger.error(f"Error generating trading signals: {str(e)}")
+            return []
 
     def add_all_indicators(self, df: pd.DataFrame) -> pd.DataFrame:
         """Add all technical indicators with optimization"""
@@ -75,25 +123,15 @@ class TechnicalIndicators:
             # Multiple timeframe Moving Averages
             periods = [20, 50, 100, 200]
             for period in periods:
-                df[f'SMA_{period}'] = ta.sma(df['Close'], length=period)
-                df[f'EMA_{period}'] = ta.ema(df['Close'], length=period)
+                df[f'SMA_{period}'] = df['Close'].rolling(window=period).mean()
+                df[f'EMA_{period}'] = df['Close'].ewm(span=period, adjust=False).mean()
 
-            # MACD with signal and histogram
-            macd = ta.macd(df['Close'])
-            df['MACD'] = macd['MACD_12_26_9']
-            df['MACD_Signal'] = macd['MACDs_12_26_9']
-            df['MACD_Hist'] = macd['MACDh_12_26_9']
-
-            # ADX for trend strength
-            adx = ta.adx(df['High'], df['Low'], df['Close'])
-            df['ADX'] = adx['ADX_14']
-            df['DI_plus'] = adx['DMP_14']
-            df['DI_minus'] = adx['DMN_14']
-
-            # Ichimoku Cloud
-            ichimoku = ta.ichimoku(df['High'], df['Low'], df['Close'])
-            for col in ichimoku.columns:
-                df[f'Ichimoku_{col}'] = ichimoku[col]
+            # MACD calculation
+            exp1 = df['Close'].ewm(span=12, adjust=False).mean()
+            exp2 = df['Close'].ewm(span=26, adjust=False).mean()
+            df['MACD'] = exp1 - exp2
+            df['MACD_Signal'] = df['MACD'].ewm(span=9, adjust=False).mean()
+            df['MACD_Hist'] = df['MACD'] - df['MACD_Signal']
 
             return df
 
@@ -106,21 +144,11 @@ class TechnicalIndicators:
         try:
             # RSI with multiple timeframes
             for period in [14, 28]:
-                df[f'RSI_{period}'] = ta.rsi(df['Close'], length=period)
-
-            # Stochastic Oscillator
-            stoch = ta.stoch(df['High'], df['Low'], df['Close'])
-            df['STOCH_K'] = stoch['STOCHk_14_3_3']
-            df['STOCH_D'] = stoch['STOCHd_14_3_3']
-
-            # Money Flow Index
-            df['MFI'] = ta.mfi(df['High'], df['Low'], df['Close'], df['Volume'])
-
-            # Williams %R
-            df['WILLIAMS_R'] = ta.willr(df['High'], df['Low'], df['Close'])
-
-            # Commodity Channel Index
-            df['CCI'] = ta.cci(df['High'], df['Low'], df['Close'])
+                delta = df['Close'].diff()
+                gain = (delta.where(delta > 0, 0)).rolling(window=period).mean()
+                loss = (-delta.where(delta < 0, 0)).rolling(window=period).mean()
+                rs = gain / loss
+                df[f'RSI_{period}'] = 100 - (100 / (1 + rs))
 
             return df
 
@@ -132,25 +160,19 @@ class TechnicalIndicators:
         """Add volatility based indicators"""
         try:
             # Bollinger Bands
-            bb = ta.bbands(df['Close'])
-            df['BB_Upper'] = bb['BBU_20_2.0']
-            df['BB_Middle'] = bb['BBM_20_2.0']
-            df['BB_Lower'] = bb['BBL_20_2.0']
+            sma = df['Close'].rolling(window=20).mean()
+            std = df['Close'].rolling(window=20).std()
+            df['BB_Upper'] = sma + (std * 2)
+            df['BB_Middle'] = sma
+            df['BB_Lower'] = sma - (std * 2)
 
             # Average True Range
-            df['ATR'] = ta.atr(df['High'], df['Low'], df['Close'])
-
-            # Keltner Channels
-            kc = ta.kc(df['High'], df['Low'], df['Close'])
-            df['KC_Upper'] = kc['KCUe_20_2']
-            df['KC_Middle'] = kc['KCBe_20_2']
-            df['KC_Lower'] = kc['KCLe_20_2']
-
-            # Donchian Channels
-            dc = ta.donchian(df['High'], df['Low'])
-            df['DC_Upper'] = dc['DCU_20_20']
-            df['DC_Middle'] = dc['DCM_20_20']
-            df['DC_Lower'] = dc['DCL_20_20']
+            high_low = df['High'] - df['Low']
+            high_close = np.abs(df['High'] - df['Close'].shift())
+            low_close = np.abs(df['Low'] - df['Close'].shift())
+            ranges = pd.concat([high_low, high_close, low_close], axis=1)
+            true_range = np.max(ranges, axis=1)
+            df['ATR'] = true_range.rolling(14).mean()
 
             return df
 
@@ -162,19 +184,7 @@ class TechnicalIndicators:
         """Add volume based indicators"""
         try:
             # On Balance Volume
-            df['OBV'] = ta.obv(df['Close'], df['Volume'])
-
-            # Accumulation/Distribution Line
-            df['ADL'] = ta.ad(df['High'], df['Low'], df['Close'], df['Volume'])
-
-            # Chaikin Money Flow
-            df['CMF'] = ta.cmf(df['High'], df['Low'], df['Close'], df['Volume'])
-
-            # Volume Weighted Average Price
-            df['VWAP'] = ta.vwap(df['High'], df['Low'], df['Close'], df['Volume'])
-
-            # Elder Force Index
-            df['EFI'] = ta.efi(df['Close'], df['Volume'])
+            df['OBV'] = (np.sign(df['Close'].diff()) * df['Volume']).fillna(0).cumsum()
 
             # Volume Profile
             df['Volume_MA'] = df['Volume'].rolling(window=20).mean()
@@ -189,15 +199,9 @@ class TechnicalIndicators:
     def add_candlestick_patterns(self, df: pd.DataFrame) -> pd.DataFrame:
         """Add candlestick pattern recognition"""
         try:
-            # Bullish patterns
-            df['Hammer'] = ta.cdl_pattern(df['Open'], df['High'], df['Low'], df['Close'], name='cdl_hammer')
-            df['MorningStar'] = ta.cdl_pattern(df['Open'], df['High'], df['Low'], df['Close'], name='cdl_morningstar')
-            df['BullishEngulfing'] = ta.cdl_pattern(df['Open'], df['High'], df['Low'], df['Close'], name='cdl_engulfing')
-
-            # Bearish patterns
-            df['ShootingStar'] = ta.cdl_pattern(df['Open'], df['High'], df['Low'], df['Close'], name='cdl_shootingstar')
-            df['EveningStar'] = ta.cdl_pattern(df['Open'], df['High'], df['Low'], df['Close'], name='cdl_eveningstar')
-            df['BearishEngulfing'] = ta.cdl_pattern(df['Open'], df['High'], df['Low'], df['Close'], name='cdl_engulfing')
+            # Simple pattern detection
+            df['Doji'] = ((np.abs(df['Open'] - df['Close']) <= 
+                          (df['High'] - df['Low']) * 0.1)).astype(int)
 
             return df
 
@@ -235,18 +239,17 @@ class TechnicalIndicators:
     def calculate_trend_strength(self, df: pd.DataFrame) -> float:
         """Calculate overall trend strength"""
         try:
-            # ADX based trend strength
-            adx_strength = df['ADX'].iloc[-1] / 100.0
-
-            # Moving Average alignment
+            # Moving Average alignment strength
             ma_alignment = self._calculate_ma_alignment(df)
 
-            # MACD momentum
-            macd_strength = abs(df['MACD'].iloc[-1]) / df['Close'].iloc[-1]
+            # Trend momentum from MACD
+            if 'MACD' in df.columns:
+                macd_strength = abs(df['MACD'].iloc[-1]) / df['Close'].iloc[-1]
+            else:
+                macd_strength = 0.5
 
             # Combine indicators
             trend_strength = np.mean([
-                adx_strength,
                 ma_alignment,
                 min(macd_strength * 10, 1)  # Normalize MACD strength
             ])
@@ -260,6 +263,9 @@ class TechnicalIndicators:
     def _calculate_ma_alignment(self, df: pd.DataFrame) -> float:
         """Calculate moving average alignment strength"""
         try:
+            if not all(col in df.columns for col in ['SMA_20', 'SMA_50', 'SMA_200']):
+                return 0.5
+
             current_price = df['Close'].iloc[-1]
             ma_20 = df['SMA_20'].iloc[-1]
             ma_50 = df['SMA_50'].iloc[-1]
@@ -285,7 +291,7 @@ class TechnicalIndicators:
             logger.error(f"Error calculating MA alignment: {e}")
             return 0.5
 
-    def determine_market_condition(self, df: pd.DataFrame) -> MarketCondition:
+    def determine_market_condition(self, df: pd.DataFrame) -> str:
         """Determine overall market condition"""
         try:
             # Trend analysis
@@ -298,48 +304,28 @@ class TechnicalIndicators:
             # Volume profile
             volume_profile = self._analyze_volume_profile(df)
 
-            # Support/Resistance
-            support = df['Support'].iloc[-1]
-            resistance = df['Resistance'].iloc[-1]
-
-            return MarketCondition(
-                trend=trend,
-                strength=trend_strength,
-                volatility=volatility,
-                volume_profile=volume_profile,
-                support_level=support,
-                resistance_level=resistance
-            )
+            return f"{trend}_{trend_strength:.2f}_{volume_profile}"
 
         except Exception as e:
             logger.error(f"Error determining market condition: {e}")
-            return MarketCondition(
-                trend='sideways',
-                strength=0.5,
-                volatility=0.0,
-                volume_profile='normal',
-                support_level=0.0,
-                resistance_level=0.0
-            )
+            return "unknown"
 
     def _determine_trend(self, df: pd.DataFrame) -> str:
         """Determine market trend direction"""
         try:
+            if not all(col in df.columns for col in ['SMA_20', 'SMA_50', 'MACD']):
+                return 'sideways'
+
             # Use multiple indicators for trend determination
             sma_20 = df['SMA_20'].iloc[-1]
             sma_50 = df['SMA_50'].iloc[-1]
             current_price = df['Close'].iloc[-1]
             macd = df['MACD'].iloc[-1]
-            adx = df['ADX'].iloc[-1]
 
-            # Strong trend criteria
-            strong_trend = adx > 25
-
-            if strong_trend:
-                if current_price > sma_20 > sma_50 and macd > 0:
-                    return 'bullish'
-                elif current_price < sma_20 < sma_50 and macd < 0:
-                    return 'bearish'
+            if current_price > sma_20 > sma_50 and macd > 0:
+                return 'bullish'
+            elif current_price < sma_20 < sma_50 and macd < 0:
+                return 'bearish'
 
             return 'sideways'
 
@@ -350,9 +336,10 @@ class TechnicalIndicators:
     def _analyze_volume_profile(self, df: pd.DataFrame) -> str:
         """Analyze volume profile"""
         try:
-            current_volume = df['Volume'].iloc[-1]
-            avg_volume = df['Volume_MA'].iloc[-1]
-            volume_ratio = current_volume / avg_volume
+            if 'Volume_Ratio' not in df.columns:
+                return 'normal'
+
+            volume_ratio = df['Volume_Ratio'].iloc[-1]
 
             if volume_ratio > 2.0:
                 return 'high'

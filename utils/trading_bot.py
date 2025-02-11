@@ -5,7 +5,7 @@ import time
 import websockets
 import threading
 from datetime import datetime
-from typing import Dict, List, Optional
+from typing import Dict, List, Optional, Any, Union
 import openai
 from utils.database import get_db
 from utils.indicators import TechnicalIndicators
@@ -15,63 +15,70 @@ import numpy as np
 logger = logging.getLogger(__name__)
 
 class WebSocketHandler:
-    def __init__(self, logger, db):
-        self.ws = None
-        self.connected = False
+    def __init__(self, logger: logging.Logger, db: Any):
+        self.ws: Optional[websockets.WebSocketClientProtocol] = None
+        self.connected: bool = False
         self.logger = logger
-        self.max_retries = 5
-        self.retry_delay = 1
-        self.last_heartbeat = time.time()
-        self.heartbeat_interval = 30
-        self.reconnect_lock = threading.Lock()
-        self.heartbeat_thread = None
-        self.should_run = True
+        self.max_retries: int = 5
+        self.retry_delay: int = 1
+        self.last_heartbeat: float = time.time()
+        self.heartbeat_interval: int = 30
+        self.reconnect_lock: threading.Lock = threading.Lock()
+        self.heartbeat_thread: Optional[threading.Thread] = None
+        self.should_run: bool = True
         self.db = db
-        self.last_batch_process = time.time()
+        self.last_batch_process: float = time.time()
         self._initialize_db()
-        self.technical_indicators = TechnicalIndicators()
+        self.technical_indicators: TechnicalIndicators = TechnicalIndicators()
+        self._message_buffer: List[Dict] = []
+        self.buffer_size: int = 1000
+        self.batch_interval: float = 1.0  # seconds
 
         # OpenAI setup for error correction
         # the newest OpenAI model is "gpt-4o" which was released May 13, 2024.
         self.openai_client = openai.OpenAI()
 
-    def _initialize_db(self):
-        """Inizializza la connessione al database"""
-        retries = 3
-        while retries > 0:
+    def _initialize_db(self) -> None:
+        """Inizializza la connessione al database con retry"""
+        max_attempts = 3
+        retry_delay = 5
+
+        for attempt in range(max_attempts):
             try:
                 if hasattr(self.db, 'connect'):
                     self.db.connect()
-                break
+                    self.logger.info("Database connection established successfully")
+                    return
             except Exception as e:
-                retries -= 1
-                self.logger.error(f"Database connection error: {str(e)}")
-                if retries > 0:
-                    time.sleep(5)
+                self.logger.error(f"Database connection attempt {attempt + 1} failed: {str(e)}")
+                if attempt < max_attempts - 1:
+                    time.sleep(retry_delay)
+                    retry_delay *= 2
+                else:
+                    raise Exception("Failed to establish database connection after all attempts")
 
-    async def _preprocess_message(self, msg):
-        """Preprocessa i messaggi raw"""
+    async def _preprocess_message(self, msg: Dict) -> Optional[Dict]:
+        """Preprocessa i messaggi con validazione"""
         try:
+            if not isinstance(msg, dict):
+                raise ValueError("Invalid message format")
+
+            required_fields = ['s', 'c', 'v']
+            if not all(field in msg for field in required_fields):
+                raise ValueError("Missing required fields in message")
+
             return {
-                'symbol': msg.get('s', ''),
+                'symbol': str(msg.get('s', '')),
                 'price': float(msg.get('c', 0)),
                 'volume': float(msg.get('v', 0)),
                 'timestamp': datetime.now().timestamp()
             }
         except Exception as e:
-            self.logger.error(f"Preprocessing error: {e}")
+            self.logger.error(f"Message preprocessing error: {str(e)}")
             return None
 
-    async def _handle_processed_batch(self, processed_data):
-        """Gestisce il batch processato"""
-        try:
-            if self.db and processed_data:
-                await self.db.insert_many(processed_data)
-        except Exception as e:
-            self.logger.error(f"Database insertion error: {e}")
-
-    async def connect_websocket(self):
-        """Connette al WebSocket con gestione errori migliorata"""
+    async def connect_websocket(self) -> bool:
+        """Connette al WebSocket con gestione errori avanzata"""
         try:
             if self.ws:
                 await self.ws.close()
@@ -79,11 +86,16 @@ class WebSocketHandler:
             self.ws = await websockets.connect(
                 "wss://stream.binance.com:9443/ws/!ticker@arr",
                 ping_interval=20,
-                ping_timeout=10
+                ping_timeout=10,
+                close_timeout=10,
+                max_size=2**23,  # 8MB max message size
+                compression=None,
+                max_queue=2**10  # Limit message queue
             )
             self.connected = True
+            self.last_heartbeat = time.time()
 
-            # Start heartbeat
+            # Start heartbeat in background
             if not self.heartbeat_thread or not self.heartbeat_thread.is_alive():
                 self.heartbeat_thread = threading.Thread(target=self._run_heartbeat, daemon=True)
                 self.heartbeat_thread.start()
@@ -91,71 +103,58 @@ class WebSocketHandler:
             # Start message processing
             asyncio.create_task(self._process_messages())
 
+            self.logger.info("WebSocket connection established successfully")
             return True
+
         except Exception as e:
-            error_context = f"Connection error: {str(e)}"
+            error_context = f"WebSocket connection error: {str(e)}"
             fix_suggestion = await self._ai_error_correction(error_context)
             self.logger.error(f"{error_context}\nAI Suggestion: {fix_suggestion}")
             return False
 
-    async def _ai_error_correction(self, error_context: str) -> str:
-        """Usa OpenAI per analizzare e correggere errori"""
-        try:
-            response = await self.openai_client.chat.completions.create(
-                model="gpt-4o",  # Latest model as of May 2024
-                messages=[{
-                    "role": "system",
-                    "content": "You are an expert trading bot error analyzer. Analyze the error and suggest fixes."
-                }, {
-                    "role": "user",
-                    "content": f"Trading bot error context:\n{error_context}"
-                }],
-                temperature=0.7
-            )
-            return response.choices[0].message.content
-        except Exception as e:
-            self.logger.error(f"AI error correction failed: {e}")
-            return "Error analysis failed"
-
-    async def _process_messages(self):
-        """Process incoming WebSocket messages"""
-        while self.connected:
+    async def _process_messages(self) -> None:
+        """Process incoming WebSocket messages with error handling"""
+        while self.connected and self.ws:
             try:
                 message = await self.ws.recv()
                 await self._on_message(message)
             except websockets.exceptions.ConnectionClosed:
-                self.logger.error("WebSocket connection closed")
+                self.logger.error("WebSocket connection closed unexpectedly")
                 self.connected = False
                 await self.handle_websocket_error(Exception("Connection closed"))
                 break
             except Exception as e:
-                self.logger.error(f"Message processing error: {e}")
+                self.logger.error(f"Message processing error: {str(e)}")
+                await self._ai_error_correction(f"Message processing error: {str(e)}")
                 continue
 
-    def _run_heartbeat(self):
-        """Run heartbeat in a separate thread"""
-        while self.connected:
+    def _run_heartbeat(self) -> None:
+        """Monitor connection health"""
+        while self.connected and self.should_run:
             try:
-                time.sleep(self.heartbeat_interval)
-                if time.time() - self.last_heartbeat > self.heartbeat_interval * 2:
-                    self.logger.warning("Heartbeat timeout, reconnecting...")
+                current_time = time.time()
+                if current_time - self.last_heartbeat > self.heartbeat_interval * 2:
+                    self.logger.warning("Heartbeat timeout detected, initiating reconnection...")
                     asyncio.run(self.handle_websocket_error(Exception("Heartbeat timeout")))
+                time.sleep(self.heartbeat_interval / 2)  # Check twice per interval
             except Exception as e:
-                self.logger.error(f"Heartbeat error: {e}")
+                self.logger.error(f"Heartbeat monitoring error: {str(e)}")
                 break
 
-    async def handle_websocket_error(self, error):
+    async def handle_websocket_error(self, error: Exception) -> bool:
         """Gestisce errori WebSocket con retry intelligente"""
         retry_count = 0
         current_delay = self.retry_delay
 
-        while retry_count < self.max_retries:
+        while retry_count < self.max_retries and self.should_run:
             try:
-                self.logger.info(f"Tentativo riconnessione {retry_count + 1}/{self.max_retries}")
+                self.logger.info(f"Attempting reconnection {retry_count + 1}/{self.max_retries}")
                 if await self.connect_websocket():
+                    self.logger.info("Reconnection successful")
                     return True
 
-                current_delay = min(current_delay * 2, 30)  # Exponential backoff
+                current_delay = min(current_delay * 2, 30)  # Exponential backoff capped at 30s
+                self.logger.info(f"Reconnection failed, waiting {current_delay}s before next attempt")
                 await asyncio.sleep(current_delay)
                 retry_count += 1
 
@@ -168,29 +167,52 @@ class WebSocketHandler:
         self.logger.critical("Failed to establish WebSocket connection after all retries")
         return False
 
-    async def _on_message(self, message):
+    async def _ai_error_correction(self, error_context: str) -> str:
+        """Usa OpenAI per analisi errori e suggerimenti"""
+        try:
+            response = await self.openai_client.chat.completions.create(
+                model="gpt-4o",  # Latest model as of May 2024
+                messages=[{
+                    "role": "system",
+                    "content": "You are an expert trading bot error analyzer. Analyze the error and suggest fixes."
+                }, {
+                    "role": "user",
+                    "content": f"Trading bot error context:\n{error_context}"
+                }],
+                temperature=0.7,
+                max_tokens=150,
+                response_format={"type": "text"}
+            )
+            return response.choices[0].message.content
+        except Exception as e:
+            self.logger.error(f"AI error correction failed: {str(e)}")
+            return "Error analysis failed"
+
+    async def _on_message(self, message: str) -> None:
+        """Process and validate incoming messages"""
         try:
             data = json.loads(message)
             self.last_heartbeat = time.time()
 
-            if not hasattr(self, '_message_buffer'):
-                self._message_buffer = []
-
-            if len(self._message_buffer) < 1000:
+            if len(self._message_buffer) < self.buffer_size:
                 self._message_buffer.append(data)
 
-            if len(self._message_buffer) >= 10 or (time.time() - self.last_batch_process) > 1.0:
+            current_time = time.time()
+            if (len(self._message_buffer) >= 10 or 
+                (current_time - self.last_batch_process) > self.batch_interval):
                 await self._process_message_batch(self._message_buffer)
                 self._message_buffer = []
-                self.last_batch_process = time.time()
+                self.last_batch_process = current_time
 
+        except json.JSONDecodeError as e:
+            self.logger.error(f"JSON decoding error: {str(e)}")
         except Exception as e:
-            error_context = f"Message processing error: {str(e)}"
+            error_context = f"Message handling error: {str(e)}"
             fix_suggestion = await self._ai_error_correction(error_context)
             self.logger.error(f"{error_context}\nAI Suggestion: {fix_suggestion}")
 
-    async def _process_message_batch(self, messages):
-        """Processa messaggi in batch con analisi tecnica avanzata"""
+    async def _process_message_batch(self, messages: List[Dict]) -> None:
+        """Process messages in batches with error handling"""
         try:
             processed_data = []
             for msg in messages:
@@ -209,55 +231,69 @@ class WebSocketHandler:
             fix_suggestion = await self._ai_error_correction(error_context)
             self.logger.error(f"{error_context}\nAI Suggestion: {fix_suggestion}")
 
-    async def _analyze_signals(self, df: pd.DataFrame):
-        """Analizza segnali di trading in tempo reale"""
+    async def _analyze_signals(self, df: pd.DataFrame) -> None:
+        """Analyze market signals with risk management"""
         try:
             signals = self.technical_indicators.get_trading_signals(df)
             if signals:
                 self.logger.info(f"Trading signals detected: {signals}")
-                # Implementa qui la logica di trading basata sui segnali
+                # Implement trading logic here
         except Exception as e:
-            self.logger.error(f"Signal analysis error: {e}")
+            self.logger.error(f"Signal analysis error: {str(e)}")
 
-    def check_connection(self):
-        """Verifica stato connessione"""
+    async def _handle_processed_batch(self, processed_data: List[Dict]) -> None:
+        """Gestisce il batch processato"""
         try:
-            return self.ws and self.connected
+            if self.db and processed_data:
+                await self.db.insert_many(processed_data)
+        except Exception as e:
+            self.logger.error(f"Database insertion error: {e}")
+
+    def check_connection(self) -> bool:
+        """Verify connection status"""
+        try:
+            return bool(self.ws and self.connected)
         except:
             return False
 
-    def setup_heartbeat(self): #Removed the async keyword as it's run in a thread
-        """Configura heartbeat per mantenere connessione"""
-        while self.check_connection():
-            try:
-                if self.ws and hasattr(self.ws, 'ping'):
-                    asyncio.run(self.ws.ping())
-                time.sleep(self.heartbeat_interval)
-            except Exception as e:
-                self.logger.error(f"Heartbeat error: {str(e)}")
-                break
+    async def cleanup(self) -> None:
+        """Cleanup resources"""
+        self.should_run = False
+        if self.ws:
+            await self.ws.close()
+        self.connected = False
+        self.logger.info("WebSocket handler cleaned up")
 
+# Example usage
+if __name__ == "__main__":
+    logging.basicConfig(level=logging.INFO)
+    logger = logging.getLogger(__name__)
 
-# Example usage (adapt to your application)
-logger = logging.getLogger(__name__)
-logging.basicConfig(level=logging.INFO)
+    class MockDB:
+        def connect(self) -> None:
+            print("Connecting to mock database...")
+            pass
+        async def insert_many(self, data: List[Dict]) -> None:
+            print(f"Inserting {len(data)} records into mock database...")
+            pass
 
-# Replace with your actual database object
-class MockDB:
-    def connect(self):
-        print("Connecting to mock database...")
-        pass
-    async def insert_many(self,data):
-        print(f"Inserting {len(data)} records into mock database...")
-        pass
+    async def main() -> None:
+        db = MockDB()
+        handler = WebSocketHandler(logger, db)
 
-db = MockDB()
-websocket_handler = WebSocketHandler(logger, db)
+        try:
+            if await handler.connect_websocket():
+                print("WebSocket connection established successfully.")
+                # Keep the connection alive
+                while handler.check_connection():
+                    await asyncio.sleep(1)
+            else:
+                print("Failed to establish WebSocket connection.")
+        except KeyboardInterrupt:
+            print("Shutting down...")
+            await handler.cleanup()
+        except Exception as e:
+            print(f"Error: {str(e)}")
+            await handler.cleanup()
 
-async def main():
-    if await websocket_handler.connect_websocket():
-        print("WebSocket connection established successfully.")
-    else:
-        print("Failed to establish WebSocket connection.")
-
-asyncio.run(main())
+    asyncio.run(main())
