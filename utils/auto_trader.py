@@ -34,9 +34,22 @@ class AutoTrader:
         self.data_loader = CryptoDataLoader()
         self.indicators = TechnicalIndicators()
         self.notifier = TradingNotifier()
-
+        self.wallet_manager = WalletManager(user_id=1)  # user_id temporaneo
+        
         # Setup logging
         self.setup_logging()
+        
+    def connect_wallet(self, wallet_address: str, chain_type: str = 'ETH'):
+        """Collega un wallet specifico per il trading"""
+        try:
+            success = self.wallet_manager.add_wallet(wallet_address, chain_type)
+            if success:
+                self.logger.info(f"Wallet {wallet_address} collegato con successo")
+                return True
+            return False
+        except Exception as e:
+            self.logger.error(f"Errore nel collegamento del wallet: {str(e)}")
+            return False
 
         # Initialize strategies
         self.strategies = {
