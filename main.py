@@ -1,5 +1,18 @@
 import streamlit as st
 import yfinance as yf
+import logging
+
+# Setup logging
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
+
+# Verifica connessione
+try:
+    yf.download("BTC-USD", period="1d")
+    logger.info("Connessione al server dati OK")
+except Exception as e:
+    st.error("Errore di connessione al server dati")
+    logger.error(f"Errore: {str(e)}")
 
 # Basic configuration
 st.set_page_config(page_title="AurumBot - Basic Test", layout="wide")
