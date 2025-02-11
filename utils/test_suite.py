@@ -31,12 +31,16 @@ class AurumBotTester:
                     errors.append(str(e))
                     self.logger.error(f"Errore durante il test: {str(e)}")
             
-            return {
+            results = {
                 "duration": duration_minutes,
                 "iterations": iterations,
                 "errors": len(errors),
-                "error_rate": len(errors) / iterations if iterations > 0 else 0
+                "error_rate": len(errors) / iterations if iterations > 0 else 0,
+                "success_rate": 1 - (len(errors) / iterations if iterations > 0 else 0),
+                "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S")
             }
+            self.logger.info(f"Test Results: {json.dumps(results, indent=2)}")
+            return results
         except Exception as e:
             self.logger.error(f"Test di stabilità fallito: {str(e)}")
             return None
