@@ -8,35 +8,15 @@ deploymentTarget = "autoscale"
 run = ["sh", "-c", "python3 test_bot.py"]
 
 [workflows]
-runButton = "Project"
+runButton = "Test Bot"
 
 [[workflows.workflow]]
-name = "Project"
-author = "agent"
-mode = "parallel"
-
-[[workflows.workflow.tasks]]
-task = "workflow.run"
-args = "Trading System Test"
-
-[[workflows.workflow]]
-name = "Trading System Test"
-author = "agent"
-
-[workflows.workflow.metadata]
-agentRequireRestartOnSave = false
-
-[[workflows.workflow.tasks]]
-task = "packager.installForAll"
+name = "Test Bot"
+author = 39294082
 
 [[workflows.workflow.tasks]]
 task = "shell.exec"
-args = "python3 test_bot.py"
-
-[[workflows.workflow]]
-name = "Project"
-mode = "parallel"
-author = "agent"
+args = "python minimal_test.py"
 
 [[ports]]
 localPort = 5000
