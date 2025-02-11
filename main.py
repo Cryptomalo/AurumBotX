@@ -74,30 +74,40 @@ def render_sidebar():
         with st.sidebar:
             st.title("🤖 AurumBot Pro")
 
+            # Get available coins from data loader
+            data_loader = get_data_loader()
+            available_coins = data_loader.get_available_coins()
+
+            # Always show these controls
             selected_tab = st.selectbox(
                 "Navigation",
                 ["Dashboard", "Trading", "Analytics", "Settings"]
             )
-
-            # Get available coins from data loader
-            data_loader = get_data_loader()
-            available_coins = data_loader.get_available_coins()
 
             crypto = st.selectbox(
                 "Select Cryptocurrency",
                 list(available_coins.keys())
             )
 
-            if selected_tab == "Trading":
-                st.subheader("Trading Settings")
-                risk_level = st.slider("Risk Level", 1, 10, 5)
-                strategy = st.selectbox(
-                    "Strategy",
-                    ["Scalping", "Swing Trading", "Meme Coin"]
-                )
+            # Trading controls
+            st.subheader("Trading Settings")
+            risk_level = st.slider("Risk Level", 1, 10, 5)
+            strategy = st.selectbox(
+                "Strategy",
+                ["Scalping", "Swing Trading", "Meme Coin"]
+            )
+            
+            # Add trading buttons
+            col1, col2 = st.columns(2)
+            with col1:
+                if st.button("Buy"):
+                    st.success("Buy order placed")
+            with col2:
+                if st.button("Sell"):
+                    st.error("Sell order placed")
 
             logger.debug(f"Sidebar rendered with selected crypto: {crypto}")
-            return selected_tab, crypto
+            return selected_tab, crypto, risk_level, strategy
 
     except Exception as e:
         logger.error(f"Sidebar rendering failed: {str(e)}", exc_info=True)
