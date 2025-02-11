@@ -5,17 +5,13 @@ secondaryBackgroundColor = "#262730"
 textColor = "#FAFAFA"
 
 [server]
-port = 5001
-address = "0.0.0.0"
 headless = true
-enableCORS = false
-enableXsrfProtection = false
-enableWebsocketCompression = true
-baseUrlPath = ""
+address = "0.0.0.0"
+port = 8501
 
 [browser]
 serverAddress = "0.0.0.0"
 gatherUsageStats = false
 
 [logger]
-level = "debug"
+level = "info"
