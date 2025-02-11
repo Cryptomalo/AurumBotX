@@ -1,17 +1,24 @@
+import os
 import streamlit as st
 import plotly.graph_objects as go
 import pandas as pd
 import numpy as np
 from datetime import datetime, timedelta
-import os
-from sqlalchemy import create_engine, text
 import logging
+from sqlalchemy import text
+from dotenv import load_dotenv
+
 from utils.data_loader import CryptoDataLoader
 from utils.indicators import TechnicalIndicators
 from utils.notifications import TradingNotifier
 from utils.wallet_manager import WalletManager
-from utils.subscription_manager import SubscriptionManager # Added import
+from utils.subscription_manager import SubscriptionManager
 from utils.auto_trader import AutoTrader
+from utils.database import get_db, init_db
+from typing import Optional
+
+# Load environment variables
+load_dotenv()
 
 # Setup logging
 logging.basicConfig(
@@ -28,7 +35,8 @@ logger = logging.getLogger(__name__)
 st.set_page_config(
     page_title="AurumBot Trading Platform",
     page_icon="🌟",
-    layout="wide"
+    layout="wide",
+    initial_sidebar_state="expanded"
 )
 
 # Initialize session state
@@ -47,61 +55,98 @@ if 'balance' not in st.session_state:
 if 'positions' not in st.session_state:
     st.session_state.positions = []
 
+def get_user_id_by_username(username: str) -> Optional[int]:
+    """Recupera l'ID utente dal database"""
+    try:
+        with next(get_db()) as session:
+            result = session.execute(
+                text("SELECT id FROM users WHERE username = :username"),
+                {"username": username}
+            ).fetchone()
+            return result[0] if result else None
+    except Exception as e:
+        logger.error(f"Error getting user ID: {e}")
+        return None
+
 def verify_activation_code(username: str, code: str) -> bool:
     """Verifica il codice di attivazione e attiva l'abbonamento"""
-    subscription_manager = SubscriptionManager()
-    return subscription_manager.activate_subscription(code, username)
+    try:
+        subscription_manager = SubscriptionManager()
+        success = subscription_manager.activate_subscription(code, username)
+        if success:
+            user_id = get_user_id_by_username(username)
+            if user_id:
+                st.session_state.user_id = user_id
+                st.session_state.username = username
+                logger.info(f"Successfully activated subscription for user: {username}")
+                return True
+            else:
+                logger.error(f"User ID not found for username: {username}")
+        else:
+            logger.warning(f"Failed to activate subscription for user: {username}")
+        return False
+    except Exception as e:
+        logger.error(f"Error verifying activation code: {e}")
+        return False
 
 def show_login_page():
     """Mostra la pagina di login con i piani di abbonamento"""
-    st.title("🌟 AurumBot Trading Platform")
+    try:
+        st.title("🌟 AurumBot Trading Platform")
+        st.header("📊 Piani di Abbonamento")
 
-    # Ottieni i piani disponibili dal database
-    subscription_manager = SubscriptionManager()
-    available_plans = subscription_manager.get_available_plans()
+        subscription_manager = SubscriptionManager()
+        available_plans = subscription_manager.get_available_plans()
 
-    # Mostra i piani di abbonamento
-    st.header("📊 Piani di Abbonamento")
-    st.write("Scegli il piano più adatto alle tue esigenze:")
+        if not available_plans:
+            st.error("Errore nel caricamento dei piani di abbonamento")
+            return
 
-    cols = st.columns(len(available_plans))
-    for idx, plan in enumerate(available_plans):
-        with cols[idx]:
-            st.markdown(f"""
-            ### {'🥉' if plan['duration_months'] == 3 else '🥈' if plan['duration_months'] == 6 else '🥇'} {plan['name']}
-            - Durata: {plan['duration_months']} mesi
-            - Prezzo: €{plan['price']:.2f}
-            - {plan['description']}
-            """)
+        cols = st.columns(len(available_plans))
+        for idx, plan in enumerate(available_plans):
+            with cols[idx]:
+                st.markdown(f"""
+                ### {'🥉' if plan['duration_months'] == 3 else '🥈' if plan['duration_months'] == 6 else '🥇'} {plan['name']}
+                - Durata: {plan['duration_months']} mesi
+                - Prezzo: €{plan['price']:.2f}
+                - {plan['description']}
+                """)
 
-    # Form di login
-    with st.form("login_form"):
-        username = st.text_input("Username", help="Inserisci il tuo username")
-        activation_code = st.text_input("Codice di Attivazione", 
-                                      help="Inserisci il codice di attivazione ricevuto",
-                                      type="password")
-        submit = st.form_submit_button("Accedi")
+        with st.form("login_form"):
+            username = st.text_input("Username", 
+                                  help="Inserisci il tuo username",
+                                  placeholder="Il tuo username")
+            activation_code = st.text_input("Codice di Attivazione", 
+                                        help="Inserisci il codice di attivazione ricevuto",
+                                        type="password",
+                                        placeholder="AB12345...")
+            submit = st.form_submit_button("Accedi")
 
-        if submit:
-            if not username or not activation_code:
-                st.error("Inserisci username e codice di attivazione")
-            elif verify_activation_code(username, activation_code):
-                st.session_state.authenticated = True
-                st.session_state.username = username
-                st.success("Login effettuato con successo!")
-                st.experimental_rerun()
-            else:
-                st.error("Codice di attivazione non valido o già utilizzato")
+            if submit:
+                if not username or not activation_code:
+                    st.error("Inserisci username e codice di attivazione")
+                elif verify_activation_code(username, activation_code):
+                    st.success("Login effettuato con successo!")
+                    st.session_state.authenticated = True
+                    st.experimental_rerun()
+                else:
+                    st.error("Codice di attivazione non valido o già utilizzato")
+
+    except Exception as e:
+        logger.error(f"Error in login page: {e}")
+        st.error("Si è verificato un errore. Riprova più tardi.")
 
 def show_dashboard():
     """Mostra la dashboard principale dopo il login"""
-    if not st.session_state.user_id:
-        st.error("Sessione non valida. Effettua nuovamente il login.")
+    st.title(f"Benvenuto, {st.session_state.username}! 👋")
+
+    # Verifica abbonamento
+    subscription_manager = SubscriptionManager()
+    if not subscription_manager.check_subscription(st.session_state.user_id):
+        st.error("Il tuo abbonamento è scaduto. Inserisci un nuovo codice di attivazione.")
         st.session_state.authenticated = False
         st.experimental_rerun()
         return
-
-    st.title(f"Benvenuto, {st.session_state.username}! 👋")
 
     if st.sidebar.button("Logout"):
         for key in st.session_state.keys():
@@ -344,10 +389,35 @@ def show_dashboard():
 
 
 def main():
-    if not st.session_state.authenticated:
-        show_login_page()
-    else:
-        show_dashboard()
+    """Funzione principale dell'applicazione"""
+    try:
+        # Initialize database if needed
+        init_db()
+
+        if not st.session_state.authenticated:
+            show_login_page()
+        else:
+            if not st.session_state.user_id:
+                logger.error("Invalid session: user_id not found")
+                st.error("Sessione non valida. Effettua nuovamente il login.")
+                st.session_state.authenticated = False
+                st.experimental_rerun()
+                return
+
+            # Verifica abbonamento
+            subscription_manager = SubscriptionManager()
+            if not subscription_manager.check_subscription(st.session_state.user_id):
+                logger.warning(f"Subscription expired for user: {st.session_state.username}")
+                st.error("Il tuo abbonamento è scaduto. Inserisci un nuovo codice di attivazione.")
+                st.session_state.authenticated = False
+                st.experimental_rerun()
+                return
+
+            show_dashboard()
+
+    except Exception as e:
+        logger.error(f"Critical error in main: {e}")
+        st.error("Si è verificato un errore critico. Contatta il supporto.")
 
 if __name__ == "__main__":
     main()

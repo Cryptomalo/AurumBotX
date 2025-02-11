@@ -1,30 +1,20 @@
 from sqlalchemy import create_engine, Column, Integer, Float, String, DateTime, ForeignKey, text
 from sqlalchemy.ext.declarative import declarative_base
-from sqlalchemy.orm import sessionmaker, relationship
+from sqlalchemy.orm import sessionmaker, relationship, Session
 from sqlalchemy.exc import SQLAlchemyError
 import os
 from datetime import datetime
 import time
+import logging
 
-# Improved database connection handling with retry mechanism
-def get_db():
-    """Generator function per ottenere una sessione del database"""
-    db = Database(os.getenv('DATABASE_URL'))
-    try:
-        yield db.session
-    except Exception as e:
-        print(f"Database connection error: {e}")
-        raise
-    finally:
-        if db.session:
-            db.session.close()
+logger = logging.getLogger(__name__)
 
 class Database:
     def __init__(self, connection_string, max_retries=5):
         self.connection_string = connection_string
         self.max_retries = max_retries
         self.engine = None
-        self.session = None
+        self.Session = None
         self.connect()
 
     def connect(self):
@@ -34,23 +24,37 @@ class Database:
         while retry_count < self.max_retries:
             try:
                 self.engine = create_engine(self.connection_string)
-                Session = sessionmaker(bind=self.engine)
-                self.session = Session()
-                print("Database connection established")
+                self.Session = sessionmaker(bind=self.engine)
+                logger.info("Database connection established")
                 return True
             except SQLAlchemyError as e:
-                print(f"Database connection attempt {retry_count + 1} failed: {e}")
+                logger.error(f"Database connection attempt {retry_count + 1} failed: {e}")
                 retry_count += 1
                 time.sleep(retry_delay)
                 retry_delay *= 2
 
         raise Exception("Failed to connect to database after multiple attempts")
 
-    def get_session(self):
-        if not self.session:
-            self.connect()
-        return self.session
+# Improved database connection handling
+def get_db():
+    """Database session generator"""
+    db_url = os.getenv('DATABASE_URL')
+    if not db_url:
+        raise ValueError("DATABASE_URL environment variable not set")
 
+    db = Database(db_url)
+    session = None
+    try:
+        session = db.Session()
+        yield session
+    except Exception as e:
+        logger.error(f"Database session error: {e}")
+        if session:
+            session.rollback()
+        raise
+    finally:
+        if session:
+            session.close()
 
 Base = declarative_base()
 
@@ -82,48 +86,75 @@ class SimulationResult(Base):
 
     strategy = relationship("TradingStrategy", back_populates="simulations")
 
-# Ensure all tables exist
 def init_db():
-    # Create tables
-    Base.metadata.create_all(bind=create_engine(os.getenv('DATABASE_URL')))
+    """Initialize database tables"""
+    try:
+        db_url = os.getenv('DATABASE_URL')
+        if not db_url:
+            raise ValueError("DATABASE_URL environment variable not set")
 
-    # Create subscription plans if they don't exist
-    with next(get_db()) as session:
-        session.execute(text("""
-        CREATE TABLE IF NOT EXISTS subscription_plans (
-            id SERIAL PRIMARY KEY,
-            name VARCHAR(100) NOT NULL,
-            duration_months INTEGER NOT NULL,
-            price DECIMAL(10,2) NOT NULL,
-            description TEXT
-        );
-        """))
+        engine = create_engine(db_url)
+        Base.metadata.create_all(bind=engine)
 
-        session.execute(text("""
-        CREATE TABLE IF NOT EXISTS activation_codes (
-            id SERIAL PRIMARY KEY,
-            code VARCHAR(20) UNIQUE NOT NULL,
-            plan_id INTEGER REFERENCES subscription_plans(id),
-            expires_at TIMESTAMP NOT NULL,
-            is_used BOOLEAN DEFAULT FALSE,
-            used_by INTEGER,
-            used_at TIMESTAMP,
-            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-        );
-        """))
+        # Create session
+        Session = sessionmaker(bind=engine)
+        session = Session()
 
-        session.execute(text("""
-        CREATE TABLE IF NOT EXISTS users (
-            id SERIAL PRIMARY KEY,
-            username VARCHAR(100) UNIQUE NOT NULL,
-            email VARCHAR(255),
-            password_hash VARCHAR(255),
-            subscription_expires_at TIMESTAMP,
-            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-        );
-        """))
+        try:
+            # Create subscription plans if they don't exist
+            session.execute(text("""
+            CREATE TABLE IF NOT EXISTS subscription_plans (
+                id SERIAL PRIMARY KEY,
+                name VARCHAR(100) NOT NULL,
+                duration_months INTEGER NOT NULL,
+                price DECIMAL(10,2) NOT NULL,
+                description TEXT,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )
+            """))
 
-        session.commit()
+            session.execute(text("""
+            CREATE TABLE IF NOT EXISTS users (
+                id SERIAL PRIMARY KEY,
+                username VARCHAR(100) UNIQUE NOT NULL,
+                email VARCHAR(255),
+                password_hash VARCHAR(255),
+                is_active BOOLEAN DEFAULT TRUE,
+                subscription_expires_at TIMESTAMP,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                last_login TIMESTAMP
+            )
+            """))
 
-# Initialize tables
-init_db()
+            session.execute(text("""
+            CREATE TABLE IF NOT EXISTS activation_codes (
+                id SERIAL PRIMARY KEY,
+                code VARCHAR(20) UNIQUE NOT NULL,
+                plan_id INTEGER REFERENCES subscription_plans(id),
+                expires_at TIMESTAMP NOT NULL,
+                is_used BOOLEAN DEFAULT FALSE,
+                used_by INTEGER REFERENCES users(id),
+                used_at TIMESTAMP,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )
+            """))
+
+            session.commit()
+            logger.info("Database tables initialized successfully")
+
+        except Exception as e:
+            logger.error(f"Error creating tables: {e}")
+            session.rollback()
+            raise
+        finally:
+            session.close()
+
+    except Exception as e:
+        logger.error(f"Database initialization error: {e}")
+        raise
+
+# Initialize database
+try:
+    init_db()
+except Exception as e:
+    logger.error(f"Failed to initialize database: {e}")

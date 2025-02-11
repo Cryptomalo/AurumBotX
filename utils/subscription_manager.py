@@ -58,7 +58,7 @@ class SubscriptionManager:
             logger.error(f"Errore nella generazione del codice: {str(e)}")
             return []
 
-    def activate_subscription(self, code: str, user_id: int) -> bool:
+    def activate_subscription(self, code: str, username: str) -> bool:
         """Attiva un abbonamento con un codice"""
         try:
             with next(get_db()) as session:
@@ -78,25 +78,31 @@ class SubscriptionManager:
 
                 code_id, expires_at, duration_months = result
 
+                # Crea o aggiorna l'utente
+                user_result = session.execute(
+                    text("""
+                    INSERT INTO users (username, subscription_expires_at)
+                    VALUES (:username, NOW() + :duration * INTERVAL '1 month')
+                    ON CONFLICT (username) 
+                    DO UPDATE SET subscription_expires_at = NOW() + :duration * INTERVAL '1 month'
+                    RETURNING id
+                    """),
+                    {"username": username, "duration": duration_months}
+                ).fetchone()
+
+                if not user_result:
+                    return False
+
+                user_id = user_result[0]
+
                 # Aggiorna il codice come utilizzato
                 session.execute(
                     text("""
                     UPDATE activation_codes 
-                    SET is_used = TRUE, used_by = :user_id, used_at = CURRENT_TIMESTAMP
+                    SET is_used = TRUE, used_by = :user_id, used_at = NOW()
                     WHERE id = :code_id
                     """),
                     {"user_id": user_id, "code_id": code_id}
-                )
-
-                # Aggiorna la scadenza dell'abbonamento dell'utente
-                new_expiry = datetime.now() + timedelta(days=30 * duration_months)
-                session.execute(
-                    text("""
-                    UPDATE users 
-                    SET subscription_expires_at = :expires_at
-                    WHERE id = :user_id
-                    """),
-                    {"expires_at": new_expiry, "user_id": user_id}
                 )
 
                 session.commit()
