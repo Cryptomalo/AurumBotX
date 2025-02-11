@@ -49,8 +49,41 @@ class PredictionModel:
             # Analisi tecnica con AI
             technical_analysis = self.model.predict(market_data)
             
-            # Analisi sentiment social
-            sentiment_scores = self.analyze_sentiment(social_data)
+            # Analisi social media
+            social_sentiment = self._analyze_social_media()
+            
+            # Analisi news
+            news_sentiment = self._analyze_crypto_news()
+            
+            # Analisi sentiment complessiva
+            sentiment_scores = {
+                'social': social_sentiment,
+                'news': news_sentiment,
+                'overall': (social_sentiment + news_sentiment) / 2
+            }
+            
+    def _analyze_social_media(self):
+        """Analizza sentiment da Twitter, Reddit, Discord"""
+        platforms = {
+            'twitter': self._scan_twitter_sentiment(),
+            'reddit': self._scan_reddit_sentiment(),
+            'discord': self._scan_discord_sentiment()
+        }
+        return sum(platforms.values()) / len(platforms)
+        
+    def _analyze_crypto_news(self):
+        """Analizza notizie crypto da fonti principali"""
+        sources = [
+            'coindesk.com',
+            'cointelegraph.com',
+            'cryptonews.com'
+        ]
+        news_scores = []
+        for source in sources:
+            score = self._analyze_news_source(source)
+            if score:
+                news_scores.append(score)
+        return sum(news_scores) / len(news_scores) if news_scores else 0.5
             
             # Analisi on-chain
             chain_metrics = self.analyze_blockchain_metrics(market_data['symbol'])
