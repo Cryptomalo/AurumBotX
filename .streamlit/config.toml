@@ -1,20 +1,12 @@
 [server]
 headless = true
 address = "0.0.0.0"
-port = 5000
+port = 8501
 enableCORS = false
-enableXsrfProtection = false
-enableWebsocketCompression = false
 
 [browser]
 serverAddress = "0.0.0.0"
 gatherUsageStats = false
 
-[theme]
-primaryColor = "#FFD700"
-backgroundColor = "#0E1117"
-secondaryBackgroundColor = "#262730"
-textColor = "#FAFAFA"
-
 [logger]
-level = "info"
+level = "debug"
