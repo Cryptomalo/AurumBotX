@@ -11,18 +11,56 @@ class WebSocketHandler:
         self.retry_delay = 1
         self.last_heartbeat = time.time()
         self.heartbeat_interval = 30
+        self.reconnect_lock = threading.Lock()
+        self.heartbeat_thread = None
+        self.should_run = True
 
 
     def connect_websocket(self):
         try:
-            # Your websocket connection code here.  Example:
-            # self.ws = websocket.WebSocketApp(...)
-            # self.ws.run_forever()
-            self.connected = True
+            if self.ws:
+                self.ws.close()
+            
+            self.ws = websocket.WebSocketApp(
+                "wss://stream.binance.com:9443/ws/!ticker@arr",
+                on_message=self._on_message,
+                on_error=self._on_error,
+                on_close=self._on_close,
+                on_open=self._on_open
+            )
+            
+            self.ws_thread = threading.Thread(target=self.ws.run_forever)
+            self.ws_thread.daemon = True
+            self.ws_thread.start()
+            
             return True
         except Exception as e:
-            self.handle_websocket_error(e)
+            self.logger.error(f"Connection error: {str(e)}")
             return False
+
+    def _on_message(self, ws, message):
+        try:
+            data = json.loads(message)
+            self.last_heartbeat = time.time()
+            # Process message here
+        except Exception as e:
+            self.logger.error(f"Message processing error: {str(e)}")
+
+    def _on_error(self, ws, error):
+        self.logger.error(f"WebSocket error: {str(error)}")
+        self.connected = False
+        self.handle_websocket_error(error)
+
+    def _on_close(self, ws, close_status_code, close_msg):
+        self.logger.warning("WebSocket connection closed")
+        self.connected = False
+        if self.should_run:
+            self.handle_websocket_error(Exception("Connection closed"))
+
+    def _on_open(self, ws):
+        self.logger.info("WebSocket connection established")
+        self.connected = True
+        self.setup_heartbeat()
 
 
     def reconnect_websocket(self):
