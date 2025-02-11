@@ -8,9 +8,10 @@ from utils.database import get_db
 import sqlalchemy as sa
 import logging
 from utils.indicators import TechnicalIndicators
-from utils.auto_trader import AutoTrader
 from utils.notifications import TradingNotifier
 from utils.wallet_manager import WalletManager
+from utils.subscription_manager import SubscriptionManager
+from sqlalchemy.orm import Session
 
 # Setup logging
 logging.basicConfig(
@@ -22,7 +23,6 @@ logging.basicConfig(
     ]
 )
 logger = logging.getLogger(__name__)
-
 
 # Page config
 st.set_page_config(
@@ -47,92 +47,113 @@ if 'balance' not in st.session_state:
     st.session_state.balance = 10000.0
 if 'positions' not in st.session_state:
     st.session_state.positions = []
+if 'subscription_active' not in st.session_state:
+    st.session_state.subscription_active = False
 
-
-def login_user(username, password):
+# Database session management
+def get_db_session() -> Session:
     try:
-        with next(get_db()) as session:
-            # Query user
-            result = session.execute(
-                sa.text("SELECT id, username, password_hash FROM users WHERE username = :username"),
-                {"username": username}
-            ).fetchone()
-
-            if result and bcrypt.checkpw(password.encode('utf-8'), result[2].encode('utf-8')):
-                st.session_state.authenticated = True
-                st.session_state.user_id = result[0]
-                st.session_state.username = result[1]
-                # Update last login
-                session.execute(
-                    sa.text("UPDATE users SET last_login = CURRENT_TIMESTAMP WHERE id = :user_id"),
-                    {"user_id": result[0]}
-                )
-                session.commit()
-                return True
-        return False
+        db = next(get_db())
+        return db
     except Exception as e:
-        st.error(f"Login error: {str(e)}")
-        return False
+        logger.error(f"Database connection error: {str(e)}")
+        st.error("Database connection error. Please try again later.")
+        return None
 
-
-def register_user(username, email, password):
+def login_user(username: str, activation_code: str) -> bool:
+    """Login utente con codice di attivazione"""
     try:
-        # Hash password
-        password_hash = bcrypt.hashpw(password.encode('utf-8'), bcrypt.gensalt())
+        subscription_manager = SubscriptionManager()
+        db = get_db_session()
 
-        with next(get_db()) as session:
-            # Insert new user
-            session.execute(
+        if not db:
+            return False
+
+        # Verifica se l'utente esiste
+        result = db.execute(
+            sa.text("SELECT id, username FROM users WHERE username = :username"),
+            {"username": username}
+        ).fetchone()
+
+        # Se l'utente non esiste, crealo
+        if not result:
+            result = db.execute(
                 sa.text("""
                 INSERT INTO users (username, email, password_hash)
-                VALUES (:username, :email, :password_hash)
+                VALUES (:username, :username, 'not_used')
+                RETURNING id, username
                 """),
-                {
-                    "username": username,
-                    "email": email,
-                    "password_hash": password_hash.decode('utf-8')
-                }
-            )
-            session.commit()
+                {"username": username}
+            ).fetchone()
+            db.commit()
+
+        # Attiva l'abbonamento
+        if subscription_manager.activate_subscription(activation_code, result[0]):
+            st.session_state.authenticated = True
+            st.session_state.user_id = result[0]
+            st.session_state.username = result[1]
+            st.session_state.subscription_active = True
             return True
-    except Exception as e:
-        st.error(f"Registration error: {str(e)}")
         return False
 
+    except Exception as e:
+        logger.error(f"Errore di login: {str(e)}")
+        st.error(f"Errore di login: {str(e)}")
+        return False
 
 def show_login_page():
-    st.title("Welcome to AurumBot Trading Platform")
+    """Mostra la pagina di login con i piani di abbonamento"""
+    st.title("🌟 AurumBot Trading Platform")
 
-    tab1, tab2 = st.tabs(["Login", "Register"])
+    st.markdown("""
+    ### 📊 Piani di Abbonamento
 
-    with tab1:
-        with st.form("login_form"):
-            username = st.text_input("Username")
-            password = st.text_input("Password", type="password")
-            submit = st.form_submit_button("Login")
+    Scegli il piano più adatto alle tue esigenze:
 
-            if submit:
-                if login_user(username, password):
-                    st.success("Login successful!")
-                    st.rerun()
-                else:
-                    st.error("Invalid username or password")
+    #### 🥉 Piano Trimestrale
+    - Durata: 3 mesi
+    - Prezzo: €299.99
+    - Accesso completo a tutte le funzionalità
 
-    with tab2:
-        with st.form("register_form"):
-            new_username = st.text_input("Username")
-            email = st.text_input("Email")
-            new_password = st.text_input("Password", type="password")
-            confirm_password = st.text_input("Confirm Password", type="password")
-            submit = st.form_submit_button("Register")
+    #### 🥈 Piano Semestrale
+    - Durata: 6 mesi
+    - Prezzo: €549.99
+    - Sconto del 10% sul prezzo mensile
 
-            if submit:
-                if new_password != confirm_password:
-                    st.error("Passwords do not match")
-                elif register_user(new_username, email, new_password):
-                    st.success("Registration successful! Please login.")
-                else:
-                    st.error("Registration failed")
+    #### 🥇 Piano Annuale
+    - Durata: 12 mesi
+    - Prezzo: €999.99
+    - Sconto del 20% sul prezzo mensile
+    """)
+
+    with st.form("login_form"):
+        username = st.text_input("Username", help="Inserisci il tuo username")
+        activation_code = st.text_input("Codice di Attivazione", help="Inserisci il codice di attivazione ricevuto")
+        submit = st.form_submit_button("Accedi")
+
+        if submit:
+            if not username or not activation_code:
+                st.error("Inserisci username e codice di attivazione")
+            elif login_user(username, activation_code):
+                st.success("Login effettuato con successo!")
+                st.rerun()
+            else:
+                st.error("Codice di attivazione non valido o già utilizzato")
+
+def show_subscription_status():
+    if st.session_state.user_id:
+        subscription_manager = SubscriptionManager()
+        info = subscription_manager.get_subscription_info(st.session_state.user_id)
+
+        if info:
+            st.sidebar.markdown("### 📊 Stato Abbonamento")
+            st.sidebar.markdown(f"""
+            **Piano:** {info['plan_name']}  
+            **Scade il:** {info['expires_at'].strftime('%d/%m/%Y')}  
+            **Stato:** {'🟢 Attivo' if info['is_active'] else '🔴 Scaduto'}
+            """)
+        else:
+            st.sidebar.warning("Nessun abbonamento attivo")
 
 
 def show_main_dashboard():
@@ -141,6 +162,17 @@ def show_main_dashboard():
     indicators = TechnicalIndicators()
     notifier = TradingNotifier()
     auto_trader = None
+
+    # Verifica abbonamento
+    subscription_manager = SubscriptionManager()
+    if not subscription_manager.check_subscription(st.session_state.user_id):
+        st.error("Il tuo abbonamento è scaduto. Inserisci un nuovo codice di attivazione per continuare.")
+        st.session_state.authenticated = False
+        st.rerun()
+        return
+
+    # Show subscription status in sidebar
+    show_subscription_status()
 
     # Sidebar
     with st.sidebar:
