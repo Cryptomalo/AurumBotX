@@ -242,6 +242,37 @@ class PredictionModel:
             print(f"Error in training: {str(e)}")
             return None
 
+    def optimize_strategy_parameters(self, historical_data: pd.DataFrame, initial_params: Dict[str, Any]) -> Dict[str, Any]:
+        """Optimize strategy parameters using machine learning"""
+        try:
+            # Create feature matrix for optimization
+            X = self.create_features(historical_data)
+            
+            # Use Bayesian optimization for parameter tuning
+            optimized_params = {}
+            for param, value in initial_params.items():
+                if isinstance(value, (int, float)):
+                    # Define parameter search space
+                    param_range = [value * 0.5, value * 1.5]
+                    
+                    # Optimize using the model
+                    best_value = self._optimize_parameter(X, param, param_range)
+                    optimized_params[param] = best_value
+                else:
+                    optimized_params[param] = value
+                    
+            return optimized_params
+            
+        except Exception as e:
+            print(f"Parameter optimization error: {e}")
+            return initial_params
+
+    def _optimize_parameter(self, X: pd.DataFrame, param: str, param_range: List[float]) -> float:
+        """Optimize individual parameter using Bayesian optimization"""
+        # Add your optimization logic here
+        # This is a placeholder that returns the middle of the range
+        return sum(param_range) / 2
+
     def predict(self, df, target_column='Close', prediction_horizon=5):
         """Generate ensemble predictions with error handling"""
         try:
