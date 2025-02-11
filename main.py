@@ -20,8 +20,8 @@ logger = logging.getLogger(__name__)
 
 # Page config
 st.set_page_config(
-    page_title="TRDX Pro",
-    page_icon="📊",
+    page_title="AurumBot",
+    page_icon="🌟",
     layout="wide",
     initial_sidebar_state="expanded"
 )
@@ -43,7 +43,7 @@ col1, col2, col3 = st.columns([1,3,1])
 with col2:
     st.markdown("""
         <div class="header">
-            <h1>TRDX Professional</h1>
+            <h1>AurumBot</h1>
             <p>AI-Powered Trading Platform</p>
         </div>
     """, unsafe_allow_html=True)
