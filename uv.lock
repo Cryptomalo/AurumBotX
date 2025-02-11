@@ -324,6 +324,20 @@ wheels = [
 ]
 
 [[package]]
+name = "binance-connector"
+version = "3.12.0"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "pycryptodome" },
+    { name = "requests" },
+    { name = "websocket-client" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/f2/cf/746736941f3b2e9a6f97e38e58675df147500e28563ad4b0f41e762a2442/binance-connector-3.12.0.tar.gz", hash = "sha256:33bf03052e2f1be3ced1196a36c51a736a50aaae07f7922640c7ebc017c6011f", size = 64894 }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/c8/a6/000219c5417c5ab5d5b85d6d62a9fb8c000dbd97aca2596b3ed9ceb7abf1/binance_connector-3.12.0-py3-none-any.whl", hash = "sha256:b6706426acd2089f6cd3cb1516a8c47210805eac1f855bc8574b01f52cab218b", size = 74363 },
+]
+
+[[package]]
 name = "bitarray"
 version = "3.0.0"
 source = { registry = "https://pypi.org/simple" }
@@ -2894,6 +2908,7 @@ dependencies = [
     { name = "base58" },
     { name = "bcrypt" },
     { name = "beautifulsoup4" },
+    { name = "binance-connector" },
     { name = "ccxt" },
     { name = "cryptography" },
     { name = "discord-py" },
@@ -2954,6 +2969,7 @@ requires-dist = [
     { name = "base58", specifier = ">=2.1.1" },
     { name = "bcrypt", specifier = ">=4.2.1" },
     { name = "beautifulsoup4", specifier = "==4.13.3" },
+    { name = "binance-connector", specifier = ">=3.12.0" },
     { name = "ccxt", specifier = ">=4.4.57" },
     { name = "cryptography", specifier = ">=44.0.0" },
     { name = "discord-py", specifier = ">=2.4.0" },

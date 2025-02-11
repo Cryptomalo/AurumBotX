@@ -9,7 +9,7 @@ from utils.strategies.base_strategy import BaseStrategy
 
 logger = logging.getLogger(__name__)
 
-class MemeCoinStrategy(BaseStrategy):
+class MemeCoinSnipingStrategy(BaseStrategy):
     """Advanced Meme Coin Sniping Strategy with social sentiment analysis"""
 
     def __init__(self, config: Dict[str, Any]):

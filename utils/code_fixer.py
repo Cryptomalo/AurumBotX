@@ -10,8 +10,7 @@ class CodeFixer:
     def __init__(self):
         """Initialize the OpenAI-powered code fixer"""
         self.client = OpenAI(api_key=os.getenv('OPENAI_API_KEY'))
-        # Note: the newest OpenAI model is "gpt-4o" which was released May 13, 2024
-        self.model = "gpt-4o"
+        self.model = "gpt-4"  # Using the current stable model
 
     def analyze_code(self, code: str) -> Dict[str, Any]:
         """Analyze code for potential issues and improvements"""
