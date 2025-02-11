@@ -16,6 +16,16 @@ logger = logging.getLogger(__name__)
 def test_testnet():
     try:
         logger.info("Avvio test in modalità testnet")
+        
+        # Test connessione dati
+        logger.info("Test connessione dati...")
+        data_loader = CryptoDataLoader()
+        df = data_loader.get_historical_data("BTC-USD", period='1d')
+        if df is None or df.empty:
+            raise Exception("Impossibile ottenere dati storici")
+            
+        # Test trading bot
+        logger.info("Test trading bot...")
         bot = AutoTrader("BTC-USD", initial_balance=10000, testnet=True)
         
         # Test analisi mercato
@@ -26,7 +36,9 @@ def test_testnet():
             
             # Test esecuzione trade
             logger.info("Test esecuzione trade...")
-            bot.execute_trade(signal)
+            success = bot.execute_trade(signal)
+            if not success:
+                raise Exception("Errore nell'esecuzione del trade")
             
         return True
     except Exception as e:
