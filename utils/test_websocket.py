@@ -5,18 +5,26 @@ import sys
 import unittest
 from unittest.mock import Mock, patch
 import pytest
+from asyncio import new_event_loop, set_event_loop
 
 # Add the project root to Python path
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from utils.websocket_handler import WebSocketHandler
 
-logging.basicConfig(level=logging.INFO)
+logging.basicConfig(level=logging.DEBUG)  # Set to DEBUG for more detailed logs
 logger = logging.getLogger(__name__)
 
 class TestWebSocketHandler(unittest.TestCase):
     def setUp(self):
         """Setup test environment with mocked dependencies"""
+        # Setup event loop for each test
+        try:
+            self.loop = asyncio.get_running_loop()
+        except RuntimeError:
+            self.loop = new_event_loop()
+            set_event_loop(self.loop)
+
         self.mock_client = Mock()
         self.mock_twm = Mock()
 
@@ -37,9 +45,16 @@ class TestWebSocketHandler(unittest.TestCase):
         self.handler = WebSocketHandler(api_key="test_key", api_secret="test_secret", testnet=True)
 
     def tearDown(self):
-        """Cleanup patches"""
+        """Cleanup patches and event loop"""
         self.client_patcher.stop()
         self.twm_patcher.stop()
+
+        # Clean up the event loop only if we created it
+        if self.loop and not self.loop.is_closed():
+            pending = asyncio.all_tasks(self.loop)
+            if pending:
+                self.loop.run_until_complete(asyncio.gather(*pending))
+            self.loop.close()
 
     def test_initial_connection(self):
         """Test initial WebSocket connection setup"""
@@ -61,6 +76,7 @@ class TestWebSocketHandler(unittest.TestCase):
         # First attempt should fail
         success = self.handler.setup_socket()
         self.assertFalse(success)
+        logger.debug("Initial connection failed as expected")
 
         # Reset mock and create new instance for second attempt
         self.mock_twm_class.reset_mock()
@@ -73,11 +89,15 @@ class TestWebSocketHandler(unittest.TestCase):
 
         # Reset handler state
         self.handler.connected = False
+        self.handler.reconnect_attempts = 0  # Reset reconnection attempts
         self.handler.twm = new_mock_twm
+
+        # Debug logging
+        logger.debug("Attempting reconnection with fresh mock...")
 
         # Reconnection should succeed
         success = self.handler.reconnect()
-        self.assertTrue(success)
+        self.assertTrue(success, "Reconnection failed when it should succeed")
         self.assertTrue(self.handler.is_connected())
         new_mock_twm.start.assert_called_once()
         new_mock_twm.start_multiplex_socket.assert_called_once()
@@ -122,47 +142,34 @@ class TestWebSocketHandler(unittest.TestCase):
         # Verify handler was stopped
         self.assertFalse(self.handler.keep_running)
 
-@pytest.mark.asyncio
-async def test_websocket_connection():
-    """Integration test for WebSocket connection"""
-    try:
-        handler = WebSocketHandler(testnet=True)
+    @pytest.mark.asyncio
+    async def test_websocket_connection(self):
+        """Integration test for WebSocket connection"""
+        try:
+            handler = WebSocketHandler(testnet=True)
 
-        # Test message handler
-        async def handle_market_data(data):
-            logger.info(f"Received market data: {data}")
+            async def handle_market_data(data):
+                logger.info(f"Received market data: {data}")
 
-        # Register handler
-        handler.register_handler("btcusdt@trade", handle_market_data)
+            handler.register_handler("btcusdt@trade", handle_market_data)
 
-        # Test connection
-        success = handler.start()
-        assert success, "Failed to establish initial connection"
+            success = handler.start()
+            assert success, "Failed to establish initial connection"
 
-        logger.info("Connection established successfully")
+            test_msg = {
+                "method": "SUBSCRIBE",
+                "params": ["btcusdt@trade"],
+                "id": 1
+            }
 
-        # Test message sending
-        test_msg = {
-            "method": "SUBSCRIBE",
-            "params": ["btcusdt@trade"],
-            "id": 1
-        }
+            success = await handler.send_message(test_msg)
+            assert success, "Failed to send test message"
 
-        success = await handler.send_message(test_msg)
-        assert success, "Failed to send test message"
-
-        logger.info("Test message sent successfully")
-
-        # Wait briefly to observe behavior
-        await asyncio.sleep(5)
-
-        # Cleanup
-        handler.stop()
-        return True
-
-    except Exception as e:
-        logger.error(f"Test failed: {str(e)}")
-        return False
+            await asyncio.sleep(5)
+            handler.stop()
+        except Exception as e:
+            logger.error(f"Test failed: {str(e)}")
+            assert False, f"Test failed with error: {str(e)}"
 
 if __name__ == "__main__":
     unittest.main()

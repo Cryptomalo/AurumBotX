@@ -146,6 +146,9 @@ class WebSocketHandler:
             # Create new connection
             self._init_websocket_manager()
 
+            # Reset connection state
+            self.connected = False
+
             # Increment attempts before trying
             self.reconnect_attempts += 1
 
