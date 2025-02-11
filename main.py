@@ -119,7 +119,37 @@ try:
     # Navigation sections
     if selected_tab == "Trading":
         st.subheader("🤖 Trading Interface")
-        st.info("Trading features coming soon!")
+        
+        col1, col2 = st.columns(2)
+        
+        with col1:
+            st.markdown("### 💰 Wallet")
+            balance = 10000.00  # Esempio
+            st.metric("Balance", f"${balance:,.2f}")
+            
+            st.markdown("### 📊 Position")
+            position_size = st.slider("Position Size (%)", 1, 100, 10)
+            leverage = st.slider("Leverage", 1, 20, 1)
+            
+        with col2:
+            st.markdown("### 🎯 Trading Strategy")
+            strategy = st.selectbox(
+                "Select Strategy",
+                ["Trend Following", "Mean Reversion", "Breakout", "Grid Trading", "Momentum", "Swing Trading"]
+            )
+            
+            if st.button("Execute Trade"):
+                st.success("Trade executed successfully!")
+                
+        # Parametri Strategia
+        st.markdown("### ⚙️ Strategy Parameters")
+        if strategy == "Trend Following":
+            st.number_input("MA Short Period", 5, 50, 20)
+            st.number_input("MA Long Period", 20, 200, 50)
+        elif strategy == "Mean Reversion":
+            st.number_input("RSI Period", 5, 30, 14)
+            st.number_input("Oversold Level", 10, 40, 30)
+            st.number_input("Overbought Level", 60, 90, 70)
     elif selected_tab == "Analytics":
         st.subheader("📊 Analytics")
         st.info("Analytics features coming soon!")
