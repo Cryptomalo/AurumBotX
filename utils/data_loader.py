@@ -27,41 +27,8 @@ class CryptoDataLoader:
         }
 
         self._cache = {}
-        self._cache_duration = 300  # 5 minutes cache
-        self._price_cache = {} # Added price cache
-
-        # Setup logging
-        self._setup_logging()
-
-    def _setup_logging(self):
-        """Setup logging configuration"""
-        formatter = logging.Formatter(
-            '%(asctime)s - %(name)s - %(levelname)s - %(message)s'
-        )
-        handler = logging.StreamHandler()
-        handler.setFormatter(formatter)
-        logger.addHandler(handler)
-        logger.setLevel(logging.INFO)
-
-    def _get_from_cache(self, key: str) -> Optional[pd.DataFrame]:
-        """Get data from cache if valid"""
-        if key in self._cache:
-            data, timestamp = self._cache[key]
-            if time.time() - timestamp < self._cache_duration:
-                logger.debug(f"Cache hit for {key}")
-                return data.copy()  # Return a copy to prevent modifications
-            else:
-                logger.debug(f"Cache expired for {key}")
-                del self._cache[key]
-        return None
-
-    def _add_to_cache(self, key: str, data: pd.DataFrame):
-        """Add data to cache with current timestamp"""
-        try:
-            self._cache[key] = (data.copy(), time.time())  # Store a copy
-            logger.debug(f"Added to cache: {key}")
-        except Exception as e:
-            logger.error(f"Cache error for {key}: {str(e)}")
+        self._cache_duration = 60  # Reduced cache duration for testing
+        self._price_cache = {}
 
     def get_historical_data(
         self,
@@ -69,7 +36,7 @@ class CryptoDataLoader:
         period: str = '1d',
         interval: str = '1m'
     ) -> Optional[pd.DataFrame]:
-        """Fetch historical data with caching and error handling"""
+        """Fetch historical data with improved error handling"""
         try:
             if symbol not in self.supported_coins:
                 logger.warning(f"Unsupported symbol: {symbol}")
@@ -81,9 +48,13 @@ class CryptoDataLoader:
             if cached_data is not None:
                 return cached_data
 
-            logger.info(f"Fetching {symbol} data for period {period}")
-            ticker = yf.Ticker(symbol)
-            df = ticker.history(period=period, interval=interval)
+            logger.info(f"Fetching {symbol} data using yfinance download")
+            df = yf.download(
+                symbol,
+                period=period,
+                interval=interval,
+                progress=False
+            )
 
             if df.empty:
                 logger.warning(f"No data received for {symbol}")
@@ -91,34 +62,37 @@ class CryptoDataLoader:
 
             # Add technical indicators
             df = self._add_technical_indicators(df)
-
-            # Cache the processed data
             self._add_to_cache(cache_key, df)
-
             return df
 
         except Exception as e:
             logger.error(f"Error fetching data for {symbol}: {str(e)}")
             return None
 
+    def _get_from_cache(self, key: str) -> Optional[pd.DataFrame]:
+        """Get data from cache if valid"""
+        if key in self._cache:
+            data, timestamp = self._cache[key]
+            if time.time() - timestamp < self._cache_duration:
+                return data.copy()
+            del self._cache[key]
+        return None
+
+    def _add_to_cache(self, key: str, data: pd.DataFrame):
+        """Add data to cache with current timestamp"""
+        try:
+            self._cache[key] = (data.copy(), time.time())
+        except Exception as e:
+            logger.error(f"Cache error for {key}: {str(e)}")
+
     def _add_technical_indicators(self, df: pd.DataFrame) -> pd.DataFrame:
         """Add technical indicators with error handling"""
         try:
-            df = df.copy()  # Create a copy to avoid SettingWithCopyWarning
+            df = df.copy()
 
-            # Calculate returns
+            # Basic indicators
             df['Returns'] = df['Close'].pct_change()
-
-            # Volatility
-            df['Volatility'] = df['Returns'].rolling(window=20).std()
-
-            # Volume metrics
             df['Volume_MA'] = df['Volume'].rolling(window=20).mean()
-            df['Volume_Ratio'] = df['Volume'] / df['Volume_MA']
-
-            # Price metrics
-            df['Price_MA_50'] = df['Close'].rolling(window=50).mean()
-            df['Price_MA_200'] = df['Close'].rolling(window=200).mean()
 
             # RSI
             delta = df['Close'].diff()
@@ -141,82 +115,36 @@ class CryptoDataLoader:
             logger.error(f"Error calculating indicators: {str(e)}")
             return df
 
-    def _fetch_price(self, symbol: str) -> Optional[float]:
-        """Fetches the current price from yfinance"""
-        try:
-            ticker = yf.Ticker(symbol)
-            hist = ticker.history(period='1d')
-            if hist.empty:
-                self.logger.warning(f"No historical data available for {symbol}")
-                return None
-            return float(hist['Close'].iloc[-1])
-        except Exception as e:
-            self.logger.error(f"Error fetching price for {symbol}: {str(e)}")
-            return None
-        except Exception as e:
-            logger.error(f"Error getting price for {symbol}: {str(e)}")
-            return None
-
     def get_current_price(self, symbol: str) -> Optional[float]:
-        """Get current price with error handling and caching"""
+        """Get current price with improved error handling"""
         try:
             cache_key = f"{symbol}_price"
             if cache_key in self._price_cache:
-                if time.time() - self._price_cache[cache_key]['timestamp'] < 5:  # 5 sec cache
-                    return self._price_cache[cache_key]['price']
+                cache_data = self._price_cache[cache_key]
+                if time.time() - cache_data['timestamp'] < 5:
+                    return cache_data['price']
 
-            price = self._fetch_price(symbol)
+            logger.info(f"Fetching current price for {symbol}")
+            df = yf.download(symbol, period='1d', progress=False)
+
+            if df.empty:
+                logger.warning(f"No price data available for {symbol}")
+                return None
+
+            price = float(df['Close'].iloc[-1])
             self._price_cache[cache_key] = {
                 'price': price,
                 'timestamp': time.time()
             }
             return price
-        except Exception as e:
-            self.logger.warning(f"No price available for {symbol}")
-            return None
 
+        except Exception as e:
+            logger.error(f"Error getting price for {symbol}: {str(e)}")
+            return None
 
     def get_available_coins(self) -> Dict[str, str]:
         """Return dictionary of available coins"""
-        return self.supported_coins.copy()  # Return a copy to prevent modifications
-
-    def get_market_data(
-        self,
-        symbols: Union[str, List[str]],
-        start_date: Optional[datetime] = None,
-        end_date: Optional[datetime] = None,
-        interval: str = '1d'
-    ) -> Dict[str, pd.DataFrame]:
-        """
-        Fetch market data for multiple symbols
-        Args:
-            symbols: Single symbol or list of symbols
-            start_date: Start date for historical data
-            end_date: End date for historical data
-            interval: Data interval
-        """
-        if isinstance(symbols, str):
-            symbols = [symbols]
-
-        market_data = {}
-        for symbol in symbols:
-            try:
-                df = self.get_historical_data(
-                    symbol,
-                    interval=interval
-                )
-                if df is not None:
-                    if start_date:
-                        df = df[df.index >= start_date]
-                    if end_date:
-                        df = df[df.index <= end_date]
-                    market_data[symbol] = df
-
-            except Exception as e:
-                logger.error(f"Error fetching {symbol}: {str(e)}")
-                continue
-
-        return market_data
+        return self.supported_coins.copy()
 
     def save_historical_data(
         self,
