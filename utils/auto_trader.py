@@ -13,10 +13,12 @@ from utils.database import get_db, TradingStrategy, SimulationResult
 from utils.notifications import TradingNotifier
 
 class AutoTrader:
-    def __init__(self, symbol, initial_balance=10000, risk_per_trade=0.02):
+    def __init__(self, symbol, initial_balance=10000, risk_per_trade=0.02, testnet=True):
         self.symbol = symbol
         self.initial_balance = initial_balance
         self.risk_per_trade = risk_per_trade
+        self.testnet = testnet
+        self.logger.info(f"Inizializzazione bot in modalità {'testnet' if testnet else 'mainnet'}")
         self.balance = initial_balance
         self.portfolio = {
             'total_value': initial_balance,
