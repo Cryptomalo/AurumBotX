@@ -1,33 +1,42 @@
 import streamlit as st
 import logging
 import sys
+from datetime import datetime
 
-# Configure logging
+# Setup logging with detailed output
 logging.basicConfig(
     level=logging.DEBUG,
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
     handlers=[
         logging.StreamHandler(sys.stdout),
-        logging.FileHandler('streamlit_debug.log')
+        logging.FileHandler('app.log', mode='w')
     ]
 )
 logger = logging.getLogger(__name__)
 
-logger.info("Starting minimal Streamlit app")
+def main():
+    try:
+        logger.info("Starting minimal test app")
 
-try:
-    # Basic page config
-    st.set_page_config(
-        page_title="AurumBot Test",
-        layout="wide",
-    )
+        # Basic page config
+        st.set_page_config(
+            page_title="AurumBot Test",
+            layout="wide"
+        )
+        logger.info("Page configuration completed")
 
-    # Simple content
-    st.title("🌟 AurumBot Test")
-    st.write("Initializing...")
+        # Minimal content
+        st.title("AurumBot Test")
+        st.write("Se vedi questo messaggio, l'app sta funzionando!")
+        st.write(f"Orario del server: {datetime.now()}")
 
-    logger.info("Basic UI elements rendered")
+        logger.info("Basic content rendered")
 
-except Exception as e:
-    logger.error(f"Error in Streamlit app: {str(e)}", exc_info=True)
-    st.error("An error occurred while starting the application")
+    except Exception as e:
+        logger.error(f"Error in app: {str(e)}", exc_info=True)
+        st.error("Si è verificato un errore. Controlla i log.")
+
+if __name__ == "__main__":
+    logger.info("Application startup initiated")
+    main()
+    logger.info("Main function completed")
