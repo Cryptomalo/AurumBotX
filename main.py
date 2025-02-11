@@ -1,9 +1,13 @@
+
 import streamlit as st
 import numpy as np
 import pandas as pd
 import plotly.graph_objects as go
 import logging
 from datetime import datetime
+from utils.auto_trader import AutoTrader
+from utils.data_loader import CryptoDataLoader
+from utils.strategies.strategy_library import StrategyLibrary
 
 # Setup logging
 logging.basicConfig(
@@ -16,9 +20,19 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-logger.info("Starting application...")
+# Initialize components
+data_loader = CryptoDataLoader()
+strategy_library = StrategyLibrary()
 
-try:
+def initialize_session_state():
+    if 'trader' not in st.session_state:
+        st.session_state.trader = AutoTrader('BTC-USD', initial_balance=10000)
+    if 'active_trades' not in st.session_state:
+        st.session_state.active_trades = []
+
+def main():
+    logger.info("Starting application...")
+
     # Basic page config
     st.set_page_config(
         page_title="AurumBot Pro",
@@ -28,137 +42,127 @@ try:
     )
     logger.info("Page config set")
 
+    initialize_session_state()
+
     # Sidebar
     with st.sidebar:
         st.title("🤖 AurumBot Pro")
-        logger.info("Sidebar title rendered")
-
+        
         # Navigation
         selected_tab = st.selectbox(
             "Navigation",
-            ["Dashboard", "Trading", "Analytics", "Settings"]
+            ["Dashboard", "Trading", "Portfolio", "Settings"]
         )
-        logger.info(f"Selected tab: {selected_tab}")
-
+        
         # Crypto selection
         crypto = st.selectbox(
             "Select Cryptocurrency",
             ["BTC-USD", "ETH-USD", "SOL-USD"]
         )
-        logger.info(f"Selected crypto: {crypto}")
 
-    # Main content
-    st.title(f"📊 Market Analysis - {crypto}")
-    logger.info("Main title rendered")
+        if st.button("Start Bot"):
+            st.session_state.trader.run()
+            st.success("Trading bot started!")
 
-    # Generate sample data
-    try:
-        logger.info("Generating sample data...")
-        np.random.seed(42)
-        dates = pd.date_range(start="2024-01-01", end="2024-02-11", freq="D")
-        data = pd.DataFrame({
-            'Open': np.random.normal(100, 10, len(dates)),
-            'High': np.random.normal(105, 10, len(dates)),
-            'Low': np.random.normal(95, 10, len(dates)),
-            'Close': np.random.normal(100, 10, len(dates)),
-            'Volume': np.random.normal(1000000, 100000, len(dates))
-        }, index=dates)
-        logger.info("Sample data generated successfully")
-    except Exception as e:
-        logger.error(f"Error generating sample data: {str(e)}")
-        st.error("Error generating market data")
-        data = None
+        if st.button("Stop Bot"):
+            st.session_state.trader = None
+            st.success("Trading bot stopped!")
 
-    if data is not None:
-        try:
-            # Display metrics
-            col1, col2, col3 = st.columns(3)
-            with col1:
-                st.metric(
-                    "Price",
-                    f"${data['Close'].iloc[-1]:.2f}",
-                    "+2.5%"
-                )
-            with col2:
-                st.metric(
-                    "Volume",
-                    f"${data['Volume'].iloc[-1]/1000000:.1f}M"
-                )
-            with col3:
-                st.metric(
-                    "Change",
-                    f"{((data['Close'].iloc[-1] - data['Close'].iloc[0])/data['Close'].iloc[0]*100):.1f}%"
-                )
-            logger.info("Metrics displayed successfully")
+    # Main content area
+    if selected_tab == "Dashboard":
+        st.title("📊 Market Analysis")
+        
+        # Market data
+        df = data_loader.get_historical_data(crypto, period='1d')
+        
+        # Metrics
+        col1, col2, col3 = st.columns(3)
+        with col1:
+            st.metric("Price", f"${df['Close'].iloc[-1]:.2f}", f"{df['Close'].pct_change().iloc[-1]:.2%}")
+        with col2:
+            st.metric("24h Volume", f"${df['Volume'].iloc[-1]/1000000:.1f}M")
+        with col3:
+            st.metric("24h Change", f"{((df['Close'].iloc[-1] - df['Close'].iloc[0])/df['Close'].iloc[0]*100):.1f}%")
 
-            # Create candlestick chart
-            logger.info("Creating candlestick chart...")
-            fig = go.Figure(data=[go.Candlestick(
-                x=data.index,
-                open=data['Open'],
-                high=data['High'],
-                low=data['Low'],
-                close=data['Close']
-            )])
+        # Chart
+        fig = go.Figure(data=[go.Candlestick(
+            x=df.index,
+            open=df['Open'],
+            high=df['High'],
+            low=df['Low'],
+            close=df['Close']
+        )])
+        
+        fig.update_layout(title=f"{crypto} Price Chart", height=600)
+        st.plotly_chart(fig, use_container_width=True)
 
-            fig.update_layout(
-                title=f"{crypto} Price Chart",
-                yaxis_title="Price (USD)",
-                template="plotly_dark",
-                height=600,
-                margin=dict(l=50, r=50, t=50, b=50)
-            )
-
-            st.plotly_chart(fig, use_container_width=True)
-            logger.info("Chart rendered successfully")
-
-        except Exception as e:
-            logger.error(f"Error displaying data: {str(e)}")
-            st.error("Error displaying market analysis")
-
-    # Navigation sections
-    if selected_tab == "Trading":
-        st.subheader("🤖 Trading Interface")
+    elif selected_tab == "Trading":
+        st.title("🤖 Trading Interface")
         
         col1, col2 = st.columns(2)
         
         with col1:
-            st.markdown("### 💰 Wallet")
-            balance = 10000.00  # Esempio
+            st.subheader("💰 Account")
+            balance = st.session_state.trader.balance
             st.metric("Balance", f"${balance:,.2f}")
             
-            st.markdown("### 📊 Position")
-            position_size = st.slider("Position Size (%)", 1, 100, 10)
+            st.subheader("📊 Risk Management")
+            risk_per_trade = st.slider("Risk per Trade (%)", 1, 10, 2)
             leverage = st.slider("Leverage", 1, 20, 1)
             
         with col2:
-            st.markdown("### 🎯 Trading Strategy")
+            st.subheader("🎯 Strategy Settings")
             strategy = st.selectbox(
                 "Select Strategy",
-                ["Trend Following", "Mean Reversion", "Breakout", "Grid Trading", "Momentum", "Swing Trading"]
+                list(strategy_library.strategies.keys())
             )
             
-            if st.button("Execute Trade"):
-                st.success("Trade executed successfully!")
-                
-        # Parametri Strategia
-        st.markdown("### ⚙️ Strategy Parameters")
-        if strategy == "Trend Following":
-            st.number_input("MA Short Period", 5, 50, 20)
-            st.number_input("MA Long Period", 20, 200, 50)
-        elif strategy == "Mean Reversion":
-            st.number_input("RSI Period", 5, 30, 14)
-            st.number_input("Oversold Level", 10, 40, 30)
-            st.number_input("Overbought Level", 60, 90, 70)
-    elif selected_tab == "Analytics":
-        st.subheader("📊 Analytics")
-        st.info("Analytics features coming soon!")
+            strategy_params = strategy_library.strategies[strategy]['params']
+            st.json(strategy_params)
+            
+            if st.button("Execute Trade", type="primary"):
+                trader = st.session_state.trader
+                signal = trader.analyze_market()
+                if signal:
+                    trader.execute_trade(signal)
+                    st.success(f"Trade executed: {signal['action']} at ${signal['price']:.2f}")
+                else:
+                    st.warning("No trading signal generated")
+
+    elif selected_tab == "Portfolio":
+        st.title("💼 Portfolio")
+        
+        # Portfolio summary
+        portfolio = st.session_state.trader.portfolio
+        st.metric("Total Value", f"${portfolio['total_value']:,.2f}")
+        
+        # Performance metrics
+        metrics = portfolio['performance_metrics']
+        col1, col2, col3 = st.columns(3)
+        with col1:
+            st.metric("Total Profit", f"${metrics['total_profit']:,.2f}")
+        with col2:
+            st.metric("Win Rate", f"{metrics['win_rate']*100:.1f}%")
+        with col3:
+            st.metric("Avg Profit/Trade", f"${metrics['avg_profit_per_trade']:,.2f}")
+        
+        # Trade history
+        st.subheader("Trade History")
+        if portfolio['trade_history']:
+            df_trades = pd.DataFrame(portfolio['trade_history'])
+            st.dataframe(df_trades)
+
     elif selected_tab == "Settings":
-        st.subheader("⚙️ Settings")
-        st.info("Settings configuration coming soon!")
+        st.title("⚙️ Settings")
+        
+        # API Configuration
+        st.subheader("API Configuration")
+        api_key = st.text_input("API Key", type="password")
+        api_secret = st.text_input("API Secret", type="password")
+        
+        if st.button("Save Settings"):
+            # Save API credentials
+            st.success("Settings saved successfully!")
 
-    logger.info("Application rendered successfully")
-
-except Exception as e:
-    logger.error(f"Critical application error: {str(e)}")
-    st.error("A critical error occurred. Please check the logs for details.")
+if __name__ == "__main__":
+    main()
