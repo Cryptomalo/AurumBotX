@@ -5,7 +5,7 @@ secondaryBackgroundColor = "#262730"
 textColor = "#FAFAFA"
 
 [server]
-port = 5000
+port = 5001
 address = "0.0.0.0"
 headless = true
 enableCORS = false
@@ -18,4 +18,4 @@ serverAddress = "0.0.0.0"
 gatherUsageStats = false
 
 [logger]
-level = "info"
+level = "debug"
