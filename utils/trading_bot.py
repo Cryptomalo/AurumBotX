@@ -2,15 +2,18 @@ import time
 import threading
 import logging
 
-class WebSocketHandler: # Assuming a class structure, adjust as needed.
+class WebSocketHandler:
     def __init__(self, logger):
-        self.ws = None  # WebSocket connection object (replace with your actual object)
+        self.ws = None
         self.connected = False
         self.logger = logger
+        self.max_retries = 5
+        self.retry_delay = 1
+        self.last_heartbeat = time.time()
+        self.heartbeat_interval = 30
 
 
     def connect_websocket(self):
-        # ... Your existing WebSocket connection logic ...
         try:
             # Your websocket connection code here.  Example:
             # self.ws = websocket.WebSocketApp(...)
@@ -23,7 +26,6 @@ class WebSocketHandler: # Assuming a class structure, adjust as needed.
 
 
     def reconnect_websocket(self):
-        # ... Your WebSocket reconnection logic ...
         try:
             # Your websocket reconnection code here. Example:
             # self.ws = websocket.WebSocketApp(...)
@@ -38,23 +40,23 @@ class WebSocketHandler: # Assuming a class structure, adjust as needed.
 
     def handle_websocket_error(self, e: Exception):
         """Gestisce errori WebSocket con retry exponenziale e heartbeat"""
-        max_retries = 10
-        retry_delay = 1
+        retry_count = 0
+        current_delay = self.retry_delay
 
-        for attempt in range(max_retries):
+        while retry_count < self.max_retries:
             try:
-                self.logger.info(f"Tentativo riconnessione WebSocket {attempt + 1}/{max_retries}")
-
-                if self.check_connection() and self.reconnect_websocket():
+                self.logger.info(f"Tentativo riconnessione {retry_count + 1}/{self.max_retries}")
+                if self.reconnect_websocket():
                     self.setup_heartbeat()
-                    self.logger.info("Riconnessione WebSocket riuscita")
                     return True
 
-                retry_delay = min(retry_delay * 2, 30)  # Max 30 secondi di attesa
-                time.sleep(retry_delay)
+                current_delay = min(current_delay * 2, 30)
+                time.sleep(current_delay)
+                retry_count += 1
 
             except Exception as conn_error:
                 self.logger.error(f"Errore riconnessione: {str(conn_error)}")
+                retry_count += 1
 
         self.logger.critical("Impossibile stabilire connessione WebSocket")
         return False
