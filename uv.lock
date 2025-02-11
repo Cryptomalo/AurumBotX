@@ -249,6 +249,15 @@ wheels = [
 ]
 
 [[package]]
+name = "base58"
+version = "2.1.1"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/7f/45/8ae61209bb9015f516102fa559a2914178da1d5868428bd86a1b4421141d/base58-2.1.1.tar.gz", hash = "sha256:c5d0cb3f5b6e81e8e35da5754388ddcc6d0d14b6c6a132cb93d69ed580a7278c", size = 6528 }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/4a/45/ec96b29162a402fc4c1c5512d114d7b3787b9d1c2ec241d9568b4816ee23/base58-2.1.1-py3-none-any.whl", hash = "sha256:11a36f4d3ce51dfc1043f3218591ac4eb1ceb172919cebe05b52a5bcc8d245c2", size = 5621 },
+]
+
+[[package]]
 name = "based58"
 version = "0.1.1"
 source = { registry = "https://pypi.org/simple" }
@@ -2579,9 +2588,11 @@ dependencies = [
     { name = "alembic" },
     { name = "anthropic" },
     { name = "asyncio" },
+    { name = "base58" },
     { name = "bcrypt" },
     { name = "beautifulsoup4" },
     { name = "ccxt" },
+    { name = "cryptography" },
     { name = "discord-py" },
     { name = "fastapi" },
     { name = "jinja2" },
@@ -2633,9 +2644,11 @@ requires-dist = [
     { name = "alembic", specifier = ">=1.14.1" },
     { name = "anthropic", specifier = ">=0.45.2" },
     { name = "asyncio", specifier = ">=3.4.3" },
+    { name = "base58", specifier = ">=2.1.1" },
     { name = "bcrypt", specifier = ">=4.2.1" },
     { name = "beautifulsoup4", specifier = "==4.13.3" },
     { name = "ccxt", specifier = ">=4.4.57" },
+    { name = "cryptography", specifier = ">=44.0.0" },
     { name = "discord-py", specifier = ">=2.4.0" },
     { name = "fastapi", specifier = ">=0.115.8" },
     { name = "jinja2", specifier = ">=3.1.5" },
