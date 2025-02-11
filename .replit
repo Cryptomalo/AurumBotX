@@ -5,7 +5,7 @@ channel = "stable-24_05"
 
 [deployment]
 deploymentTarget = "autoscale"
-run = ["sh", "-c", "python3 main.py"]
+run = ["sh", "-c", "python test_bot.py"]
 
 [workflows]
 runButton = "Project"
@@ -17,10 +17,10 @@ mode = "parallel"
 
 [[workflows.workflow.tasks]]
 task = "workflow.run"
-args = "AurumBot"
+args = "Trading Bot Test"
 
 [[workflows.workflow]]
-name = "AurumBot"
+name = "Trading Bot Test"
 author = "agent"
 
 [workflows.workflow.metadata]
@@ -31,8 +31,7 @@ task = "packager.installForAll"
 
 [[workflows.workflow.tasks]]
 task = "shell.exec"
-args = "python3 main.py"
-waitForPort = 8000
+args = "python test_bot.py"
 
 [[workflows.workflow]]
 name = "Project"

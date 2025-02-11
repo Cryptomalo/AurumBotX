@@ -1,10 +1,11 @@
+import asyncio
 import logging
 from datetime import datetime
-import time
-from utils.auto_trader import AutoTrader
-from utils.data_loader import CryptoDataLoader
+import os
+from utils.trading_bot import WebSocketHandler
 from utils.strategies.strategy_manager import StrategyManager
 from utils.sentiment_analyzer import SentimentAnalyzer
+from utils.database import Database
 
 # Setup logging
 logging.basicConfig(
@@ -15,22 +16,29 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 async def test_bot():
+    """Test delle componenti principali del bot"""
     try:
         logger.info("Inizializzazione test trading bot")
+
+        # Inizializzazione database
+        db = Database(os.environ.get('DATABASE_URL'))
+        if not db.connect():
+            raise Exception("Errore connessione database")
 
         # Test componenti
         strategy_manager = StrategyManager()
         sentiment_analyzer = SentimentAnalyzer()
-        data_loader = CryptoDataLoader()
 
-        # Verifica connessione dati
-        logger.info("Test connessione dati...")
-        df = data_loader.get_historical_data("BTC-USD", period='1d')
-        if df is None or df.empty:
-            raise Exception("Impossibile ottenere dati storici")
+        # Test WebSocket
+        websocket_handler = WebSocketHandler(logger, db)
+        ws_status = await websocket_handler.connect_websocket()
+        if not ws_status:
+            logger.error("Errore connessione WebSocket")
+            return False
+
+        logger.info("Connessione WebSocket stabilita")
 
         # Test strategia DEX
-        logger.info("Test strategia DEX...")
         config = {
             'rpc_url': 'https://bsc-dataseed.binance.org/',
             'min_liquidity': 5,
@@ -38,21 +46,23 @@ async def test_bot():
             'min_holders': 50
         }
 
-        await strategy_manager.activate_strategy('dex_sniping', config)
+        try:
+            await strategy_manager.activate_strategy('dex_sniping', config)
+            logger.info("Strategia DEX attivata con successo")
+        except Exception as e:
+            logger.error(f"Errore attivazione strategia: {e}")
+            return False
 
         # Test sentiment analysis
-        logger.info("Test analisi sentiment...")
-        sentiment_data = await sentiment_analyzer.analyze_social_sentiment("BTC")
-        if sentiment_data:
-            logger.info(f"Sentiment score: {sentiment_data.get('score', 0)}")
+        try:
+            sentiment_data = await sentiment_analyzer.analyze_social_sentiment("BTC")
+            if sentiment_data:
+                logger.info(f"Sentiment score: {sentiment_data.get('score', 0)}")
+        except Exception as e:
+            logger.error(f"Errore analisi sentiment: {e}")
+            return False
 
-        # Test trading signals
-        signals = await strategy_manager.execute_strategies(df)
-        if signals:
-            logger.info(f"Segnali generati: {len(signals)}")
-            for signal in signals:
-                logger.info(f"Segnale: {signal}")
-
+        logger.info("Test completato con successo")
         return True
 
     except Exception as e:
@@ -60,6 +70,5 @@ async def test_bot():
         return False
 
 if __name__ == "__main__":
-    import asyncio
     success = asyncio.run(test_bot())
     print(f"Test completato: {'Successo' if success else 'Fallito'}")
