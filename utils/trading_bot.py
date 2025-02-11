@@ -24,9 +24,11 @@ class WebSocketHandler:
         try:
             if self.ws:
                 self.ws.close()
-
+                
+            websocket.enableTrace(True)
             self.ws = websocket.WebSocketApp(
                 "wss://stream.binance.com:9443/ws/!ticker@arr",
+                sslopt={"cert_reqs": ssl.CERT_NONE},
                 on_message=self._on_message,
                 on_error=self._on_error,
                 on_close=self._on_close,

@@ -20,6 +20,10 @@ class Database:
     def connect(self):
         retry_count = 0
         retry_delay = 1
+        self.last_connection_attempt = time.time()
+        
+        if hasattr(self, 'engine') and self.engine:
+            return True
 
         while retry_count < self.max_retries:
             try:
