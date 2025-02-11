@@ -10,6 +10,7 @@ from utils.data_loader import CryptoDataLoader
 from utils.indicators import TechnicalIndicators
 from utils.notifications import TradingNotifier
 from utils.wallet_manager import WalletManager
+from utils.subscription_manager import SubscriptionManager # Added import
 from utils.auto_trader import AutoTrader
 
 # Setup logging
@@ -30,20 +31,6 @@ st.set_page_config(
     layout="wide"
 )
 
-# Verifica e inizializza il database
-def init_db():
-    try:
-        engine = create_engine(os.getenv('DATABASE_URL'))
-        with engine.connect() as conn:
-            # Test connection
-            conn.execute(text("SELECT 1"))
-            logger.info("Database connection successful")
-            return engine
-    except Exception as e:
-        logger.error(f"Database connection error: {e}")
-        st.error("Errore di connessione al database. Riprova più tardi.")
-        return None
-
 # Initialize session state
 if 'authenticated' not in st.session_state:
     st.session_state.authenticated = False
@@ -62,86 +49,37 @@ if 'positions' not in st.session_state:
 
 def verify_activation_code(username: str, code: str) -> bool:
     """Verifica il codice di attivazione e attiva l'abbonamento"""
-    try:
-        engine = init_db()
-        if not engine:
-            return False
-
-        with engine.connect() as conn:
-            # Verifica se il codice è valido e non utilizzato
-            result = conn.execute(
-                text("""
-                SELECT ac.id, ac.plan_id, sp.duration_months 
-                FROM activation_codes ac
-                JOIN subscription_plans sp ON ac.plan_id = sp.id
-                WHERE ac.code = :code AND ac.is_used = FALSE
-                """),
-                {"code": code}
-            ).fetchone()
-
-            if not result:
-                return False
-
-            code_id, plan_id, duration = result
-
-            # Crea o aggiorna l'utente
-            user_result = conn.execute(
-                text("""
-                INSERT INTO users (username, subscription_expires_at)
-                VALUES (:username, NOW() + :duration * INTERVAL '1 month')
-                ON CONFLICT (username) 
-                DO UPDATE SET subscription_expires_at = NOW() + :duration * INTERVAL '1 month'
-                RETURNING id
-                """),
-                {"username": username, "duration": duration}
-            ).fetchone()
-
-            # Marca il codice come utilizzato
-            conn.execute(
-                text("""
-                UPDATE activation_codes 
-                SET is_used = TRUE, used_by = :user_id, used_at = NOW()
-                WHERE id = :code_id
-                """),
-                {"user_id": user_result[0], "code_id": code_id}
-            )
-
-            conn.commit()
-            st.session_state.user_id = user_result[0]
-            return True
-
-    except Exception as e:
-        logger.error(f"Error verifying activation code: {e}")
-        return False
+    subscription_manager = SubscriptionManager()
+    return subscription_manager.activate_subscription(code, username)
 
 def show_login_page():
     """Mostra la pagina di login con i piani di abbonamento"""
     st.title("🌟 AurumBot Trading Platform")
 
-    st.markdown("""
-    ### 📊 Piani di Abbonamento
+    # Ottieni i piani disponibili dal database
+    subscription_manager = SubscriptionManager()
+    available_plans = subscription_manager.get_available_plans()
 
-    Scegli il piano più adatto alle tue esigenze:
+    # Mostra i piani di abbonamento
+    st.header("📊 Piani di Abbonamento")
+    st.write("Scegli il piano più adatto alle tue esigenze:")
 
-    #### 🥉 Piano Trimestrale
-    - Durata: 3 mesi
-    - Prezzo: €299.99
-    - Accesso completo a tutte le funzionalità
+    cols = st.columns(len(available_plans))
+    for idx, plan in enumerate(available_plans):
+        with cols[idx]:
+            st.markdown(f"""
+            ### {'🥉' if plan['duration_months'] == 3 else '🥈' if plan['duration_months'] == 6 else '🥇'} {plan['name']}
+            - Durata: {plan['duration_months']} mesi
+            - Prezzo: €{plan['price']:.2f}
+            - {plan['description']}
+            """)
 
-    #### 🥈 Piano Semestrale
-    - Durata: 6 mesi
-    - Prezzo: €549.99
-    - Sconto del 10% sul prezzo mensile
-
-    #### 🥇 Piano Annuale
-    - Durata: 12 mesi
-    - Prezzo: €999.99
-    - Sconto del 20% sul prezzo mensile
-    """)
-
+    # Form di login
     with st.form("login_form"):
         username = st.text_input("Username", help="Inserisci il tuo username")
-        activation_code = st.text_input("Codice di Attivazione", help="Inserisci il codice di attivazione ricevuto")
+        activation_code = st.text_input("Codice di Attivazione", 
+                                      help="Inserisci il codice di attivazione ricevuto",
+                                      type="password")
         submit = st.form_submit_button("Accedi")
 
         if submit:
@@ -151,7 +89,7 @@ def show_login_page():
                 st.session_state.authenticated = True
                 st.session_state.username = username
                 st.success("Login effettuato con successo!")
-                st.rerun()
+                st.experimental_rerun()
             else:
                 st.error("Codice di attivazione non valido o già utilizzato")
 
@@ -160,7 +98,7 @@ def show_dashboard():
     if not st.session_state.user_id:
         st.error("Sessione non valida. Effettua nuovamente il login.")
         st.session_state.authenticated = False
-        st.rerun()
+        st.experimental_rerun()
         return
 
     st.title(f"Benvenuto, {st.session_state.username}! 👋")
@@ -168,7 +106,7 @@ def show_dashboard():
     if st.sidebar.button("Logout"):
         for key in st.session_state.keys():
             del st.session_state[key]
-        st.rerun()
+        st.experimental_rerun()
 
     # Initialize components
     data_loader = CryptoDataLoader()
