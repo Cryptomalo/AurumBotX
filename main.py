@@ -1,42 +1,81 @@
-import streamlit as st
+from fastapi import FastAPI, Request, Form
+from fastapi.templating import Jinja2Templates
+from fastapi.responses import HTMLResponse
 import logging
 import sys
-from datetime import datetime
+from utils.code_fixer import CodeFixer
+from pathlib import Path
 
-# Setup logging with detailed output
+# Setup logging
 logging.basicConfig(
-    level=logging.DEBUG,
+    level=logging.INFO,
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
     handlers=[
         logging.StreamHandler(sys.stdout),
-        logging.FileHandler('app.log', mode='w')
+        logging.FileHandler('app.log')
     ]
 )
 logger = logging.getLogger(__name__)
 
-def main():
+# Initialize FastAPI
+app = FastAPI(title="Editor di Codice Intelligente")
+
+# Setup templates
+templates = Jinja2Templates(directory="templates")
+
+# Initialize CodeFixer
+code_fixer = CodeFixer()
+
+@app.get("/", response_class=HTMLResponse)
+async def index(request: Request):
+    """Render the main editor page"""
+    return templates.TemplateResponse(
+        "editor.html",
+        {
+            "request": request,
+            "code": "def esempio():\n    print('Hello World!')"
+        }
+    )
+
+@app.post("/analyze")
+async def analyze_code(request: Request, code: str = Form(...)):
+    """Analyze the code and return suggestions"""
     try:
-        logger.info("Starting minimal test app")
+        # Get analysis from CodeFixer
+        analysis = code_fixer.analyze_code(code)
 
-        # Basic page config
-        st.set_page_config(
-            page_title="AurumBot Test",
-            layout="wide"
+        # Extract suggestions
+        suggestions = []
+        if "potential_issues" in analysis:
+            suggestions.extend(analysis["potential_issues"])
+        if "suggestions" in analysis:
+            suggestions.extend(analysis["suggestions"])
+        if "best_practices" in analysis:
+            suggestions.extend(analysis["best_practices"])
+
+        return templates.TemplateResponse(
+            "suggestions.html",
+            {
+                "request": request,
+                "suggestions": suggestions
+            }
         )
-        logger.info("Page configuration completed")
-
-        # Minimal content
-        st.title("AurumBot Test")
-        st.write("Se vedi questo messaggio, l'app sta funzionando!")
-        st.write(f"Orario del server: {datetime.now()}")
-
-        logger.info("Basic content rendered")
-
     except Exception as e:
-        logger.error(f"Error in app: {str(e)}", exc_info=True)
-        st.error("Si è verificato un errore. Controlla i log.")
+        logger.error(f"Error analyzing code: {str(e)}")
+        return templates.TemplateResponse(
+            "suggestions.html",
+            {
+                "request": request,
+                "error": f"Errore nell'analisi: {str(e)}"
+            }
+        )
 
 if __name__ == "__main__":
-    logger.info("Application startup initiated")
-    main()
-    logger.info("Main function completed")
+    import uvicorn
+    logger.info("Starting FastAPI application")
+    uvicorn.run(
+        "main:app",
+        host="0.0.0.0",
+        port=8501,
+        reload=True
+    )
