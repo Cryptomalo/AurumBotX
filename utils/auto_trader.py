@@ -18,6 +18,7 @@ class AutoTrader:
         self.initial_balance = initial_balance
         self.risk_per_trade = risk_per_trade
         self.testnet = testnet
+        self.setup_logging()
         self.logger.info(f"Inizializzazione bot in modalità {'testnet' if testnet else 'mainnet'}")
         self.balance = initial_balance
         self.portfolio = {
@@ -165,7 +166,7 @@ class AutoTrader:
     def execute_trade(self, signal):
         try:
             if signal is None:
-                return
+                return False
 
             current_time = datetime.now()
             # Reduced minimum time between trades for better opportunities
@@ -199,6 +200,7 @@ class AutoTrader:
                 }
                 self.last_action_time = current_time
                 self.notifier.send_trade_notification('BUY', self.symbol, price, position_size)
+                return True
 
             elif self.is_in_position and self.current_position:
                 if (action == 'sell' or 
