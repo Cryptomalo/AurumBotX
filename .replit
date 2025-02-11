@@ -34,14 +34,6 @@ task = "shell.exec"
 args = "python -m streamlit run main.py --server.port=8501 --server.address=0.0.0.0"
 waitForPort = 8501
 
-[[workflows.workflow]]
-name = "Test Bot"
-author = 39294082
-
-[[workflows.workflow.tasks]]
-task = "shell.exec"
-args = "python test_bot.py"
-
 [[ports]]
 localPort = 5000
 externalPort = 80
