@@ -15,10 +15,7 @@ logger = logging.getLogger(__name__)
 
 class SentimentAnalyzer:
     def __init__(self):
-        # the newest OpenAI model is "gpt-4o" which was released May 13, 2024
-        self.openai_client = openai.OpenAI(
-            api_key="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"
-        )
+        self.openai_client = openai.OpenAI()
         self.initialize_social_clients()
 
     def initialize_social_clients(self):

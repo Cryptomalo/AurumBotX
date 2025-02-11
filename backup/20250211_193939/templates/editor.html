@@ -1,0 +1,26 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="editor-container">
+    <h1>Editor di Codice Intelligente</h1>
+    <div>
+        <textarea 
+            class="code-editor"
+            hx-post="/analyze"
+            hx-trigger="keyup changed delay:500ms"
+            hx-target="#suggestions"
+            name="code">{{ code }}</textarea>
+    </div>
+    
+    <button 
+        class="analyze-btn"
+        hx-post="/analyze"
+        hx-target="#suggestions">
+        Analizza Codice
+    </button>
+
+    <div id="suggestions" class="suggestions">
+        <!-- I suggerimenti verranno caricati qui -->
+    </div>
+</div>
+{% endblock %}
