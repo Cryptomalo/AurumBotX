@@ -4,6 +4,29 @@
     color: #e0e0e0;
 }
 
+/* Header styling */
+.header {
+    text-align: center;
+    padding: 1rem;
+    margin-bottom: 2rem;
+}
+
+.header h1 {
+    color: #ffd700;
+    font-size: 2.5rem;
+    font-weight: 700;
+    margin-bottom: 0.5rem;
+}
+
+/* Container styling */
+[data-testid="stContainer"] {
+    background: rgba(26, 32, 44, 0.8);
+    border: 1px solid #2d3748;
+    border-radius: 10px;
+    padding: 1rem;
+    margin: 0.5rem 0;
+}
+
 /* Sidebar styling */
 .css-1d391kg {
     background-color: rgba(10, 15, 24, 0.9);
@@ -13,12 +36,13 @@
 /* Metrics styling */
 [data-testid="stMetricValue"] {
     color: #ffd700 !important;
-    font-size: 1.8rem !important;
+    font-size: 1.5rem !important;
     font-weight: 600 !important;
 }
 
 [data-testid="stMetricDelta"] {
-    font-size: 1rem !important;
+    color: #4caf50 !important;
+    font-size: 0.9rem !important;
 }
 
 /* Cards styling */
@@ -313,4 +337,43 @@ input[type="number"] {
 .status-inactive {
     color: #808080;
     font-weight: 600;
+}
+
+/* Signal cards */
+.signal-card {
+    background: rgba(26, 32, 44, 0.95);
+    border: 1px solid #2d3748;
+    border-radius: 8px;
+    padding: 1rem;
+    margin: 0.5rem 0;
+}
+
+.signal-card h4 {
+    color: #ffd700;
+    margin: 0;
+}
+
+.signal-card.bullish {
+    border-left: 4px solid #4caf50;
+}
+
+.signal-card.bearish {
+    border-left: 4px solid #f44336;
+}
+
+.confidence {
+    font-size: 0.9rem;
+    color: #888;
+    margin-top: 0.5rem;
+}
+
+/* Controls */
+.stSelectbox select {
+    background-color: #1a202c !important;
+    color: #ffd700 !important;
+    border: 1px solid #2d3748 !important;
+}
+
+.stSlider div[data-baseweb="slider"] {
+    background-color: #2d3748 !important;
 }
