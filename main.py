@@ -113,8 +113,21 @@ with col2:
     fig.update_layout(
         template="plotly_dark",
         height=500,
-        margin=dict(l=0, r=0, t=0, b=0)
+        margin=dict(l=0, r=0, t=0, b=0),
+        paper_bgcolor='rgba(0,0,0,0)',
+        plot_bgcolor='rgba(0,0,0,0)',
+        font=dict(size=12),
+        xaxis=dict(gridcolor='rgba(128,128,128,0.1)', tickfont=dict(size=12)),
+        yaxis=dict(gridcolor='rgba(128,128,128,0.1)', tickfont=dict(size=12))
     )
+    
+    # Improve image quality
+    fig.update_xaxes(showgrid=True, gridwidth=1, gridcolor='rgba(128,128,128,0.1)')
+    fig.update_yaxes(showgrid=True, gridwidth=1, gridcolor='rgba(128,128,128,0.1)')
+    
+    # Set higher resolution
+    config = {'toImageButtonOptions': {'format': 'png', 'height': 800, 'width': 1200, 'scale': 2}}
+    st.plotly_chart(fig, use_container_width=True, config=config)
 
     st.plotly_chart(fig, use_container_width=True)
 
