@@ -21,25 +21,15 @@ class TechnicalIndicators:
         """Add Relative Strength Index"""
         try:
             df = df.copy()
-            # Calculate price changes
             delta = df['Close'].diff()
-
-            # Separate gains and losses
             gain = delta.where(delta > 0, 0)
             loss = -delta.where(delta < 0, 0)
-
-            # Calculate average gains and losses
             avg_gain = gain.rolling(window=period).mean()
             avg_loss = loss.rolling(window=period).mean()
-
-            # Calculate RS and RSI
             rs = avg_gain / avg_loss
             rsi = 100 - (100 / (1 + rs))
-
-            # Handle NaN values without inplace operations
             df = df.assign(RSI=rsi.fillna(50).clip(0, 100))
             return df
-
         except Exception as e:
             print(f"Error calculating RSI: {str(e)}")
             df = df.assign(RSI=50)
@@ -50,19 +40,15 @@ class TechnicalIndicators:
         """Add MACD indicator"""
         try:
             df = df.copy()
-            # Calculate MACD components
             exp1 = df['Close'].ewm(span=fast, adjust=False).mean()
             exp2 = df['Close'].ewm(span=slow, adjust=False).mean()
             macd = exp1 - exp2
             signal_line = macd.ewm(span=signal, adjust=False).mean()
-
-            # Assign values without inplace operations
             df = df.assign(
                 MACD=macd.fillna(0),
                 Signal=signal_line.fillna(0)
             )
             return df
-
         except Exception as e:
             print(f"Error calculating MACD: {str(e)}")
             df = df.assign(MACD=0, Signal=0)

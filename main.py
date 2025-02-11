@@ -1,17 +1,16 @@
 import streamlit as st
 import plotly.graph_objects as go
 import pandas as pd
-from datetime import datetime
-import bcrypt
-from utils.data_loader import CryptoDataLoader
-from utils.database import get_db
-import sqlalchemy as sa
+import numpy as np
+from datetime import datetime, timedelta
+import os
+from sqlalchemy import create_engine, text
 import logging
+from utils.data_loader import CryptoDataLoader
 from utils.indicators import TechnicalIndicators
 from utils.notifications import TradingNotifier
 from utils.wallet_manager import WalletManager
-from utils.subscription_manager import SubscriptionManager
-from sqlalchemy.orm import Session
+from utils.auto_trader import AutoTrader
 
 # Setup logging
 logging.basicConfig(
@@ -24,13 +23,26 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-# Page config
+# Configurazione pagina
 st.set_page_config(
     page_title="AurumBot Trading Platform",
     page_icon="🌟",
-    layout="wide",
-    initial_sidebar_state="expanded"
+    layout="wide"
 )
+
+# Verifica e inizializza il database
+def init_db():
+    try:
+        engine = create_engine(os.getenv('DATABASE_URL'))
+        with engine.connect() as conn:
+            # Test connection
+            conn.execute(text("SELECT 1"))
+            logger.info("Database connection successful")
+            return engine
+    except Exception as e:
+        logger.error(f"Database connection error: {e}")
+        st.error("Errore di connessione al database. Riprova più tardi.")
+        return None
 
 # Initialize session state
 if 'authenticated' not in st.session_state:
@@ -47,58 +59,59 @@ if 'balance' not in st.session_state:
     st.session_state.balance = 10000.0
 if 'positions' not in st.session_state:
     st.session_state.positions = []
-if 'subscription_active' not in st.session_state:
-    st.session_state.subscription_active = False
 
-# Database session management
-def get_db_session() -> Session:
+def verify_activation_code(username: str, code: str) -> bool:
+    """Verifica il codice di attivazione e attiva l'abbonamento"""
     try:
-        db = next(get_db())
-        return db
-    except Exception as e:
-        logger.error(f"Database connection error: {str(e)}")
-        st.error("Database connection error. Please try again later.")
-        return None
-
-def login_user(username: str, activation_code: str) -> bool:
-    """Login utente con codice di attivazione"""
-    try:
-        subscription_manager = SubscriptionManager()
-        db = get_db_session()
-
-        if not db:
+        engine = init_db()
+        if not engine:
             return False
 
-        # Verifica se l'utente esiste
-        result = db.execute(
-            sa.text("SELECT id, username FROM users WHERE username = :username"),
-            {"username": username}
-        ).fetchone()
-
-        # Se l'utente non esiste, crealo
-        if not result:
-            result = db.execute(
-                sa.text("""
-                INSERT INTO users (username, email, password_hash)
-                VALUES (:username, :username, 'not_used')
-                RETURNING id, username
+        with engine.connect() as conn:
+            # Verifica se il codice è valido e non utilizzato
+            result = conn.execute(
+                text("""
+                SELECT ac.id, ac.plan_id, sp.duration_months 
+                FROM activation_codes ac
+                JOIN subscription_plans sp ON ac.plan_id = sp.id
+                WHERE ac.code = :code AND ac.is_used = FALSE
                 """),
-                {"username": username}
+                {"code": code}
             ).fetchone()
-            db.commit()
 
-        # Attiva l'abbonamento
-        if subscription_manager.activate_subscription(activation_code, result[0]):
-            st.session_state.authenticated = True
-            st.session_state.user_id = result[0]
-            st.session_state.username = result[1]
-            st.session_state.subscription_active = True
+            if not result:
+                return False
+
+            code_id, plan_id, duration = result
+
+            # Crea o aggiorna l'utente
+            user_result = conn.execute(
+                text("""
+                INSERT INTO users (username, subscription_expires_at)
+                VALUES (:username, NOW() + :duration * INTERVAL '1 month')
+                ON CONFLICT (username) 
+                DO UPDATE SET subscription_expires_at = NOW() + :duration * INTERVAL '1 month'
+                RETURNING id
+                """),
+                {"username": username, "duration": duration}
+            ).fetchone()
+
+            # Marca il codice come utilizzato
+            conn.execute(
+                text("""
+                UPDATE activation_codes 
+                SET is_used = TRUE, used_by = :user_id, used_at = NOW()
+                WHERE id = :code_id
+                """),
+                {"user_id": user_result[0], "code_id": code_id}
+            )
+
+            conn.commit()
+            st.session_state.user_id = user_result[0]
             return True
-        return False
 
     except Exception as e:
-        logger.error(f"Errore di login: {str(e)}")
-        st.error(f"Errore di login: {str(e)}")
+        logger.error(f"Error verifying activation code: {e}")
         return False
 
 def show_login_page():
@@ -134,76 +147,55 @@ def show_login_page():
         if submit:
             if not username or not activation_code:
                 st.error("Inserisci username e codice di attivazione")
-            elif login_user(username, activation_code):
+            elif verify_activation_code(username, activation_code):
+                st.session_state.authenticated = True
+                st.session_state.username = username
                 st.success("Login effettuato con successo!")
                 st.rerun()
             else:
                 st.error("Codice di attivazione non valido o già utilizzato")
 
-def show_subscription_status():
-    if st.session_state.user_id:
-        subscription_manager = SubscriptionManager()
-        info = subscription_manager.get_subscription_info(st.session_state.user_id)
-
-        if info:
-            st.sidebar.markdown("### 📊 Stato Abbonamento")
-            st.sidebar.markdown(f"""
-            **Piano:** {info['plan_name']}  
-            **Scade il:** {info['expires_at'].strftime('%d/%m/%Y')}  
-            **Stato:** {'🟢 Attivo' if info['is_active'] else '🔴 Scaduto'}
-            """)
-        else:
-            st.sidebar.warning("Nessun abbonamento attivo")
-
-
-def show_main_dashboard():
-    # Initialize components
-    data_loader = CryptoDataLoader()
-    indicators = TechnicalIndicators()
-    notifier = TradingNotifier()
-    auto_trader = None
-
-    # Verifica abbonamento
-    subscription_manager = SubscriptionManager()
-    if not subscription_manager.check_subscription(st.session_state.user_id):
-        st.error("Il tuo abbonamento è scaduto. Inserisci un nuovo codice di attivazione per continuare.")
+def show_dashboard():
+    """Mostra la dashboard principale dopo il login"""
+    if not st.session_state.user_id:
+        st.error("Sessione non valida. Effettua nuovamente il login.")
         st.session_state.authenticated = False
         st.rerun()
         return
 
-    # Show subscription status in sidebar
-    show_subscription_status()
+    st.title(f"Benvenuto, {st.session_state.username}! 👋")
 
-    # Sidebar
-    with st.sidebar:
-        st.title(f"Welcome, {st.session_state.username}!")
+    if st.sidebar.button("Logout"):
+        for key in st.session_state.keys():
+            del st.session_state[key]
+        st.rerun()
 
-        # Navigation
-        page = st.radio(
-            "Navigation",
-            ["Dashboard", "Wallet", "Trade", "Orders", "History", "Settings"]
-        )
+    # Initialize components
+    data_loader = CryptoDataLoader()
+    indicators = TechnicalIndicators()
+    notifier = TradingNotifier()
+    auto_trader = None # Initialize auto_trader here
 
-        if st.button("Logout"):
-            st.session_state.authenticated = False
-            st.session_state.user_id = None
-            st.session_state.username = None
-            st.rerun()
+    # Sidebar Navigation
+    page = st.sidebar.radio(
+        "Navigation",
+        ["Dashboard", "Wallet", "Trade", "Orders", "History", "Settings"]
+    )
 
     if page == "Dashboard":
-        st.title("Trading Dashboard")
+        st.header("Trading Dashboard")
 
         # Portfolio Overview
         col1, col2, col3 = st.columns(3)
         with col1:
-            st.metric("Portfolio Value", f"${st.session_state.balance:,.2f}", "+5.2%")  # using session state
+            st.metric("Portfolio Value", f"${st.session_state.balance:,.2f}", "+5.2%")
         with col2:
             st.metric("24h Change", "+$521.43", "+5.21%")
         with col3:
-            st.metric("Active Positions", len(st.session_state.positions))  # using session state
+            st.metric("Active Positions", len(st.session_state.positions))
 
-        # Market Overview and Trading Controls (from original code, adapted)
-        st.subheader("Market Analysis & Trading Controls")
+        # Market Analysis Section
+        st.subheader("Market Analysis")
         selected_pair = st.selectbox(
             "Select Trading Pair",
             data_loader.get_available_coins().keys()
@@ -224,7 +216,7 @@ def show_main_dashboard():
                     risk_per_trade=0.02 if risk_level == "Low" else 0.05 if risk_level == "Medium" else 0.1
                 )
             else:
-                auto_trader = None  # added to handle stopping trading
+                auto_trader = None
 
         # Timeframe selector
         timeframe = st.select_slider(
@@ -243,44 +235,38 @@ def show_main_dashboard():
                 df = indicators.add_macd(df)
 
                 # Create main chart
-                fig = go.Figure()
-
-                # Candlestick
-                fig.add_trace(go.Candlestick(
+                fig = go.Figure(data=[go.Candlestick(
                     x=df.index,
                     open=df['Open'],
                     high=df['High'],
                     low=df['Low'],
-                    close=df['Close'],
-                    name='OHLC'
-                ))
+                    close=df['Close']
+                )])
 
-                # Customize chart
                 fig.update_layout(
                     title=f"{selected_pair} Price Chart",
                     yaxis_title="Price (USD)",
                     template="plotly_dark",
-                    height=600,
-                    margin=dict(l=50, r=50, t=50, b=50)
+                    height=600
                 )
 
                 st.plotly_chart(fig, use_container_width=True)
 
-                # Display indicators
-                indicators_tab, orders_tab = st.tabs(["📊 Indicators", "📝 Orders"])
+                # Technical Indicators
+                st.subheader("Technical Indicators")
+                col1, col2 = st.columns(2)
+                with col1:
+                    st.metric("RSI", f"{df['RSI'].iloc[-1]:.2f}")
+                with col2:
+                    st.metric("MACD", f"{df['MACD'].iloc[-1]:.2f}")
 
-                with indicators_tab:
-                    col_ind1, col_ind2 = st.columns(2)
-                    with col_ind1:
-                        st.metric("RSI", f"{df['RSI'].iloc[-1]:.2f}")
-                    with col_ind2:
-                        st.metric("MACD", f"{df['MACD'].iloc[-1]:.2f}")
+                # Display Active Orders
+                st.subheader("Active Orders")
+                if st.session_state.trading_active and auto_trader:
+                    st.write(auto_trader.portfolio['open_orders'])
+                else:
+                    st.info("Start trading to see active orders")
 
-                with orders_tab:
-                    if st.session_state.trading_active and auto_trader:
-                        st.write("Active Orders:", auto_trader.portfolio['open_orders'])
-                    else:
-                        st.info("Start trading to see active orders")
 
             else:
                 st.error("Failed to load market data")
@@ -302,7 +288,6 @@ def show_main_dashboard():
 
         # Trading Stats (from original code, adapted)
         st.subheader("📊 Statistics")
-
         if st.session_state.trading_active and auto_trader:
             metrics = auto_trader.portfolio['performance_metrics']
             st.metric("Total Profit", f"${metrics['total_profit']:.2f}")
@@ -332,7 +317,6 @@ def show_main_dashboard():
 
     elif page == "Wallet":
         st.title("Wallet Management")
-
         if st.session_state.user_id:
             wallet_manager = WalletManager(st.session_state.user_id)
 
@@ -383,14 +367,15 @@ def show_main_dashboard():
     elif page == "Trade":
         st.title("Trade")
         # Add trading interface here
+        st.info("Trading interface coming soon...")
 
     elif page == "Orders":
         st.title("Order History")
         # Add order history here
+        st.info("Order history coming soon...")
 
     elif page == "History":
         st.title("Transaction History")
-
         if st.session_state.user_id:
             wallet_manager = WalletManager(st.session_state.user_id)
             transactions = wallet_manager.get_transactions()
@@ -417,15 +402,14 @@ def show_main_dashboard():
     elif page == "Settings":
         st.title("Account Settings")
         # Add settings interface here
+        st.info("Account settings coming soon...")
 
 
-# Main app logic
 def main():
     if not st.session_state.authenticated:
         show_login_page()
     else:
-        show_main_dashboard()
-
+        show_dashboard()
 
 if __name__ == "__main__":
     main()
