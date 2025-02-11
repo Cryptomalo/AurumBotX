@@ -46,22 +46,9 @@ class SentimentAnalyzer:
                 logger.error(f"Twitter initialization failed: {twitter_e}")
                 self.twitter = None
 
-            # Telegram setup
-            try:
-                api_id = os.getenv("TELEGRAM_API_ID")
-                api_hash = os.getenv("TELEGRAM_API_HASH")
-                if api_id and api_hash:
-                    self.telegram = TelegramClient(
-                        'aurum_bot',
-                        int(api_id),
-                        api_hash
-                    )
-                    logger.info("Telegram client initialized successfully")
-                else:
-                    raise ValueError("Telegram API credentials not found")
-            except Exception as telegram_e:
-                logger.error(f"Telegram initialization failed: {telegram_e}")
-                self.telegram = None
+            # Telegram setup - temporarily disabled
+            self.telegram = None
+            logger.info("Telegram integration temporarily disabled")
 
         except Exception as e:
             logger.error(f"Error initializing social clients: {e}")
@@ -72,7 +59,8 @@ class SentimentAnalyzer:
         try:
             reddit_data = await self.get_reddit_sentiment(symbol) if self.reddit else []
             twitter_data = await self.get_twitter_sentiment(symbol) if self.twitter else []
-            telegram_data = await self.get_telegram_sentiment(symbol) if self.telegram else []
+            # Telegram data collection disabled
+            telegram_data = []
 
             combined_data = {
                 "reddit": reddit_data,
@@ -81,8 +69,8 @@ class SentimentAnalyzer:
                 "timestamp": datetime.now().isoformat()
             }
 
-            # Verifica se abbiamo dati sufficienti
-            if not any([reddit_data, twitter_data, telegram_data]):
+            # Verifica se abbiamo dati sufficienti (escluso Telegram)
+            if not any([reddit_data, twitter_data]):
                 logger.warning("No social media data available for analysis")
                 return {
                     "error": "Insufficient social media data",
@@ -149,7 +137,7 @@ class SentimentAnalyzer:
         """Ottiene tweet rilevanti"""
         try:
             query = f"#{symbol} OR {symbol} crypto -is:retweet"
-            tweets = await self.twitter.search_recent_tweets(
+            tweets = self.twitter.search_recent_tweets(
                 query=query,
                 max_results=100,
                 tweet_fields=['created_at', 'public_metrics']
@@ -163,31 +151,6 @@ class SentimentAnalyzer:
 
         except Exception as e:
             logger.error(f"Error getting Twitter sentiment: {e}")
-            return []
-
-    async def get_telegram_sentiment(self, symbol: str) -> List[Dict[str, Any]]:
-        """Ottiene messaggi da canali Telegram"""
-        try:
-            channels = ['cryptosignals', 'binancenews']  # Add relevant channels
-            messages = []
-
-            async with self.telegram:
-                for channel in channels:
-                    try:
-                        async for message in self.telegram.iter_messages(channel, limit=50):
-                            if symbol.lower() in message.text.lower():
-                                messages.append({
-                                    "text": message.text,
-                                    "date": message.date.isoformat(),
-                                    "views": message.views
-                                })
-                    except Exception as chan_e:
-                        logger.warning(f"Error fetching from channel {channel}: {chan_e}")
-
-            return messages
-
-        except Exception as e:
-            logger.error(f"Error getting Telegram sentiment: {e}")
             return []
 
     async def analyze_with_ai(self, data: Dict[str, Any]) -> Dict[str, Any]:
@@ -233,12 +196,10 @@ class SentimentAnalyzer:
 
         Reddit Posts: {len(data['reddit'])} posts
         Twitter Mentions: {len(data['twitter'])} tweets
-        Telegram Messages: {len(data['telegram'])} messages
 
         Key metrics:
         - Reddit engagement: {sum(post['score'] for post in data['reddit'])}
         - Twitter engagement: {sum(tweet['metrics'].get('like_count', 0) for tweet in data['twitter'])}
-        - Telegram views: {sum(msg.get('views', 0) for msg in data['telegram'])}
 
         Please analyze the overall sentiment, identify key trends, and potential market signals.
         """

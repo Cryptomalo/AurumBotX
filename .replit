@@ -35,10 +35,6 @@ author = "agent"
 task = "workflow.run"
 args = "Trading Bot Tests"
 
-[[workflows.workflow.tasks]]
-task = "workflow.run"
-args = "Telegram Test"
-
 [[workflows.workflow]]
 name = "Trading Bot Tests"
 author = "agent"
@@ -52,20 +48,6 @@ task = "packager.installForAll"
 [[workflows.workflow.tasks]]
 task = "shell.exec"
 args = "python test_bot.py"
-
-[[workflows.workflow]]
-name = "Telegram Test"
-author = "agent"
-
-[workflows.workflow.metadata]
-agentRequireRestartOnSave = false
-
-[[workflows.workflow.tasks]]
-task = "packager.installForAll"
-
-[[workflows.workflow.tasks]]
-task = "shell.exec"
-args = "python utils/telegram_test.py"
 
 [[ports]]
 localPort = 5000
