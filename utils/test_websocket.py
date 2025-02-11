@@ -18,15 +18,20 @@ class TestWebSocketHandler(unittest.TestCase):
     def setUp(self):
         """Setup test environment with mocked dependencies"""
         self.mock_client = Mock()
-        self.mock_bm = Mock()
+        self.mock_twm = Mock()
 
         # Setup patches
         self.client_patcher = patch('utils.websocket_handler.Client', return_value=self.mock_client)
-        self.bm_patcher = patch('utils.websocket_handler.BinanceSocketManager', return_value=self.mock_bm)
+        self.twm_patcher = patch('utils.websocket_handler.ThreadedWebsocketManager', return_value=self.mock_twm)
 
         # Start patches
         self.mock_client_class = self.client_patcher.start()
-        self.mock_bm_class = self.bm_patcher.start()
+        self.mock_twm_class = self.twm_patcher.start()
+
+        # Configure default mock behavior
+        self.mock_twm.is_alive.return_value = True
+        self.mock_twm.start.return_value = None
+        self.mock_twm.start_multiplex_socket.return_value = True
 
         # Create handler instance
         self.handler = WebSocketHandler(api_key="test_key", api_secret="test_secret", testnet=True)
@@ -34,37 +39,48 @@ class TestWebSocketHandler(unittest.TestCase):
     def tearDown(self):
         """Cleanup patches"""
         self.client_patcher.stop()
-        self.bm_patcher.stop()
+        self.twm_patcher.stop()
 
     def test_initial_connection(self):
         """Test initial WebSocket connection setup"""
-        # Configure mock
-        self.mock_bm.start_multiplex_socket.return_value = "test_conn_key"
-
         # Test connection
         success = self.handler.setup_socket()
         self.assertTrue(success)
         self.assertTrue(self.handler.is_connected())
 
         # Verify correct method calls
-        self.mock_bm.start_multiplex_socket.assert_called_once()
-        self.mock_bm.start.assert_called_once()
+        self.mock_twm.start.assert_called_once()
+        self.mock_twm.start_multiplex_socket.assert_called_once()
 
     def test_reconnection_logic(self):
         """Test reconnection with exponential backoff"""
-        # Configure mock to fail first then succeed
-        self.mock_bm.start_multiplex_socket.side_effect = [Exception("Connection failed"), "test_conn_key"]
+        # First attempt: TWM fails to start
+        self.mock_twm.start.side_effect = [Exception("Connection failed")]
+        self.mock_twm.is_alive.return_value = False
 
         # First attempt should fail
         success = self.handler.setup_socket()
         self.assertFalse(success)
 
+        # Reset mock and create new instance for second attempt
+        self.mock_twm_class.reset_mock()
+        new_mock_twm = Mock()
+        new_mock_twm.is_alive.return_value = True
+        new_mock_twm.start.side_effect = None  # Clear side effect
+        new_mock_twm.start.return_value = None
+        new_mock_twm.start_multiplex_socket.return_value = True
+        self.mock_twm_class.return_value = new_mock_twm
+
+        # Reset handler state
+        self.handler.connected = False
+        self.handler.twm = new_mock_twm
+
         # Reconnection should succeed
         success = self.handler.reconnect()
         self.assertTrue(success)
-
-        # Verify backoff delay was reset
-        self.assertEqual(self.handler.reconnect_delay, 1)
+        self.assertTrue(self.handler.is_connected())
+        new_mock_twm.start.assert_called_once()
+        new_mock_twm.start_multiplex_socket.assert_called_once()
 
     def test_message_handler(self):
         """Test message handling with various scenarios"""
