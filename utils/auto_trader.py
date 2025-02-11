@@ -18,6 +18,17 @@ class AutoTrader:
         self.initial_balance = initial_balance
         self.risk_per_trade = risk_per_trade
         self.balance = initial_balance
+        self.portfolio = {
+            'total_value': initial_balance,
+            'crypto_holdings': {},
+            'open_orders': [],
+            'trade_history': [],
+            'performance_metrics': {
+                'total_profit': 0,
+                'win_rate': 0,
+                'avg_profit_per_trade': 0
+            }
+        }
 
         # Initialize components
         self.data_loader = CryptoDataLoader()

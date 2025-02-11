@@ -4,6 +4,53 @@ from datetime import datetime
 import pytz
 from utils.database import SimulationResult, TradingStrategy, get_db
 
+class AdvancedBacktester:
+    def __init__(self, strategy, initial_balance=10000):
+        self.strategy = strategy
+        self.initial_balance = initial_balance
+        self.results = []
+        
+    def run_backtest(self, historical_data, start_date, end_date):
+        """Esegue backtest con simulazione mercato realistica"""
+        balance = self.initial_balance
+        positions = {}
+        trades = []
+        
+        for timestamp, row in historical_data.iterrows():
+            if start_date <= timestamp <= end_date:
+                signal = self.strategy.analyze_market(historical_data[:timestamp])
+                if signal and signal['action'] != 'hold':
+                    trade_result = self._simulate_trade(signal, row, balance)
+                    trades.append(trade_result)
+                    balance = trade_result['new_balance']
+                    
+        return {
+            'final_balance': balance,
+            'total_trades': len(trades),
+            'profit_factor': self._calculate_profit_factor(trades),
+            'sharpe_ratio': self._calculate_sharpe_ratio(trades),
+            'max_drawdown': self._calculate_max_drawdown(trades),
+            'trades': trades
+        }
+        
+    def _simulate_trade(self, signal, price_data, balance):
+        """Simula trade con slippage e commissioni realistiche"""
+        slippage = 0.001  # 0.1% slippage
+        commission = 0.002  # 0.2% commission
+        
+        entry_price = price_data['Close'] * (1 + slippage)
+        position_size = balance * signal['size_factor']
+        commission_cost = position_size * commission
+        
+        return {
+            'timestamp': price_data.name,
+            'action': signal['action'],
+            'entry_price': entry_price,
+            'position_size': position_size,
+            'commission': commission_cost,
+            'new_balance': balance - position_size - commission_cost
+        }
+
 class TradingSimulator:
     def __init__(self, initial_balance=10000):
         self.initial_balance = initial_balance
