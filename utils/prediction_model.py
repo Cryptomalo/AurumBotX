@@ -44,10 +44,20 @@ class MemeCoinPredictionModel:
 class PredictionModel:
 
     def analyze_market_with_ai(self, market_data, social_data):
-        """Analisi avanzata del mercato usando AI"""
+        """Analisi avanzata del mercato usando AI con parallel processing"""
         try:
-            # Analisi tecnica con AI
-            technical_analysis = self.model.predict(market_data)
+            from concurrent.futures import ThreadPoolExecutor
+            
+            with ThreadPoolExecutor(max_workers=3) as executor:
+                # Esegui analisi in parallelo
+                technical_future = executor.submit(self.model.predict, market_data)
+                sentiment_future = executor.submit(self._analyze_social_media)
+                news_future = executor.submit(self._analyze_crypto_news)
+                
+                # Raccogli risultati
+                technical_analysis = technical_future.result()
+                social_sentiment = sentiment_future.result()
+                news_sentiment = news_future.result()
             
             # Analisi social media
             social_sentiment = self._analyze_social_media()

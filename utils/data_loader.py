@@ -28,6 +28,7 @@ class CryptoDataLoader:
 
         self._cache = {}
         self._cache_duration = 300  # 5 minutes cache
+        self._price_cache = {} # Added price cache
 
         # Setup logging
         self._setup_logging()
@@ -140,8 +141,8 @@ class CryptoDataLoader:
             logger.error(f"Error calculating indicators: {str(e)}")
             return df
 
-    def get_current_price(self, symbol: str) -> Optional[float]:
-        """Get current price with error handling"""
+    def _fetch_price(self, symbol: str) -> Optional[float]:
+        """Fetches the current price from yfinance"""
         try:
             ticker = yf.Ticker(symbol)
             price = ticker.info.get('regularMarketPrice')
@@ -152,6 +153,25 @@ class CryptoDataLoader:
         except Exception as e:
             logger.error(f"Error getting price for {symbol}: {str(e)}")
             return None
+
+    def get_current_price(self, symbol: str) -> Optional[float]:
+        """Get current price with error handling and caching"""
+        try:
+            cache_key = f"{symbol}_price"
+            if cache_key in self._price_cache:
+                if time.time() - self._price_cache[cache_key]['timestamp'] < 5:  # 5 sec cache
+                    return self._price_cache[cache_key]['price']
+
+            price = self._fetch_price(symbol)
+            self._price_cache[cache_key] = {
+                'price': price,
+                'timestamp': time.time()
+            }
+            return price
+        except Exception as e:
+            self.logger.warning(f"No price available for {symbol}")
+            return None
+
 
     def get_available_coins(self) -> Dict[str, str]:
         """Return dictionary of available coins"""
