@@ -1,3 +1,4 @@
+import asyncio
 import os
 import time
 import logging
@@ -90,7 +91,7 @@ class CryptoDataLoader:
             logger.error(f"Database setup error: {e}", exc_info=True)
             self.engine = None
 
-    def get_historical_data(
+    async def get_historical_data(
         self,
         symbol: str,
         period: str = '1d',
@@ -102,7 +103,7 @@ class CryptoDataLoader:
             logger.info(f"Getting historical data for {symbol}")
 
             if not self.use_live_data or not self.market_exchange:
-                return self._get_simulated_data(symbol, period, interval)
+                return await self._get_simulated_data(symbol, period, interval)
 
             # Try to get from cache first
             cached_data = self._get_from_cache(f"{symbol}_{period}_{interval}")
@@ -134,24 +135,117 @@ class CryptoDataLoader:
                 df.set_index('timestamp', inplace=True)
 
                 # Add technical indicators
-                df = self._add_technical_indicators(df)
+                df = await self._add_technical_indicators(df)
 
                 # Cache the data
                 self._add_to_cache(f"{symbol}_{period}_{interval}", df)
 
                 # Save to database for historical analysis
-                self._save_to_database(symbol, df)
+                await self._save_to_database(symbol, df)
 
                 return df
 
             except Exception as e:
                 logger.error(f"Error fetching live data for {symbol}: {e}")
                 logger.info("Falling back to simulated data")
-                return self._get_simulated_data(symbol, period, interval)
+                return await self._get_simulated_data(symbol, period, interval)
 
         except Exception as e:
             logger.error(f"Error fetching data for {symbol}: {e}")
-            return self._get_simulated_data(symbol, period, interval)
+            return await self._get_simulated_data(symbol, period, interval)
+
+    async def _get_simulated_data(self, symbol: str, period: str, interval: str) -> pd.DataFrame:
+        """Generate simulated market data for testing"""
+        periods = {'1d': 1, '7d': 7, '30d': 30}
+        intervals = {'1m': 1, '5m': 5, '15m': 15, '1h': 60, '4h': 240, '1d': 1440}
+
+        days = periods.get(period, 1)
+        mins = intervals.get(interval, 1)
+
+        end_time = datetime.now()
+        start_time = end_time - timedelta(days=days)
+
+        # Generate timestamps
+        timestamps = pd.date_range(start=start_time, end=end_time, freq=f'{mins}min')
+
+        # Generate simulated prices with some randomness
+        base_price = 100 if 'BTC' not in symbol else 30000
+        price_data = []
+        current_price = base_price
+
+        for _ in range(len(timestamps)):
+            change = np.random.normal(0, 0.001)
+            current_price *= (1 + change)
+            high_price = current_price * (1 + abs(np.random.normal(0, 0.0005)))
+            low_price = current_price * (1 - abs(np.random.normal(0, 0.0005)))
+            volume = abs(np.random.normal(1000000, 100000))
+            price_data.append([
+                current_price * 0.9999,  # Open
+                high_price,              # High
+                low_price,               # Low
+                current_price,           # Close
+                volume                   # Volume
+            ])
+
+        df = pd.DataFrame(
+            price_data,
+            index=timestamps,
+            columns=['Open', 'High', 'Low', 'Close', 'Volume']
+        )
+
+        # Add technical indicators
+        df = await self._add_technical_indicators(df)
+        return df
+
+    async def _add_technical_indicators(self, df: pd.DataFrame) -> pd.DataFrame:
+        """Calculate comprehensive technical indicators"""
+        try:
+            df = df.copy()
+
+            # Basic indicators
+            df['Returns'] = df['Close'].pct_change()
+            df['Volatility'] = df['Returns'].rolling(window=20).std()
+            df['Volume_MA'] = df['Volume'].rolling(window=20).mean()
+            df['Volume_Ratio'] = df['Volume'] / df['Volume_MA']
+
+            # Moving averages
+            for period in [20, 50, 200]:
+                df[f'SMA_{period}'] = df['Close'].rolling(window=period).mean()
+                df[f'EMA_{period}'] = df['Close'].ewm(span=period, adjust=False).mean()
+
+            # RSI
+            delta = df['Close'].diff()
+            gain = delta.where(delta > 0, 0)
+            loss = -delta.where(delta < 0, 0)
+            avg_gain = gain.rolling(window=14).mean()
+            avg_loss = loss.rolling(window=14).mean()
+            rs = avg_gain / avg_loss
+            df['RSI'] = 100 - (100 / (1 + rs))
+
+            # Clean up NaN values
+            df = df.fillna(method='bfill').fillna(method='ffill').fillna(0)
+
+            return df
+        except Exception as e:
+            logger.error(f"Error calculating indicators: {e}", exc_info=True)
+            return df
+
+    async def _save_to_database(self, symbol: str, df: pd.DataFrame):
+        """Save market data to database for historical analysis"""
+        if not self.engine:
+            return
+
+        try:
+            table_name = f"market_data_{symbol.lower().replace('/', '_')}"
+            df.to_sql(
+                table_name,
+                self.engine,
+                if_exists='append',
+                index=True
+            )
+            logger.debug(f"Saved {len(df)} rows to database for {symbol}")
+        except Exception as e:
+            logger.error(f"Database error for {symbol}: {e}", exc_info=True)
 
     def get_current_price(self, symbol: str) -> Optional[float]:
         """Get current price from live market when possible"""
@@ -192,47 +286,6 @@ class CryptoDataLoader:
         """Normalize symbol format for exchange"""
         return symbol.replace('-', '/') if '-' in symbol else symbol
 
-    def _get_simulated_data(self, symbol: str, period: str, interval: str) -> pd.DataFrame:
-        """Generate simulated market data for testing"""
-        periods = {'1d': 1, '7d': 7, '30d': 30}
-        intervals = {'1m': 1, '5m': 5, '15m': 15, '1h': 60, '4h': 240, '1d': 1440}
-
-        days = periods.get(period, 1)
-        mins = intervals.get(interval, 1)
-
-        end_time = datetime.now()
-        start_time = end_time - timedelta(days=days)
-
-        # Generate timestamps
-        timestamps = pd.date_range(start=start_time, end=end_time, freq=f'{mins}min')
-
-        # Generate simulated prices with some randomness
-        base_price = 100 if 'BTC' not in symbol else 30000
-        price_data = []
-        current_price = base_price
-
-        for _ in range(len(timestamps)):
-            change = np.random.normal(0, 0.001)
-            current_price *= (1 + change)
-            high_price = current_price * (1 + abs(np.random.normal(0, 0.0005)))
-            low_price = current_price * (1 - abs(np.random.normal(0, 0.0005)))
-            volume = abs(np.random.normal(1000000, 100000))
-            price_data.append([
-                current_price * 0.9999,  # Open
-                high_price,              # High
-                low_price,               # Low
-                current_price,           # Close
-                volume                   # Volume
-            ])
-
-        df = pd.DataFrame(
-            price_data,
-            index=timestamps,
-            columns=['Open', 'High', 'Low', 'Close', 'Volume']
-        )
-
-        return df
-
     def _get_from_cache(self, key: str, interval: str = '1m') -> Optional[pd.DataFrame]:
         """Get data from cache if valid"""
         try:
@@ -261,77 +314,15 @@ class CryptoDataLoader:
         except Exception as e:
             logger.error(f"Cache error for {key}: {e}", exc_info=True)
 
-    def _add_technical_indicators(self, df: pd.DataFrame) -> pd.DataFrame:
-        """Calculate comprehensive technical indicators"""
-        try:
-            df = df.copy()
-
-            # Basic indicators
-            df['Returns'] = df['Close'].pct_change()
-            df['Volatility'] = df['Returns'].rolling(window=20).std()
-            df['Volume_MA'] = df['Volume'].rolling(window=20).mean()
-            df['Volume_Ratio'] = df['Volume'] / df['Volume_MA']
-
-            # Moving averages
-            for period in [20, 50, 200]:
-                df[f'SMA_{period}'] = df['Close'].rolling(window=period).mean()
-                df[f'EMA_{period}'] = df['Close'].ewm(span=period, adjust=False).mean()
-
-            # RSI
-            delta = df['Close'].diff()
-            gain = delta.where(delta > 0, 0)
-            loss = -delta.where(delta < 0, 0)
-            avg_gain = gain.rolling(window=14).mean()
-            avg_loss = loss.rolling(window=14).mean()
-            rs = avg_gain / avg_loss
-            df['RSI'] = 100 - (100 / (1 + rs))
-
-            # MACD
-            exp1 = df['Close'].ewm(span=12, adjust=False).mean()
-            exp2 = df['Close'].ewm(span=26, adjust=False).mean()
-            df['MACD'] = exp1 - exp2
-            df['Signal'] = df['MACD'].ewm(span=9, adjust=False).mean()
-            df['MACD_Hist'] = df['MACD'] - df['Signal']
-
-            # Bollinger Bands
-            df['BB_Middle'] = df['Close'].rolling(window=20).mean()
-            df['BB_Upper'] = df['BB_Middle'] + 2 * df['Close'].rolling(window=20).std()
-            df['BB_Lower'] = df['BB_Middle'] - 2 * df['Close'].rolling(window=20).std()
-
-            # Clean up NaN values
-            df = df.fillna(method='bfill').fillna(method='ffill').fillna(0)
-
-            return df
-        except Exception as e:
-            logger.error(f"Error calculating indicators: {e}", exc_info=True)
-            return df
-
-    def _save_to_database(self, symbol: str, df: pd.DataFrame):
-        """Save market data to database for historical analysis"""
-        if not self.engine:
-            return
-
-        try:
-            table_name = f"market_data_{symbol.lower().replace('/', '_')}"
-            df.to_sql(
-                table_name,
-                self.engine,
-                if_exists='append',
-                index=True
-            )
-            logger.debug(f"Saved {len(df)} rows to database for {symbol}")
-        except Exception as e:
-            logger.error(f"Database error for {symbol}: {e}", exc_info=True)
-
     def get_available_coins(self) -> Dict[str, str]:
         """Return dictionary of supported cryptocurrencies"""
         return self.supported_coins.copy()
 
-    def get_market_summary(self, symbol: str) -> Dict[str, Union[float, str]]:
+    async def get_market_summary(self, symbol: str) -> Dict[str, Union[float, str]]:
         """Get market summary using simulated data"""
         try:
             symbol = self._normalize_symbol(symbol)
-            df = self.get_historical_data(symbol, period='1d')
+            df = await self.get_historical_data(symbol, period='1d')
             if df is None or df.empty:
                 return {}
 

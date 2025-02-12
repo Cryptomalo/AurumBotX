@@ -22,11 +22,93 @@ class StrategyManager:
         self.strategy_performance: Dict[str, Dict] = {}
         self._initialize_strategies()
         self.risk_limits = {
-            'max_position_size': 0.1,  # 10% del portfolio
-            'max_daily_loss': 0.02,    # 2% massima perdita giornaliera
-            'stop_loss': 0.03,         # 3% stop loss per trade
-            'take_profit': 0.05        # 5% take profit per trade
+            'max_position_size': 0.1,  
+            'max_daily_loss': 0.02,    
+            'stop_loss': 0.03,         
+            'take_profit': 0.05        
         }
+        self.is_live_testing = False
+        self.test_start_time = None
+
+    async def configure_for_live_testing(self):
+        """Configura il manager e le strategie per il testing con dati reali"""
+        try:
+            logger.info("Configuring StrategyManager for live testing...")
+            self.is_live_testing = True
+            self.test_start_time = datetime.now()
+
+            # Configura limiti di rischio più conservativi per il testing
+            self.risk_limits.update({
+                'max_position_size': 0.05,  # Ridotto al 5%
+                'max_daily_loss': 0.01,     # Ridotto all'1%
+                'stop_loss': 0.02,          # Ridotto al 2%
+                'take_profit': 0.03         # Ridotto al 3%
+            })
+
+            # Configura ogni strategia attiva per il live testing
+            for strategy_name, strategy in self.active_strategies.items():
+                logger.info(f"Configuring strategy {strategy_name} for live testing")
+                if hasattr(strategy, 'configure_for_live_testing'):
+                    await strategy.configure_for_live_testing()
+
+                # Reset performance metrics per il nuovo test
+                self.strategy_performance[strategy_name] = {
+                    'start_time': self.test_start_time,
+                    'trades': 0,
+                    'profit_loss': 0.0,
+                    'win_rate': 0.0,
+                    'sharpe_ratio': 0.0,
+                    'max_drawdown': 0.0,
+                    'volatility': 0.0,
+                    'risk_adjusted_return': 0.0
+                }
+
+            logger.info("StrategyManager successfully configured for live testing")
+            return True
+
+        except Exception as e:
+            logger.error(f"Error configuring for live testing: {str(e)}")
+            self.is_live_testing = False
+            return False
+
+    async def cleanup(self):
+        """Pulisce le risorse e chiude le connessioni"""
+        try:
+            logger.info("Starting StrategyManager cleanup...")
+
+            # Disattiva il modalità live testing
+            self.is_live_testing = False
+
+            # Cleanup per ogni strategia attiva
+            for strategy_name, strategy in list(self.active_strategies.items()):
+                try:
+                    logger.info(f"Cleaning up strategy {strategy_name}")
+                    if hasattr(strategy, 'cleanup'):
+                        await strategy.cleanup()
+
+                    # Salva le performance finali
+                    if strategy_name in self.strategy_performance:
+                        end_time = datetime.now()
+                        duration = end_time - self.strategy_performance[strategy_name]['start_time']
+                        logger.info(f"Strategy {strategy_name} ran for {duration}")
+                        logger.info(f"Final performance metrics: {self.strategy_performance[strategy_name]}")
+
+                    # Rimuovi la strategia dalla lista attive
+                    del self.active_strategies[strategy_name]
+
+                except Exception as e:
+                    logger.error(f"Error cleaning up strategy {strategy_name}: {str(e)}")
+
+            # Reset delle variabili interne
+            self.strategy_performance.clear()
+            self.test_start_time = None
+
+            logger.info("StrategyManager cleanup completed successfully")
+            return True
+
+        except Exception as e:
+            logger.error(f"Error during StrategyManager cleanup: {str(e)}")
+            return False
 
     def _initialize_strategies(self):
         """Inizializza le strategie disponibili con configurazione avanzata"""

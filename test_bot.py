@@ -89,6 +89,48 @@ class TestBot:
             logger.error(f"Component initialization error: {str(e)}")
             return False
 
+    async def db_health_check(self) -> bool:
+        """Verify database health with sync session"""
+        if not self.db:
+            logger.error("Database not initialized during health check")
+            raise ValueError("Database not initialized")
+
+        max_attempts = 3
+        retry_delay = 5
+
+        for attempt in range(max_attempts):
+            try:
+                logger.info(f"Database health check attempt {attempt + 1}")
+                if not self.db.connect():
+                    logger.error("Database connection failed")
+                    raise Exception("Database connection failed")
+
+                # Test simple query using sync session
+                session = self.db.Session()
+                try:
+                    logger.debug("Executing test query...")
+                    session.execute(text("SELECT 1"))
+                    session.commit()
+                    logger.info("Database health check passed")
+                    return True
+                except Exception as e:
+                    logger.error(f"Test query failed: {str(e)}")
+                    session.rollback()
+                    raise
+                finally:
+                    session.close()
+
+            except Exception as e:
+                logger.error(f"Database health check attempt {attempt + 1} failed: {str(e)}")
+                if attempt < max_attempts - 1:
+                    logger.info(f"Waiting {retry_delay}s before next attempt...")
+                    await asyncio.sleep(retry_delay)
+                    retry_delay *= 2
+
+        logger.error("Database health check failed after all attempts")
+        raise Exception("Database health check failed after all attempts")
+
+
     async def run_extended_test(self) -> bool:
         """Run extended test with real market data and testnet trading"""
         try:
