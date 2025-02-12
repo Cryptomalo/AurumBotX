@@ -19,11 +19,12 @@ logging.basicConfig(
     handlers=[
         logging.FileHandler(log_filename),
         logging.StreamHandler(sys.stdout)
-    ]
-)
+    ])
 logger = logging.getLogger(__name__)
 
+
 class TestBot:
+
     def __init__(self):
         logger.info("Inizializzazione TestBot...")
         self.db: Optional[Database] = None
@@ -93,7 +94,8 @@ class TestBot:
 
         for attempt in range(max_attempts):
             try:
-                logger.info(f"Tentativo {attempt + 1} di health check database")
+                logger.info(
+                    f"Tentativo {attempt + 1} di health check database")
                 if not self.db.connect():
                     logger.error("Connessione database fallita")
                     raise Exception("Connessione database fallita")
@@ -114,9 +116,13 @@ class TestBot:
                     session.close()
 
             except Exception as e:
-                logger.error(f"Database health check tentativo {attempt + 1} fallito: {str(e)}")
+                logger.error(
+                    f"Database health check tentativo {attempt + 1} fallito: {str(e)}"
+                )
                 if attempt < max_attempts - 1:
-                    logger.info(f"Attesa {retry_delay}s prima del prossimo tentativo...")
+                    logger.info(
+                        f"Attesa {retry_delay}s prima del prossimo tentativo..."
+                    )
                     await asyncio.sleep(retry_delay)
                     retry_delay *= 2
 
@@ -160,11 +166,14 @@ class TestBot:
 
             # Attiva e testa la strategia
             logger.info("Attivazione strategia DEX...")
-            if await self.strategy_manager.activate_strategy('dex_sniping', dex_config):
-                logger.info("Test strategia DEX superato: attivazione riuscita")
+            if await self.strategy_manager.activate_strategy(
+                    'dex_sniping', dex_config):
+                logger.info(
+                    "Test strategia DEX superato: attivazione riuscita")
                 return True
 
-            logger.error("Test strategia DEX fallito: attivazione non riuscita")
+            logger.error(
+                "Test strategia DEX fallito: attivazione non riuscita")
             return False
 
         except Exception as e:
@@ -179,16 +188,20 @@ class TestBot:
 
         try:
             logger.info("Esecuzione analisi sentiment per BTC...")
-            sentiment_data = await self.sentiment_analyzer.analyze_social_sentiment("BTC")
+            sentiment_data = await self.sentiment_analyzer.analyze_social_sentiment(
+                "BTC")
             if sentiment_data and 'score' in sentiment_data:
-                logger.info(f"Test sentiment analysis superato. Score: {sentiment_data['score']}")
+                logger.info(
+                    f"Test sentiment analysis superato. Score: {sentiment_data['score']}"
+                )
                 return True
 
             logger.error("Test sentiment analysis fallito: dati non validi")
             return False
 
         except Exception as e:
-            logger.error(f"Test sentiment analysis fallito con errore: {str(e)}")
+            logger.error(
+                f"Test sentiment analysis fallito con errore: {str(e)}")
             return False
 
     async def run_all_tests(self) -> bool:
@@ -210,7 +223,9 @@ class TestBot:
             if all_passed:
                 logger.info("Tutti i test completati con successo")
             else:
-                failed_tests = [name for name, passed in test_results.items() if not passed]
+                failed_tests = [
+                    name for name, passed in test_results.items() if not passed
+                ]
                 logger.error(f"Test falliti: {', '.join(failed_tests)}")
 
             return all_passed
@@ -228,11 +243,14 @@ class TestBot:
             if self.websocket_handler:
                 await self.websocket_handler.cleanup()
             if self.strategy_manager:
-                for strategy_name in list(self.strategy_manager.active_strategies.keys()):
-                    await self.strategy_manager.deactivate_strategy(strategy_name)
+                for strategy_name in list(
+                        self.strategy_manager.active_strategies.keys()):
+                    await self.strategy_manager.deactivate_strategy(
+                        strategy_name)
             logger.info("Pulizia risorse completata")
         except Exception as e:
             logger.error(f"Errore durante la pulizia: {str(e)}")
+
 
 if __name__ == "__main__":
     logger.info("Avvio programma principale...")
