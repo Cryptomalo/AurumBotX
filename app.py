@@ -33,9 +33,10 @@ st.markdown("""
 <style>
     .stApp {
         background-color: #0E1117;
+        color: #FFFFFF;
     }
     div[data-testid="stSidebarNav"] {
-        background-color: #1E1E1E;
+        background-color: #1A1A1A;
         padding-top: 2rem;
         position: fixed;
         top: 0;
@@ -47,20 +48,57 @@ st.markdown("""
         margin-left: 0;
     }
     .css-1d391kg {
-        background-color: #1E1E1E;
+        background-color: #1A1A1A;
     }
     section[data-testid="stSidebar"] > div {
-        background-color: #1E1E1E;
+        background-color: #1A1A1A;
         padding: 1rem;
     }
     .stTabs [data-baseweb="tab-list"] button[data-baseweb="tab"] {
-        background-color: #1E1E1E;
+        background-color: #1A1A1A;
         border-radius: 4px 4px 0 0;
         padding: 10px 20px;
-        color: white;
+        color: #E0E0E0;
     }
     .stTabs [data-baseweb="tab-list"] button[data-baseweb="tab"][aria-selected="true"] {
-        background-color: #2E2E2E;
+        background-color: #2D2D2D;
+        color: #FFFFFF;
+    }
+    /* Improve button contrast */
+    .stButton>button {
+        background-color: #FF9900;
+        color: #000000;
+        font-weight: 500;
+    }
+    .stButton>button:hover {
+        background-color: #FFB84D;
+        color: #000000;
+    }
+    /* Improve metrics visibility */
+    div[data-testid="stMetricValue"] {
+        color: #FFFFFF;
+        font-size: 24px;
+        font-weight: 600;
+    }
+    div[data-testid="stMetricDelta"] {
+        color: #00FF00;
+        font-weight: 500;
+    }
+    div[data-testid="stMetricDelta"].negative {
+        color: #FF4B4B;
+    }
+    /* Better menu contrast */
+    .nav-link {
+        background-color: #1A1A1A !important;
+        color: #E0E0E0 !important;
+    }
+    .nav-link:hover {
+        background-color: #2D2D2D !important;
+        color: #FFFFFF !important;
+    }
+    .nav-link.active {
+        background-color: #FF9900 !important;
+        color: #000000 !important;
     }
 </style>
 """, unsafe_allow_html=True)

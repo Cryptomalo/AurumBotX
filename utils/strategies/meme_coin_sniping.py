@@ -9,7 +9,7 @@ from utils.strategies.base_strategy import BaseStrategy
 
 logger = logging.getLogger(__name__)
 
-class MemeCoinSnipingStrategy(BaseStrategy):
+class MemeCoinStrategy(BaseStrategy):
     """Advanced Meme Coin Sniping Strategy with social sentiment analysis"""
 
     def __init__(self, config: Dict[str, Any]):
@@ -23,13 +23,13 @@ class MemeCoinSnipingStrategy(BaseStrategy):
         self.risk_per_trade = config.get('risk_per_trade', 0.01)
         self.dex_url = "https://api.dexscreener.com/latest/dex"
 
-    async def analyze_market(self, market_data: Dict, sentiment_data: Dict, risk_score: float) -> List[Dict]:
+    async def analyze_market(self, market_data: Dict, sentiment_data: Dict = None, risk_score: float = 0.5) -> List[Dict]:
         """Analizza il mercato per opportunità sui meme coin"""
         try:
             signals = []
 
             # Analyze social sentiment
-            if sentiment_data.get('score', 0) < self.sentiment_threshold:
+            if sentiment_data and sentiment_data.get('score', 0) < self.sentiment_threshold:
                 logger.info(f"Sentiment score too low: {sentiment_data.get('score')}")
                 return signals
 

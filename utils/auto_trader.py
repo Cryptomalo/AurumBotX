@@ -5,16 +5,16 @@ from typing import Dict
 from utils.data_loader import CryptoDataLoader
 from utils.indicators import TechnicalIndicators
 from utils.strategies.base_strategy import BaseStrategy
-from utils.strategies.meme_coin_sniping import MemeCoinSnipingStrategy
+from utils.strategies.meme_coin_sniping import MemeCoinStrategy
 from utils.strategies.scalping import ScalpingStrategy
 from utils.strategies.swing_trading import SwingTradingStrategy
 from utils.database import get_db, TradingStrategy, SimulationResult
 from utils.notifications import TradingNotifier
-from utils.wallet_manager import WalletManager # Assuming this import is needed
+from utils.wallet_manager import WalletManager
 
 class AutoTrader:
     def __init__(self, symbol, initial_balance=10000, risk_per_trade=0.02, testnet=False):
-        self.logger = logging.getLogger(__name__) # Logger initialized here
+        self.logger = logging.getLogger(__name__)
         self.symbol = symbol
         self.initial_balance = initial_balance
         self.risk_per_trade = risk_per_trade
@@ -37,11 +37,11 @@ class AutoTrader:
         self.data_loader = CryptoDataLoader()
         self.indicators = TechnicalIndicators()
         self.notifier = TradingNotifier()
-        self.wallet_manager = WalletManager(user_id=1)  # user_id temporaneo
+        self.wallet_manager = WalletManager(user_id=1)
 
         # Initialize strategies
         self.strategies = {
-            'meme_coin': MemeCoinSnipingStrategy({
+            'meme_coin': MemeCoinStrategy({
                 'min_liquidity': 200000,
                 'sentiment_threshold': 0.75,
                 'profit_target': 0.15,
