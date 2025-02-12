@@ -14,11 +14,12 @@ from utils.strategies.dex_sniping import DexSnipingStrategy
 from utils.database import get_db, TradingStrategy, SimulationResult
 from utils.notifications import TradingNotifier
 from utils.wallet_manager import WalletManager
+from utils.prediction_model import PredictionModel
 
 class AutoTrader:
     def __init__(self, symbol: str, initial_balance: float = 10000, risk_per_trade: float = 0.02, testnet: bool = True):
         self.logger = logging.getLogger(__name__)
-        self.symbol = symbol
+        self.symbol = symbol.replace("-", "/")  # Convert BTC-USDT to BTC/USDT format
         self.initial_balance = initial_balance
         self.risk_per_trade = risk_per_trade
         self.testnet = testnet
@@ -40,16 +41,15 @@ class AutoTrader:
         self.setup_logging()
         self.data_loader = CryptoDataLoader()
         self.indicators = TechnicalIndicators()
+        self.prediction_model = PredictionModel()
 
         # Disable external services in test mode
         if self.testnet:
             self.notifier = None
             self.wallet_manager = None
-            self.sentiment_analyzer = None
         else:
             self.notifier = TradingNotifier()
             self.wallet_manager = WalletManager(user_id=1)
-            self.sentiment_analyzer = None  # Will be initialized in production
 
         # Initialize strategies with testnet configuration
         self.strategies = {
@@ -60,33 +60,35 @@ class AutoTrader:
                 'initial_stop_loss': 0.003,
                 'trailing_stop': 0.002,
                 'testnet': testnet
-            })
-        } if self.testnet else {
-            'meme_coin': MemeCoinStrategy({
-                'min_liquidity': 200000,
-                'sentiment_threshold': 0.75,
+            }),
+            'swing': SwingTradingStrategy({
+                'trend_period': 20,
                 'profit_target': 0.15,
-                'max_loss': 0.05,
-                'volume_threshold': 100000,
-                'momentum_period': 12,
+                'stop_loss': 0.10,
+                'min_trend_strength': 0.6,
                 'testnet': testnet
-            }),
-            'scalping': ScalpingStrategy({
-                'volume_threshold': 1000000,
-                'min_volatility': 0.002,
-                'profit_target': 0.005,
-                'initial_stop_loss': 0.003,
-                'trailing_stop': 0.002,
-                'testnet': testnet
-            }),
-            'dex': DexSnipingStrategy({
-                'min_liquidity': 5,
-                'max_buy_tax': 10,
-                'min_holders': 50,
-                'testnet': testnet,
-                'rpc_url': 'https://bsc-dataseed.binance.org/'
             })
         }
+
+        if not self.testnet:
+            self.strategies.update({
+                'meme_coin': MemeCoinStrategy({
+                    'min_liquidity': 200000,
+                    'sentiment_threshold': 0.75,
+                    'profit_target': 0.15,
+                    'max_loss': 0.05,
+                    'volume_threshold': 100000,
+                    'momentum_period': 12,
+                    'testnet': testnet
+                }),
+                'dex': DexSnipingStrategy({
+                    'min_liquidity': 5,
+                    'max_buy_tax': 10,
+                    'min_holders': 50,
+                    'testnet': testnet,
+                    'rpc_url': 'https://bsc-dataseed.binance.org/'
+                })
+            })
 
         # Trading state
         self.is_in_position = False
@@ -111,17 +113,41 @@ class AutoTrader:
                 self.logger.info("Running in testnet mode")
 
             # Get market data
-            df = self.data_loader.get_historical_data(self.symbol, period='1d')
-            if df is None or df.empty:
+            df_short = self.data_loader.get_historical_data(self.symbol, period='1d', interval='1m')
+            df_medium = self.data_loader.get_historical_data(self.symbol, period='7d', interval='15m')
+            df_long = self.data_loader.get_historical_data(self.symbol, period='30d', interval='1h')
+
+            if df_short is None or df_short.empty:
                 self.logger.error("Unable to get market data")
                 return None
 
             # Add technical indicators with error handling
             try:
-                df = self.indicators.add_all_indicators(df)
+                df_short = self.indicators.add_all_indicators(df_short)
+                market_volatility = self.calculate_market_volatility(df_medium)
+                self.adjust_strategies_parameters(market_volatility)
             except Exception as e:
                 self.logger.error(f"Error adding technical indicators: {str(e)}")
                 return None
+
+            # Merge timeframes
+            df = self.merge_timeframes(df_short, df_medium, df_long)
+            if df is None:
+                return None
+
+            # Get AI predictions
+            try:
+                ai_signal = self.prediction_model.analyze_market_with_ai(df, self._get_social_data())
+                if ai_signal and ai_signal['confidence'] > 0.75:
+                    return {
+                        'action': 'buy' if ai_signal['technical_score'] > 0.5 else 'sell',
+                        'confidence': ai_signal['confidence'],
+                        'size_factor': ai_signal['suggested_position_size'],
+                        'target_price': self._calculate_target_price(df, ai_signal),
+                        'stop_loss': self._calculate_stop_loss(df, ai_signal)
+                    }
+            except Exception as e:
+                self.logger.warning(f"AI analysis error (non-critical): {str(e)}")
 
             best_signal = None
             best_confidence = 0
@@ -162,6 +188,44 @@ class AutoTrader:
             self.logger.error(f"Market analysis error: {str(e)}")
             return None
 
+    def _get_social_data(self):
+        """Get social media data for sentiment analysis"""
+        try:
+            return {
+                'sentiment_score': 0.5,
+                'volume_score': 0.5,
+                'trend_score': 0.5
+            }
+        except Exception as e:
+            self.logger.error(f"Error getting social data: {str(e)}")
+            return None
+
+    def _calculate_target_price(self, df: pd.DataFrame, ai_signal: Dict[str, Any]) -> float:
+        """Calculate target price based on AI signals"""
+        try:
+            current_price = df['Close'].iloc[-1]
+            volatility = self.calculate_market_volatility(df)
+            if volatility is None:
+                return current_price * 1.02
+            target_multiplier = 1 + (ai_signal['confidence'] * volatility * 5)
+            return current_price * target_multiplier
+        except Exception as e:
+            self.logger.error(f"Error calculating target price: {str(e)}")
+            return df['Close'].iloc[-1] * 1.02
+
+    def _calculate_stop_loss(self, df: pd.DataFrame, ai_signal: Dict[str, Any]) -> float:
+        """Calculate stop loss based on AI signals"""
+        try:
+            current_price = df['Close'].iloc[-1]
+            volatility = self.calculate_market_volatility(df)
+            if volatility is None:
+                return current_price * 0.98
+            stop_multiplier = 1 - (ai_signal['confidence'] * volatility * 3)
+            return current_price * stop_multiplier
+        except Exception as e:
+            self.logger.error(f"Error calculating stop loss: {str(e)}")
+            return df['Close'].iloc[-1] * 0.98
+
     def execute_trade(self, signal: Optional[Dict[str, Any]]) -> bool:
         """Execute a trade based on the generated signal"""
         if not signal:
@@ -172,7 +236,6 @@ class AutoTrader:
             if self.last_action_time and (current_time - self.last_action_time).seconds < 300:
                 return False
 
-            # High confidence signals get priority
             if signal.get('confidence', 0) > 0.9:
                 self.last_action_time = current_time - timedelta(seconds=290)
 
@@ -197,6 +260,8 @@ class AutoTrader:
                     'stop_loss': signal['stop_loss']
                 }
                 self.last_action_time = current_time
+                if self.notifier:
+                    self.notifier.send_trade_notification('BUY', self.symbol, price, position_size)
                 return True
 
             elif self.is_in_position and self.current_position:
@@ -215,6 +280,11 @@ class AutoTrader:
                         f"Balance={self.balance:.2f}"
                     )
 
+                    if self.notifier:
+                        self.notifier.send_trade_notification(
+                            'SELL', self.symbol, price, position_size, profit_loss
+                        )
+
                     self.is_in_position = False
                     self.current_position = None
                     self.last_action_time = current_time
@@ -224,6 +294,8 @@ class AutoTrader:
 
         except Exception as e:
             self.logger.error(f"Trade execution error: {str(e)}")
+            if self.notifier:
+                self.notifier.send_error_notification(self.symbol, str(e))
             return False
 
     def run(self, interval: int = 3600):
@@ -242,6 +314,8 @@ class AutoTrader:
             self.logger.info("Trading bot stopped manually")
         except Exception as e:
             self.logger.error(f"Critical error in trading bot: {str(e)}")
+            if self.notifier:
+                self.notifier.send_error_notification(self.symbol, str(e))
         finally:
             self.logger.info(f"Bot stopped. Final balance: {self.balance}")
 
