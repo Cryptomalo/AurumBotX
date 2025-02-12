@@ -1,11 +1,26 @@
 import pandas as pd
 import numpy as np
-import pandas_ta as ta
 import logging
 from typing import Optional, Dict, Union, List, Tuple
 from dataclasses import dataclass
 
+# Configure logging
 logger = logging.getLogger(__name__)
+
+# Create numpy compatibility layer
+np.NaN = np.nan  # Ensure NaN is available for older code
+
+# Try importing pandas_ta with proper error handling and compatibility fixes
+try:
+    # Patch numpy NaN before importing pandas_ta
+    import sys
+    import numpy
+    sys.modules['numpy'].NaN = numpy.nan
+
+    import pandas_ta as ta
+except ImportError as e:
+    logger.error(f"Failed to import pandas_ta: {e}")
+    raise ImportError("pandas_ta is required but failed to import. Please ensure it's properly installed.")
 
 @dataclass
 class MarketCondition:
@@ -47,7 +62,7 @@ class TechnicalIndicators:
         }
 
     def add_all_indicators(self, df: pd.DataFrame) -> pd.DataFrame:
-        """Add all technical indicators with optimization using pandas-ta"""
+        """Add all technical indicators with optimization using pandas_ta"""
         try:
             df = df.copy()
 
@@ -87,7 +102,7 @@ class TechnicalIndicators:
             df['Market_Condition'] = self.determine_market_condition(df)
 
             # Clean up NaN values
-            df = df.fillna(method='ffill').fillna(method='bfill').fillna(0)
+            df = df.fillna(method='ffill').fillna(method='bfill').fillna(np.nan)
 
             return df
 
