@@ -53,6 +53,55 @@ class Backtester:
         self.trades_history = []
         self.current_position = None
 
+        # Risk management
+        self.max_position_size = 0.1  # Max 10% of balance per trade
+        self.max_risk_per_trade = 0.02  # Max 2% risk per trade
+
+    def _standardize_column_names(self, df: pd.DataFrame) -> pd.DataFrame:
+        """Standardize column names while maintaining compatibility"""
+        column_mapping = {
+            'volume': 'Volume',
+            'close': 'Close',
+            'high': 'High',
+            'low': 'Low',
+            'open': 'Open'
+        }
+
+        # Create copies of data with both uppercase and lowercase names
+        for lower, upper in column_mapping.items():
+            if lower in df.columns:
+                df[upper] = df[lower]
+            elif upper in df.columns:
+                df[lower] = df[upper]
+
+        return df
+
+    def _calculate_position_size(self, current_price: float, stop_loss: float) -> float:
+        """Calculate position size based on risk management rules"""
+        try:
+            # Calculate maximum loss we're willing to take
+            max_loss = self.balance * self.max_risk_per_trade
+
+            # Calculate position size based on stop loss distance
+            price_distance = abs(current_price - stop_loss)
+            risk_per_unit = price_distance
+
+            if risk_per_unit <= 0:
+                logger.warning("Invalid risk per unit, using minimum position size")
+                return self.balance * 0.01  # Use 1% as minimum
+
+            position_size = max_loss / risk_per_unit
+
+            # Limit position size to max allowed
+            max_allowed = self.balance * self.max_position_size
+            position_size = min(position_size, max_allowed)
+
+            return position_size
+
+        except Exception as e:
+            logger.error(f"Error calculating position size: {e}")
+            return self.balance * 0.01  # Use 1% as fallback
+
     async def run_backtest(self) -> BacktestResult:
         """Execute backtest and return results"""
         try:
@@ -66,23 +115,26 @@ class Backtester:
             if df is None or df.empty:
                 raise ValueError("No historical data available")
 
+            # Standardize column names
+            df = self._standardize_column_names(df)
+            logger.info(f"Loaded data columns: {df.columns.tolist()}")
+
             # Add technical indicators
             df = self.indicators.add_all_indicators(df)
-
-            # Prepare market data for analysis
-            df['high_volume'] = df['Volume'] > df['Volume'].rolling(window=24).mean()
+            logger.info("Technical indicators added successfully")
 
             # Main backtesting loop
             position_open = False
             entry_price = 0.0
             position_size = 0.0
+            stop_loss_price = 0.0
 
             for timestamp, row in df.iterrows():
-                # Skip data outside our date range
                 if timestamp < self.start_date or timestamp > self.end_date:
                     continue
 
                 current_price = row['Close']
+                logger.debug(f"Processing {timestamp}: Price={current_price}, Balance=${self.balance:.2f}")
 
                 # Prepare market data for analysis
                 market_data = df.loc[:timestamp].copy()
@@ -90,39 +142,53 @@ class Backtester:
                 # Generate trading signals
                 analysis = await self.strategy.analyze_market(market_data)
                 if analysis and isinstance(analysis, list):
-                    analysis = analysis[0]  # Take first analysis result
+                    analysis = analysis[0]
 
                 if analysis:
                     signal = self.strategy.generate_signals(analysis)
+                    logger.debug(f"Signal generated: {signal}")
                 else:
                     signal = None
 
+                # Handle buy signals
                 if signal and not position_open and signal['action'].lower() == 'buy':
-                    position_size = self.balance * 0.1  # Use 10% of balance per trade
+                    stop_loss_price = signal.get('stop_loss', current_price * 0.98)  # Default 2% stop loss
+                    position_size = self._calculate_position_size(current_price, stop_loss_price)
                     entry_price = current_price
                     position_open = True
+
+                    logger.info(f"Opening position: Price=${current_price:.2f}, Size=${position_size:.2f}, Stop=${stop_loss_price:.2f}")
 
                     self.trades_history.append({
                         'timestamp': timestamp,
                         'action': 'BUY',
                         'price': current_price,
                         'size': position_size,
+                        'stop_loss': stop_loss_price,
                         'balance': self.balance
                     })
 
+                # Handle sell signals and risk management
                 elif position_open:
                     should_sell = False
                     if signal:
                         should_sell = signal['action'].lower() == 'sell'
 
-                    # Add take profit and stop loss checks
+                    # Risk management checks
+                    stop_loss_hit = current_price <= stop_loss_price
                     take_profit_hit = current_price >= entry_price * 1.02  # 2% profit target
-                    stop_loss_hit = current_price <= entry_price * 0.99   # 1% stop loss
 
-                    if should_sell or take_profit_hit or stop_loss_hit:
-                        profit_loss = (current_price - entry_price) * position_size
+                    if should_sell or stop_loss_hit or take_profit_hit:
+                        # Calculate actual PnL
+                        units = position_size / entry_price
+                        exit_value = units * current_price
+                        entry_value = units * entry_price
+                        profit_loss = exit_value - entry_value
+
                         self.balance += profit_loss
                         position_open = False
+
+                        logger.info(f"Closing position: Entry=${entry_price:.2f}, Exit=${current_price:.2f}, P/L=${profit_loss:.2f}")
 
                         self.trades_history.append({
                             'timestamp': timestamp,
@@ -133,11 +199,13 @@ class Backtester:
                             'balance': self.balance
                         })
 
-            # Calculate performance metrics
+            if not self.trades_history:
+                logger.warning("No trades executed during backtest period")
+
             return self._calculate_results()
 
         except Exception as e:
-            logger.error(f"Backtesting error: {str(e)}")
+            logger.error(f"Backtesting error: {str(e)}", exc_info=True)
             raise
 
     def _calculate_results(self) -> BacktestResult:

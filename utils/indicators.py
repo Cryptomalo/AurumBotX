@@ -12,7 +12,7 @@ np.NaN = np.nan  # Ensure NaN is available for older code
 
 # Try importing pandas_ta with proper error handling and compatibility fixes
 try:
-    # Patch numpy NaN before importing pandas_ta
+    # Patch numpy NaN before importing pandas_ta (this part is redundant given the numpy compatibility layer above)
     import sys
     import numpy
     sys.modules['numpy'].NaN = numpy.nan
@@ -32,83 +32,174 @@ class MarketCondition:
     resistance_level: float
 
 class TechnicalIndicators:
-    """Advanced technical indicators calculator with optimized performance using pandas-ta"""
+    """Advanced technical indicators calculator with optimized performance"""
 
     def __init__(self):
         self.cache = {}
-        # Custom indicator settings
-        self.indicator_settings = {
-            'trend': {
-                'ema_lengths': [20, 50, 100, 200],
-                'macd_fast': 12,
-                'macd_slow': 26,
-                'macd_signal': 9
-            },
-            'momentum': {
-                'rsi_length': 14,
-                'stoch_length': 14,
-                'willr_length': 14
-            },
-            'volatility': {
-                'bbands_length': 20,
-                'bbands_std': 2,
-                'atr_length': 14
-            },
-            'volume': {
-                'vwap_anchor': 'D',  # Daily anchor
-                'obv_length': 20,
-                'pvt_length': 20
-            }
-        }
+        self.trend_indicators = ['SMA', 'EMA', 'MACD']
+        self.momentum_indicators = ['RSI', 'Stochastic', 'MFI']
+        self.volatility_indicators = ['BB', 'ATR', 'KC']
+        self.volume_indicators = ['OBV', 'ADL', 'CMF']
 
     def add_all_indicators(self, df: pd.DataFrame) -> pd.DataFrame:
-        """Add all technical indicators with optimization using pandas_ta"""
+        """Add all technical indicators with optimization"""
         try:
             df = df.copy()
 
-            # Initialize strategy with all indicators
-            strategy = ta.Strategy(
-                name="full_suite",
-                ta=[
-                    # Trend
-                    {"kind": "ema", "length": l} for l in self.indicator_settings['trend']['ema_lengths']
-                ] + [
-                    {"kind": "macd", "fast": self.indicator_settings['trend']['macd_fast'],
-                     "slow": self.indicator_settings['trend']['macd_slow'],
-                     "signal": self.indicator_settings['trend']['macd_signal']},
-                    # Momentum
-                    {"kind": "rsi", "length": self.indicator_settings['momentum']['rsi_length']},
-                    {"kind": "stoch", "length": self.indicator_settings['momentum']['stoch_length']},
-                    {"kind": "willr", "length": self.indicator_settings['momentum']['willr_length']},
-                    # Volatility
-                    {"kind": "bbands", "length": self.indicator_settings['volatility']['bbands_length'],
-                     "std": self.indicator_settings['volatility']['bbands_std']},
-                    {"kind": "atr", "length": self.indicator_settings['volatility']['atr_length']},
-                    # Volume
-                    {"kind": "obv"},
-                    {"kind": "pvt"},
-                    {"kind": "vwap", "anchor": self.indicator_settings['volume']['vwap_anchor']}
-                ]
-            )
+            # Verify required columns exist (case-insensitive)
+            required_columns = ['close', 'high', 'low', 'open', 'volume']
+            existing_columns = [col.lower() for col in df.columns]
 
-            # Calculate all indicators
-            df.ta.strategy(strategy)
+            for col in required_columns:
+                if col not in existing_columns:
+                    upper_col = col.upper()
+                    if upper_col in df.columns:
+                        df[col] = df[upper_col]
+                    else:
+                        raise ValueError(f"Missing required column: {col}")
 
-            # Add custom calculations
-            df['Volatility'] = self.calculate_volatility(df)
+            # Calculate returns first to avoid DataFrame copy warnings
+            df['returns'] = df['close'].pct_change()
+            df['volatility'] = self.calculate_volatility(df)
+
+            # Add indicators
+            df = self.add_volume_indicators(df)
+            df = self.add_trend_indicators(df)
+            df = self.add_momentum_indicators(df)
+            df = self.add_volatility_indicators(df)
+
+            # Support and Resistance
             support, resistance = self.calculate_support_resistance(df)
-            df['Support'] = support
-            df['Resistance'] = resistance
-            df['Market_Condition'] = self.determine_market_condition(df)
+            df['support'] = support
+            df['resistance'] = resistance
 
-            # Clean up NaN values
-            df = df.fillna(method='ffill').fillna(method='bfill').fillna(np.nan)
+            # Market condition
+            df['market_condition'] = self.determine_market_condition(df)
+
+            # Add uppercase column names for compatibility
+            for col in df.columns:
+                df[col.upper()] = df[col]
 
             return df
 
         except Exception as e:
             logger.error(f"Error adding indicators: {e}")
             return df
+
+    def add_trend_indicators(self, df: pd.DataFrame) -> pd.DataFrame:
+        """Add trend indicators"""
+        try:
+            # Multiple timeframe Moving Averages
+            periods = [20, 50, 100, 200]
+            for period in periods:
+                df[f'sma_{period}'] = df['close'].rolling(window=period).mean()
+                df[f'ema_{period}'] = df['close'].ewm(span=period, adjust=False).mean()
+
+            # MACD
+            exp1 = df['close'].ewm(span=12, adjust=False).mean()
+            exp2 = df['close'].ewm(span=26, adjust=False).mean()
+            df['macd'] = exp1 - exp2
+            df['macd_signal'] = df['macd'].ewm(span=9, adjust=False).mean()
+            df['macd_hist'] = df['macd'] - df['macd_signal']
+
+            return df
+
+        except Exception as e:
+            logger.error(f"Error adding trend indicators: {e}")
+            return df
+
+    def add_momentum_indicators(self, df: pd.DataFrame) -> pd.DataFrame:
+        """Add momentum indicators"""
+        try:
+            # RSI
+            for period in [14, 28]:
+                delta = df['close'].diff()
+                gain = (delta.where(delta > 0, 0)).rolling(window=period).mean()
+                loss = (-delta.where(delta < 0, 0)).rolling(window=period).mean()
+                rs = gain / loss
+                df[f'rsi_{period}'] = 100 - (100 / (1 + rs))
+
+            return df
+
+        except Exception as e:
+            logger.error(f"Error adding momentum indicators: {e}")
+            return df
+
+    def add_volatility_indicators(self, df: pd.DataFrame) -> pd.DataFrame:
+        """Add volatility indicators"""
+        try:
+            # Bollinger Bands
+            sma = df['close'].rolling(window=20).mean()
+            std = df['close'].rolling(window=20).std()
+            df['bb_upper'] = sma + (std * 2)
+            df['bb_middle'] = sma
+            df['bb_lower'] = sma - (std * 2)
+
+            # ATR
+            high_low = df['high'] - df['low']
+            high_close = np.abs(df['high'] - df['close'].shift())
+            low_close = np.abs(df['low'] - df['close'].shift())
+            ranges = pd.concat([high_low, high_close, low_close], axis=1)
+            true_range = np.max(ranges, axis=1)
+            df['atr'] = true_range.rolling(14).mean()
+
+            return df
+
+        except Exception as e:
+            logger.error(f"Error adding volatility indicators: {e}")
+            return df
+
+    def add_volume_indicators(self, df: pd.DataFrame) -> pd.DataFrame:
+        """Add volume indicators"""
+        try:
+            # On Balance Volume
+            df['obv'] = (np.sign(df['close'].diff()) * df['volume']).fillna(0).cumsum()
+
+            # Volume Profile
+            df['volume_ma'] = df['volume'].rolling(window=20).mean()
+            df['volume_ratio'] = df['volume'] / df['volume_ma']
+
+            return df
+
+        except Exception as e:
+            logger.error(f"Error adding volume indicators: {e}")
+            return df
+
+    def calculate_support_resistance(self, df: pd.DataFrame) -> Tuple[pd.Series, pd.Series]:
+        """Add support and resistance levels"""
+        try:
+            window = 20
+            df['rolling_min'] = df['low'].rolling(window=window, center=True).min()
+            df['rolling_max'] = df['high'].rolling(window=window, center=True).max()
+
+            # Identify support levels
+            support = df['rolling_min'].where(
+                (df['low'] == df['rolling_min']) &
+                (df['low'].shift(1) > df['rolling_min']) &
+                (df['low'].shift(-1) > df['rolling_min'])
+            ).ffill()
+
+            # Identify resistance levels
+            resistance = df['rolling_max'].where(
+                (df['high'] == df['rolling_max']) &
+                (df['high'].shift(1) < df['rolling_max']) &
+                (df['high'].shift(-1) < df['rolling_max'])
+            ).ffill()
+
+            return support, resistance
+
+        except Exception as e:
+            logger.error(f"Error adding support/resistance levels: {e}")
+            return pd.Series(np.nan, index=df.index), pd.Series(np.nan, index=df.index)
+
+
+    def calculate_volatility(self, df: pd.DataFrame) -> pd.Series:
+        """Calculate historical volatility"""
+        try:
+            return df['returns'].ewm(span=20).std() * np.sqrt(252)
+        except Exception as e:
+            logger.error(f"Error calculating volatility: {e}")
+            return pd.Series(0, index=df.index)
 
     def get_trading_signals(self, df: pd.DataFrame) -> List[Dict]:
         """Generate enhanced trading signals using multiple indicators"""
@@ -117,8 +208,8 @@ class TechnicalIndicators:
             current_price = df['close'].iloc[-1]
 
             # RSI Signals
-            if 'RSI_14' in df.columns:
-                rsi = df['RSI_14'].iloc[-1]
+            if 'rsi_14' in df.columns:
+                rsi = df['rsi_14'].iloc[-1]
                 if rsi < 30:
                     signals.append({
                         'type': 'BUY',
@@ -135,9 +226,9 @@ class TechnicalIndicators:
                     })
 
             # MACD Signals
-            if all(col in df.columns for col in ['MACD_12_26_9', 'MACDs_12_26_9']):
-                macd = df['MACD_12_26_9'].iloc[-2:]
-                signal = df['MACDs_12_26_9'].iloc[-2:]
+            if all(col in df.columns for col in ['macd', 'macd_signal']):
+                macd = df['macd'].iloc[-2:]
+                signal = df['macd_signal'].iloc[-2:]
                 hist = macd - signal
 
                 # Calculate signal strength based on histogram size
@@ -159,9 +250,9 @@ class TechnicalIndicators:
                     })
 
             # Bollinger Bands Signals
-            if all(col in df.columns for col in ['BBL_20_2.0', 'BBU_20_2.0']):
-                bb_lower = df['BBL_20_2.0'].iloc[-1]
-                bb_upper = df['BBU_20_2.0'].iloc[-1]
+            if all(col in df.columns for col in ['bb_lower', 'bb_upper']):
+                bb_lower = df['bb_lower'].iloc[-1]
+                bb_upper = df['bb_upper'].iloc[-1]
 
                 if current_price < bb_lower:
                     signals.append({
@@ -184,57 +275,6 @@ class TechnicalIndicators:
             logger.error(f"Error generating trading signals: {str(e)}")
             return []
 
-    def calculate_volatility(self, df: pd.DataFrame) -> pd.Series:
-        """Calculate advanced volatility metrics"""
-        try:
-            # Use True Range based volatility
-            if 'ATR_14' in df.columns:
-                return df['ATR_14'] / df['Close']
-            else:
-                # Fallback to traditional volatility calculation
-                returns = df['Close'].pct_change()
-                return returns.ewm(span=20).std() * np.sqrt(252)
-        except Exception as e:
-            logger.error(f"Error calculating volatility: {e}")
-            return pd.Series(0, index=df.index)
-
-    def calculate_support_resistance(self, df: pd.DataFrame) -> Tuple[pd.Series, pd.Series]:
-        """Calculate dynamic support and resistance using fractals and pivot points"""
-        try:
-            # Pivot Points
-            high = df['High'].rolling(window=20, center=True).max()
-            low = df['Low'].rolling(window=20, center=True).min()
-            close = df['Close']
-
-            pivot = (high + low + close) / 3
-            support1 = 2 * pivot - high
-            resistance1 = 2 * pivot - low
-
-            # Fractals
-            support_fractals = low.where(
-                (df['Low'].shift(2) > df['Low'].shift(1)) &
-                (df['Low'].shift(1) > df['Low']) &
-                (df['Low'] < df['Low'].shift(-1)) &
-                (df['Low'].shift(-1) < df['Low'].shift(-2))
-            )
-
-            resistance_fractals = high.where(
-                (df['High'].shift(2) < df['High'].shift(1)) &
-                (df['High'].shift(1) < df['High']) &
-                (df['High'] > df['High'].shift(-1)) &
-                (df['High'].shift(-1) > df['High'].shift(-2))
-            )
-
-            # Combine both methods
-            support = ((support_fractals + support1) / 2).ffill()
-            resistance = ((resistance_fractals + resistance1) / 2).ffill()
-
-            return support, resistance
-
-        except Exception as e:
-            logger.error(f"Error calculating support/resistance: {e}")
-            return pd.Series(), pd.Series()
-
     def determine_market_condition(self, df: pd.DataFrame) -> str:
         """Determine overall market condition using multiple indicators"""
         try:
@@ -251,20 +291,20 @@ class TechnicalIndicators:
     def _determine_trend(self, df: pd.DataFrame) -> str:
         """Enhanced trend determination using multiple timeframes"""
         try:
-            current_price = df['Close'].iloc[-1]
+            current_price = df['close'].iloc[-1]
 
             # Check EMAs across multiple timeframes
             ema_trends = []
-            for length in self.indicator_settings['trend']['ema_lengths']:
-                ema_col = f'EMA_{length}'
+            for length in [20, 50, 100, 200]:
+                ema_col = f'ema_{length}'
                 if ema_col in df.columns:
                     ema = df[ema_col].iloc[-1]
                     ema_trends.append(current_price > ema)
 
             # MACD trend
             macd_bullish = False
-            if 'MACD_12_26_9' in df.columns:
-                macd_bullish = df['MACD_12_26_9'].iloc[-1] > 0
+            if 'macd' in df.columns:
+                macd_bullish = df['macd'].iloc[-1] > 0
 
             # Combine signals
             bullish_count = sum(ema_trends) + macd_bullish
@@ -284,18 +324,15 @@ class TechnicalIndicators:
     def calculate_trend_strength(self, df: pd.DataFrame) -> float:
         """Calculate trend strength using multiple indicators"""
         try:
-            # ADX for trend strength if available
-            if 'ADX_14' in df.columns:
-                adx = df['ADX_14'].iloc[-1] / 100  # Normalize to 0-1
-            else:
-                adx = 0.5
+            # ADX for trend strength if available (Not implemented in the edited code, using a default)
+            adx = 0.5
 
             # EMA alignment
             ema_alignment = self._calculate_ma_alignment(df)
 
             # MACD momentum
-            if 'MACD_12_26_9' in df.columns:
-                macd = df['MACD_12_26_9'].iloc[-1]
+            if 'macd' in df.columns:
+                macd = df['macd'].iloc[-1]
                 macd_strength = min(1, abs(macd) / df['close'].iloc[-1] * 100)
             else:
                 macd_strength = 0.5
@@ -318,8 +355,8 @@ class TechnicalIndicators:
         try:
             # Get the EMAs
             emas = []
-            for length in sorted(self.indicator_settings['trend']['ema_lengths']):
-                ema_col = f'EMA_{length}'
+            for length in sorted([20, 50, 100, 200]):
+                ema_col = f'ema_{length}'
                 if ema_col in df.columns:
                     emas.append(df[ema_col].iloc[-1])
 
