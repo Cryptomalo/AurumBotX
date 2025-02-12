@@ -22,10 +22,10 @@ class StrategyManager:
         self.strategy_performance: Dict[str, Dict] = {}
         self._initialize_strategies()
         self.risk_limits = {
-            'max_position_size': 0.1,  
-            'max_daily_loss': 0.02,    
-            'stop_loss': 0.03,         
-            'take_profit': 0.05        
+            'max_position_size': 0.1,  # 10% massimo per posizione
+            'max_daily_loss': 0.02,    # 2% massimo di perdita giornaliera
+            'stop_loss': 0.03,         # 3% stop loss per trade
+            'take_profit': 0.05        # 5% take profit per trade
         }
         self.is_live_testing = False
         self.test_start_time = None
@@ -238,34 +238,85 @@ class StrategyManager:
             return []
 
     def _calculate_risk_score(self, market_data: pd.DataFrame, sentiment_data: Dict) -> float:
-        """Calcola un risk score composito"""
+        """Calcola un risk score composito basato su multipli fattori"""
         try:
-            # Volatilità del mercato
-            volatility = market_data['Returns'].std() * np.sqrt(252)
+            # Volatilità del mercato (ATR e BB Width)
+            volatility_atr = market_data['ATR'].iloc[-1] / market_data['Close'].iloc[-1]
+            volatility_bb = market_data['BB_Width'].iloc[-1]
+            volatility_score = (volatility_atr + volatility_bb) / 2
 
-            # Sentiment score
+            # Momentum e trend strength
+            momentum_score = 0.0
+            if 'ROC' in market_data.columns and 'MFI' in market_data.columns:
+                roc = market_data['ROC'].iloc[-1]
+                mfi = market_data['MFI'].iloc[-1]
+                momentum_score = (
+                    (roc / 100 if abs(roc) < 100 else np.sign(roc)) +
+                    (mfi / 100)
+                ) / 2
+
+            # Volume analysis
+            volume_ratio = market_data['Volume_Ratio'].iloc[-1]
+            volume_score = min(volume_ratio / 3, 1.0)  # Normalize
+
+            # Trend analysis usando multiple MA
+            sma_scores = []
+            for period in [20, 50, 200]:
+                if f'SMA_{period}' in market_data.columns:
+                    current_price = market_data['Close'].iloc[-1]
+                    sma = market_data[f'SMA_{period}'].iloc[-1]
+                    sma_scores.append(1 if current_price > sma else 0)
+            trend_score = sum(sma_scores) / len(sma_scores) if sma_scores else 0.5
+
+            # MACD signal
+            macd_score = 0.5
+            if all(x in market_data.columns for x in ['MACD', 'Signal']):
+                macd = market_data['MACD'].iloc[-1]
+                signal = market_data['Signal'].iloc[-1]
+                macd_score = 1 if macd > signal else 0
+
+            # RSI analysis
+            rsi_score = 0.5
+            if 'RSI' in market_data.columns:
+                rsi = market_data['RSI'].iloc[-1]
+                rsi_score = (
+                    0.9 if rsi < 30 else  # Oversold
+                    0.1 if rsi > 70 else  # Overbought
+                    0.5  # Neutral
+                )
+
+            # Sentiment integration
             sentiment_score = sentiment_data.get('score', 0.5)
-
-            # Volume anomaly
-            volume_ma = market_data['Volume'].rolling(20).mean()
-            volume_ratio = market_data['Volume'].iloc[-1] / volume_ma.iloc[-1]
-
-            # Trend strength
-            trend_strength = self.indicators.calculate_trend_strength(market_data)
+            sentiment_confidence = sentiment_data.get('confidence', 0.5)
+            adjusted_sentiment = sentiment_score * sentiment_confidence
 
             # Composite risk score (0-1)
-            risk_score = np.mean([
-                volatility / 2,  # Normalize volatility
-                1 - sentiment_score,
-                min(volume_ratio / 5, 1),
-                1 - trend_strength
+            weights = {
+                'volatility': 0.25,
+                'momentum': 0.15,
+                'volume': 0.10,
+                'trend': 0.20,
+                'macd': 0.10,
+                'rsi': 0.10,
+                'sentiment': 0.10
+            }
+
+            risk_score = sum([
+                weights['volatility'] * volatility_score,
+                weights['momentum'] * momentum_score,
+                weights['volume'] * volume_score,
+                weights['trend'] * trend_score,
+                weights['macd'] * macd_score,
+                weights['rsi'] * rsi_score,
+                weights['sentiment'] * adjusted_sentiment
             ])
 
+            # Normalize final score
             return min(max(risk_score, 0), 1)
 
         except Exception as e:
-            logger.error(f"Errore nel calcolo del risk score: {e}")
-            return 0.5
+            logger.error(f"Errore nel calcolo del risk score: {e}", exc_info=True)
+            return 0.5  # Default a rischio medio in caso di errore
 
     def _check_risk_limits(self, strategy_name: str) -> bool:
         """Verifica i limiti di rischio per una strategia"""
@@ -292,13 +343,32 @@ class StrategyManager:
         try:
             filtered_signals = []
             for signal in signals:
-                # Verifica dimensione posizione
+                # Verifica dimensione posizione massima
                 if signal.get('position_size', 0) > self.risk_limits['max_position_size']:
                     continue
 
-                # Aggiungi stop loss e take profit
-                signal['stop_loss'] = signal['entry_price'] * (1 - self.risk_limits['stop_loss'])
-                signal['take_profit'] = signal['entry_price'] * (1 + self.risk_limits['take_profit'])
+                # Calcola stop loss dinamico basato su ATR
+                atr = signal.get('atr', self.risk_limits['stop_loss'])
+                dynamic_stop = min(
+                    atr * 2,  # 2x ATR come massimo stop loss
+                    self.risk_limits['stop_loss']  # Limite massimo configurato
+                )
+
+                # Applica il position sizing ottimale
+                risk_per_trade = signal.get('risk_per_trade', 0.01)  # 1% default
+                position_size = self._calculate_position_size(
+                    signal['entry_price'],
+                    dynamic_stop,
+                    risk_per_trade
+                )
+
+                # Aggiorna il segnale con i nuovi parametri
+                signal.update({
+                    'stop_loss': signal['entry_price'] * (1 - dynamic_stop),
+                    'take_profit': signal['entry_price'] * (1 + (dynamic_stop * 1.5)),  # Risk:Reward 1:1.5
+                    'position_size': position_size,
+                    'max_loss': position_size * dynamic_stop  # Perdita massima potenziale
+                })
 
                 filtered_signals.append(signal)
 
@@ -307,6 +377,32 @@ class StrategyManager:
         except Exception as e:
             logger.error(f"Errore nel filtraggio dei segnali: {e}")
             return []
+
+    def _calculate_position_size(
+        self,
+        entry_price: float,
+        stop_loss_pct: float,
+        risk_per_trade: float
+    ) -> float:
+        """Calcola la dimensione ottimale della posizione"""
+        try:
+            # Implementa il modello di Kelly Criterion modificato
+            win_rate = self.strategy_performance.get('win_rate', 50) / 100
+            if win_rate < 0.5:  # Se win rate < 50%, riduci il rischio
+                risk_per_trade *= 0.5
+
+            # Calcola il position size ottimale
+            account_size = 1.0  # Normalizzato a 1 (100%)
+            risk_amount = account_size * risk_per_trade
+            position_size = risk_amount / stop_loss_pct
+
+            # Applica limiti di sicurezza
+            max_position = self.risk_limits['max_position_size']
+            return min(position_size, max_position)
+
+        except Exception as e:
+            logger.error(f"Errore nel calcolo del position size: {e}")
+            return self.risk_limits['max_position_size'] * 0.5  # Default a metà del massimo
 
     def _update_performance(self, strategy_name: str, signals: List[Dict]):
         """Aggiorna le statistiche avanzate di performance della strategia"""
@@ -375,18 +471,56 @@ class StrategyManager:
             for strategy_name, strategy in self.active_strategies.items():
                 perf = self.strategy_performance[strategy_name]
 
-                # Aggiusta parametri in base alle performance
-                if perf['sharpe_ratio'] < 1.0:
-                    # Riduci il rischio
+                # Performance-based optimization
+                if perf['sharpe_ratio'] < 1.0 or perf['max_drawdown'] > 0.1:
+                    # Riduci il rischio se la performance è scarsa
                     strategy.config['risk_per_trade'] *= 0.8
-                elif perf['win_rate'] < 40:
-                    # Aggiusta parametri di entrata/uscita
-                    strategy.optimize_parameters(market_conditions)
+                    strategy.config['position_size_limit'] *= 0.8
+                    logger.info(f"Reduced risk for {strategy_name} due to poor performance")
 
-                logger.info(f"Strategia {strategy_name} ottimizzata")
+                elif perf['win_rate'] < 45:
+                    # Aggiusta timeframe e parametri se win rate è basso
+                    if 'timeframe' in strategy.config:
+                        # Move to higher timeframe for more reliable signals
+                        current_tf = strategy.config['timeframe']
+                        if current_tf == '1m':
+                            strategy.config['timeframe'] = '5m'
+                        elif current_tf == '5m':
+                            strategy.config['timeframe'] = '15m'
+                    logger.info(f"Adjusted timeframe for {strategy_name} due to low win rate")
+
+                elif perf['volatility'] > 0.02:  # 2% daily volatility
+                    # Increase minimum confidence threshold in volatile markets
+                    strategy.config['min_confidence'] = min(
+                        0.8,
+                        strategy.config.get('min_confidence', 0.5) + 0.1
+                    )
+                    logger.info(f"Increased confidence threshold for {strategy_name} due to high volatility")
+
+                # Market condition based optimization
+                if market_conditions.get('trend') == 'ranging':
+                    # In ranging markets, focus on mean reversion
+                    strategy.config['mean_reversion_weight'] = 0.7
+                    strategy.config['trend_following_weight'] = 0.3
+                elif market_conditions.get('trend') == 'trending':
+                    # In trending markets, focus on trend following
+                    strategy.config['mean_reversion_weight'] = 0.3
+                    strategy.config['trend_following_weight'] = 0.7
+
+                # Volatility based optimization
+                if market_conditions.get('volatility', 0) > 0.02:
+                    # In high volatility, widen stops and reduce position size
+                    strategy.config['stop_loss_multiplier'] = 1.5
+                    strategy.config['position_size_multiplier'] = 0.7
+                else:
+                    # In low volatility, tighten stops and increase position size
+                    strategy.config['stop_loss_multiplier'] = 1.0
+                    strategy.config['position_size_multiplier'] = 1.0
+
+                logger.info(f"Strategy {strategy_name} ottimizzata")
 
         except Exception as e:
-            logger.error(f"Errore nell'ottimizzazione delle strategie: {e}")
+            logger.error(f"Errore nell'ottimizzazione delle strategie: {e}", exc_info=True)
 
     async def deactivate_strategy(self, strategy_name: str) -> bool:
         """Disattiva una strategia con cleanup"""
@@ -400,3 +534,160 @@ class StrategyManager:
         except Exception as e:
             logger.error(f"Errore nella disattivazione della strategia {strategy_name}: {e}")
             return False
+
+    async def validate_optimization(self, strategy_name: str, market_data: pd.DataFrame) -> Dict:
+        """Valida le modifiche alla strategia attraverso backtesting"""
+        try:
+            if strategy_name not in self.active_strategies:
+                return {'valid': False, 'error': 'Strategia non trovata'}
+
+            strategy = self.active_strategies[strategy_name]
+            original_config = strategy.config.copy()
+
+            # Esegui backtest con configurazione originale
+            original_results = await self._run_backtest(strategy, market_data)
+
+            # Ottimizza la strategia
+            market_conditions = self._analyze_market_conditions(market_data)
+            self.optimize_strategies(market_conditions)
+
+            # Esegui backtest con nuova configurazione
+            new_results = await self._run_backtest(strategy, market_data)
+
+            # Confronta i risultati
+            improvements = {
+                'sharpe_ratio': new_results['sharpe_ratio'] - original_results['sharpe_ratio'],
+                'max_drawdown': original_results['max_drawdown'] - new_results['max_drawdown'],
+                'win_rate': new_results['win_rate'] - original_results['win_rate'],
+                'profit_factor': new_results['profit_factor'] - original_results['profit_factor']
+            }
+
+            # Verifica se le modifiche sono effettivamente migliorative
+            is_better = (
+                improvements['sharpe_ratio'] > 0 and
+                improvements['max_drawdown'] > 0 and
+                improvements['win_rate'] > -5  # Allow small decrease in win rate if other metrics improve
+            )
+
+            if not is_better:
+                # Ripristina configurazione originale
+                strategy.config = original_config
+                logger.warning(f"Optimization reverted for {strategy_name} - no improvement")
+                return {
+                    'valid': False,
+                    'improvements': improvements,
+                    'message': 'Optimization did not improve performance'
+                }
+
+            logger.info(f"Optimization validated for {strategy_name}")
+            return {
+                'valid': True,
+                'improvements': improvements,
+                'message': 'Optimization improved performance'
+            }
+
+        except Exception as e:
+            logger.error(f"Error validating optimization: {e}", exc_info=True)
+            return {'valid': False, 'error': str(e)}
+
+    def _analyze_market_conditions(self, market_data: pd.DataFrame) -> Dict:
+        """Analizza le condizioni di mercato per l'ottimizzazione"""
+        try:
+            latest_data = market_data.tail(100)  # Analizza ultimi 100 periodi
+
+            # Calcola trend
+            sma20 = latest_data['Close'].rolling(20).mean()
+            sma50 = latest_data['Close'].rolling(50).mean()
+            trend_strength = abs(sma20.iloc[-1] - sma50.iloc[-1]) / sma50.iloc[-1]
+
+            # Calcola volatilità
+            volatility = latest_data['Returns'].std() * np.sqrt(252)
+
+            # Identifica regime di mercato
+            if trend_strength < 0.01:  # 1% difference between SMAs
+                market_type = 'ranging'
+            else:
+                market_type = 'trending'
+
+            return {
+                'trend': market_type,
+                'trend_strength': trend_strength,
+                'volatility': volatility,
+                'volume_profile': latest_data['Volume_Ratio'].mean(),
+                'avg_true_range': latest_data['ATR'].mean()
+            }
+
+        except Exception as e:
+            logger.error(f"Error analyzing market conditions: {e}", exc_info=True)
+            return {}
+
+    async def _run_backtest(self, strategy: BaseStrategy, market_data: pd.DataFrame) -> Dict:
+        """Esegue backtest della strategia"""
+        try:
+            signals = []
+            metrics = {
+                'total_trades': 0,
+                'winning_trades': 0,
+                'total_profit': 0,
+                'max_drawdown': 0,
+                'returns': []
+            }
+
+            # Simula trading su dati storici
+            for i in range(len(market_data) - 1):
+                data_slice = market_data.iloc[:i+1]
+                new_signals = await strategy.analyze_market(
+                    data_slice,
+                    {'score': 0.5, 'confidence': 0.5},  # Default sentiment
+                    0.5  # Default risk score
+                )
+
+                for signal in new_signals:
+                    metrics['total_trades'] += 1
+
+                    # Simula risultato trade
+                    entry_price = signal['entry_price']
+                    next_price = market_data['Close'].iloc[i+1]
+                    profit_loss = (next_price - entry_price) / entry_price
+
+                    if profit_loss > 0:
+                        metrics['winning_trades'] += 1
+
+                    metrics['total_profit'] += profit_loss
+                    metrics['returns'].append(profit_loss)
+
+                    # Aggiorna max drawdown
+                    if len(metrics['returns']) > 0:
+                        cumulative = pd.Series(metrics['returns']).cumsum()
+                        drawdown = (cumulative - cumulative.expanding().max())
+                        metrics['max_drawdown'] = abs(min(drawdown.min(), metrics['max_drawdown']))
+
+            # Calcola metriche finali
+            if metrics['total_trades'] > 0:
+                win_rate = (metrics['winning_trades'] / metrics['total_trades']) * 100
+                returns_series = pd.Series(metrics['returns'])
+                sharpe_ratio = self._calculate_sharpe_ratio(returns_series)
+                profit_factor = abs(sum(x for x in metrics['returns'] if x > 0) / 
+                                  sum(abs(x) for x in metrics['returns'] if x < 0))
+            else:
+                win_rate = 0
+                sharpe_ratio = 0
+                profit_factor = 0
+
+            return {
+                'sharpe_ratio': sharpe_ratio,
+                'max_drawdown': metrics['max_drawdown'],
+                'win_rate': win_rate,
+                'profit_factor': profit_factor,
+                'total_trades': metrics['total_trades']
+            }
+
+        except Exception as e:
+            logger.error(f"Error in backtest: {e}", exc_info=True)
+            return {
+                'sharpe_ratio': 0,
+                'max_drawdown': 1,
+                'win_rate': 0,
+                'profit_factor': 0,
+                'total_trades': 0
+            }
