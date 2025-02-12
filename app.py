@@ -1,17 +1,9 @@
-import streamlit as st
-import pandas as pd
-from datetime import datetime
-import logging
+import os
 import sys
-import plotly.graph_objects as go
-from plotly.subplots import make_subplots
-from streamlit_option_menu import option_menu
-from streamlit_autorefresh import st_autorefresh
+import logging
+from datetime import datetime
 
-from utils.data_loader import CryptoDataLoader
-from utils.auto_trader import AutoTrader
-
-# Setup logging
+# Setup logging first
 logging.basicConfig(
     level=logging.INFO,
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
@@ -22,26 +14,38 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-# Page config must be first Streamlit command
-st.set_page_config(
-    page_title="AurumBot Trading",
-    page_icon="🤖",
-    layout="wide",
-    initial_sidebar_state="expanded"
-)
-
-# Auto refresh
-st_autorefresh(interval=5000, key="datarefresh")
-
-# Initialize session state
-if 'bot_running' not in st.session_state:
-    st.session_state.bot_running = False
-if 'selected_strategy' not in st.session_state:
-    st.session_state.selected_strategy = 'scalping'
-if 'auto_trader' not in st.session_state:
-    st.session_state.auto_trader = None
-
 try:
+    # Import Streamlit and other UI components
+    import streamlit as st
+    from streamlit_option_menu import option_menu
+    from streamlit_autorefresh import st_autorefresh
+    import plotly.graph_objects as go
+    from plotly.subplots import make_subplots
+    import pandas as pd
+
+    # Import local modules
+    from utils.data_loader import CryptoDataLoader
+    from utils.auto_trader import AutoTrader
+
+    # Page config must be first Streamlit command
+    st.set_page_config(
+        page_title="AurumBot Trading",
+        page_icon="🤖",
+        layout="wide",
+        initial_sidebar_state="expanded"
+    )
+
+    # Auto refresh
+    st_autorefresh(interval=5000, key="datarefresh")
+
+    # Initialize session state
+    if 'bot_running' not in st.session_state:
+        st.session_state.bot_running = False
+    if 'selected_strategy' not in st.session_state:
+        st.session_state.selected_strategy = 'scalping'
+    if 'auto_trader' not in st.session_state:
+        st.session_state.auto_trader = None
+
     # Sidebar
     with st.sidebar:
         st.title("🤖 AurumBot")
@@ -228,8 +232,8 @@ try:
         max_daily_trades = st.slider("Max Daily Trades", 5, 50, 20)
 
 except Exception as e:
-    st.error(f"Application error: {str(e)}")
-    logger.error(f"Critical error: {str(e)}")
+    st.error(f"Critical application error: {str(e)}")
+    logger.error(f"Critical error: {str(e)}", exc_info=True)
 
 # Custom styling
 st.markdown("""
