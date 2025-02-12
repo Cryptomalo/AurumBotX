@@ -123,7 +123,7 @@ try:
             if df is not None and not df.empty:
                 # Create subplot with secondary y-axis
                 fig = make_subplots(rows=2, cols=1, shared_xaxes=True, 
-                                vertical_spacing=0.03, row_heights=[0.7, 0.3])
+                                    vertical_spacing=0.03, row_heights=[0.7, 0.3])
 
                 # Candlestick chart
                 fig.add_trace(
@@ -187,73 +187,72 @@ try:
             st.error(f"Error loading market data: {str(e)}")
             logger.error(f"Market data error: {str(e)}")
 
+    elif selected == "Strategy Config":
+        st.title("Strategy Configuration")
+
+        # Strategy specific parameters
+        if strategy == "Scalping":
+            col1, col2 = st.columns(2)
+            with col1:
+                st.number_input("Volume Threshold", value=1000000)
+                st.number_input("Min Volatility", value=0.002, format="%.4f")
+            with col2:
+                st.number_input("Profit Target", value=0.005, format="%.4f")
+                st.number_input("Stop Loss", value=0.003, format="%.4f")
+
+        elif strategy == "DEX Sniping":
+            col1, col2 = st.columns(2)
+            with col1:
+                st.number_input("Min Liquidity (ETH)", value=5)
+                st.number_input("Max Buy Tax (%)", value=10)
+            with col2:
+                st.number_input("Min Holders", value=50)
+                st.text_input("RPC URL", value="https://data-seed-prebsc-1-s1.binance.org:8545/")
+
+        elif strategy == "Meme Coin":
+            col1, col2 = st.columns(2)
+            with col1:
+                st.number_input("Sentiment Threshold", value=0.75, format="%.2f")
+                st.number_input("Volume Increase (%)", value=200)
+            with col2:
+                st.number_input("Max Entry Price", value=0.01, format="%.4f")
+                st.number_input("Min Social Score", value=7.5, format="%.1f")
+
+    elif selected == "Performance":
+        st.title("Performance Analytics")
+
+        # Performance metrics
+        col1, col2, col3, col4 = st.columns(4)
+        col1.metric("Total Profit/Loss", "$0.00")
+        col2.metric("Win Rate", "0%")
+        col3.metric("Total Trades", "0")
+        col4.metric("Avg. Trade Duration", "0m")
+
+        # Performance chart placeholder
+        st.line_chart(pd.DataFrame({'balance': [initial_balance]*10}))
+
+    elif selected == "Settings":
+        st.title("Bot Settings")
+
+        # API Configuration
+        st.subheader("API Configuration")
+        api_col1, api_col2 = st.columns(2)
+
+        with api_col1:
+            st.text_input("API Key (Testnet)", type="password")
+        with api_col2:
+            st.text_input("API Secret (Testnet)", type="password")
+
+        # Notification Settings
+        st.subheader("Notifications")
+        notify_trades = st.checkbox("Trade Notifications", value=True)
+        notify_errors = st.checkbox("Error Notifications", value=True)
+
+        # Risk Management
+        st.subheader("Risk Management")
+        max_trades = st.slider("Max Concurrent Trades", 1, 10, 3)
+        max_daily_trades = st.slider("Max Daily Trades", 5, 50, 20)
+
 except Exception as e:
     st.error(f"Application error: {str(e)}")
     logger.error(f"Critical error: {str(e)}")
-
-    
-elif selected == "Strategy Config":
-    st.title("Strategy Configuration")
-
-    # Strategy specific parameters
-    if strategy == "Scalping":
-        col1, col2 = st.columns(2)
-        with col1:
-            st.number_input("Volume Threshold", value=1000000)
-            st.number_input("Min Volatility", value=0.002, format="%.4f")
-        with col2:
-            st.number_input("Profit Target", value=0.005, format="%.4f")
-            st.number_input("Stop Loss", value=0.003, format="%.4f")
-
-    elif strategy == "DEX Sniping":
-        col1, col2 = st.columns(2)
-        with col1:
-            st.number_input("Min Liquidity (ETH)", value=5)
-            st.number_input("Max Buy Tax (%)", value=10)
-        with col2:
-            st.number_input("Min Holders", value=50)
-            st.text_input("RPC URL", value="https://data-seed-prebsc-1-s1.binance.org:8545/")
-
-    elif strategy == "Meme Coin":
-        col1, col2 = st.columns(2)
-        with col1:
-            st.number_input("Sentiment Threshold", value=0.75, format="%.2f")
-            st.number_input("Volume Increase (%)", value=200)
-        with col2:
-            st.number_input("Max Entry Price", value=0.01, format="%.4f")
-            st.number_input("Min Social Score", value=7.5, format="%.1f")
-
-elif selected == "Performance":
-    st.title("Performance Analytics")
-
-    # Performance metrics
-    col1, col2, col3, col4 = st.columns(4)
-    col1.metric("Total Profit/Loss", "$0.00")
-    col2.metric("Win Rate", "0%")
-    col3.metric("Total Trades", "0")
-    col4.metric("Avg. Trade Duration", "0m")
-
-    # Performance chart placeholder
-    st.line_chart(pd.DataFrame({'balance': [initial_balance]*10}))
-
-elif selected == "Settings":
-    st.title("Bot Settings")
-
-    # API Configuration
-    st.subheader("API Configuration")
-    api_col1, api_col2 = st.columns(2)
-
-    with api_col1:
-        st.text_input("API Key (Testnet)", type="password")
-    with api_col2:
-        st.text_input("API Secret (Testnet)", type="password")
-
-    # Notification Settings
-    st.subheader("Notifications")
-    notify_trades = st.checkbox("Trade Notifications", value=True)
-    notify_errors = st.checkbox("Error Notifications", value=True)
-
-    # Risk Management
-    st.subheader("Risk Management")
-    max_trades = st.slider("Max Concurrent Trades", 1, 10, 3)
-    max_daily_trades = st.slider("Max Daily Trades", 5, 50, 20)

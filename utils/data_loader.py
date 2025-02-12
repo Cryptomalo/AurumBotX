@@ -119,7 +119,7 @@ class CryptoDataLoader:
     ) -> Optional[pd.DataFrame]:
         """Fetch historical data from testnet"""
         try:
-            symbol = symbol.replace('-', '/')
+            symbol = self._normalize_symbol(symbol)
 
             # For testing, return simulated data if exchange is not available
             if not hasattr(self, 'exchange') or self.exchange is None:
@@ -152,10 +152,6 @@ class CryptoDataLoader:
             df.set_index('timestamp', inplace=True)
 
             df = self._add_technical_indicators(df)
-
-            self._add_to_cache(f"{symbol}_{period}_{interval}", df)
-            self._save_to_database(symbol, df)
-
             return df
 
         except Exception as e:
