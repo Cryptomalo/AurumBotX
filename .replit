@@ -180,8 +180,8 @@ task = "packager.installForAll"
 
 [[workflows.workflow.tasks]]
 task = "shell.exec"
-args = "streamlit run app.py --server.port=8501 --server.address=0.0.0.0"
-waitForPort = 8501
+args = "streamlit run app.py --server.port=8502 --server.address=0.0.0.0"
+waitForPort = 8502
 
 [[ports]]
 localPort = 5000

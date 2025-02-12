@@ -3,19 +3,11 @@ import pandas as pd
 from datetime import datetime
 import logging
 import sys
-
-# Page config must be first Streamlit command
-st.set_page_config(
-    page_title="AurumBot Trading",
-    page_icon="🤖",
-    layout="wide",
-    initial_sidebar_state="expanded"
-)
-
-from streamlit_option_menu import option_menu
-from streamlit_autorefresh import st_autorefresh
 import plotly.graph_objects as go
 from plotly.subplots import make_subplots
+from streamlit_option_menu import option_menu
+from streamlit_autorefresh import st_autorefresh
+
 from utils.data_loader import CryptoDataLoader
 from utils.auto_trader import AutoTrader
 
@@ -25,10 +17,18 @@ logging.basicConfig(
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
     handlers=[
         logging.StreamHandler(sys.stdout),
-        logging.FileHandler('app.log')
+        logging.FileHandler('streamlit_app.log')
     ]
 )
 logger = logging.getLogger(__name__)
+
+# Page config must be first Streamlit command
+st.set_page_config(
+    page_title="AurumBot Trading",
+    page_icon="🤖",
+    layout="wide",
+    initial_sidebar_state="expanded"
+)
 
 # Auto refresh
 st_autorefresh(interval=5000, key="datarefresh")
@@ -64,8 +64,8 @@ try:
         )
 
         # Testnet indicator
-        st.sidebar.markdown("---")
-        st.sidebar.info("🔒 Running in Testnet Mode")
+        st.markdown("---")
+        st.info("🔒 Running in Testnet Mode")
 
     # Main content
     if selected == "Dashboard":
@@ -81,27 +81,40 @@ try:
             if st.button("Start Bot" if not st.session_state.bot_running else "Stop Bot"):
                 try:
                     if not st.session_state.bot_running:
+                        # Initialize bot with testnet mode
+                        st.session_state.auto_trader = AutoTrader(
+                            symbol=symbol,
+                            initial_balance=initial_balance,
+                            risk_per_trade=risk_per_trade/100,
+                            testnet=True
+                        )
                         st.session_state.bot_running = True
                         st.success("Bot started in testnet mode")
                         logger.info("Trading bot initialized in testnet mode")
                     else:
                         st.session_state.bot_running = False
+                        st.session_state.auto_trader = None
                         st.info("Bot stopped")
                         logger.info("Trading bot stopped")
                 except Exception as e:
                     st.error(f"Error: {str(e)}")
                     logger.error(f"Bot initialization error: {str(e)}")
                     st.session_state.bot_running = False
+                    st.session_state.auto_trader = None
 
         try:
             # Market data visualization
-            data_loader = CryptoDataLoader()
+            data_loader = CryptoDataLoader(testnet=True)
             df = data_loader.get_historical_data(symbol, period='1d', interval=timeframe)
 
             if df is not None and not df.empty:
                 # Create subplot with secondary y-axis
-                fig = make_subplots(rows=2, cols=1, shared_xaxes=True, 
-                                vertical_spacing=0.03, row_heights=[0.7, 0.3])
+                fig = make_subplots(
+                    rows=2, cols=1,
+                    shared_xaxes=True,
+                    vertical_spacing=0.03,
+                    row_heights=[0.7, 0.3]
+                )
 
                 # Candlestick chart
                 fig.add_trace(
@@ -147,6 +160,9 @@ try:
                 col2.metric("24h Volume", f"${df['Volume'].sum():,.0f}")
                 col3.metric("Open Positions", "0" if not st.session_state.bot_running else "Active")
                 col4.metric("P/L", "+$0.00", "0.00%")
+
+            else:
+                st.warning("No data available for the selected trading pair")
 
         except Exception as e:
             st.error(f"Error loading market data: {str(e)}")

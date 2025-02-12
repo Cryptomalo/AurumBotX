@@ -36,7 +36,7 @@ dependencies = [
     "solana==0.25.1",
     "solana-sdk==0.25.6",
     "sqlalchemy==2.0.38",
-    "streamlit>=1.42.0",
+    "streamlit>=1.28.0",
     "telethon==1.38.1",
     "tensorflow==2.14.0",
     "torch>=2.6.0",

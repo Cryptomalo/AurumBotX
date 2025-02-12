@@ -1,33 +1,35 @@
 import os
 import time
 import logging
-from typing import Dict, Optional, List, Union, Tuple
+from typing import Dict, Optional, List, Union
 from datetime import datetime, timedelta
 import concurrent.futures
 
 import pandas as pd
 import numpy as np
-import ccxt
+from binance.client import Client
+from binance.exceptions import BinanceAPIException
 from sqlalchemy import create_engine, text
 from sqlalchemy.orm import Session
 
 logger = logging.getLogger(__name__)
 
 class CryptoDataLoader:
-    def __init__(self, use_live_data: bool = True):
+    def __init__(self, use_live_data: bool = True, testnet: bool = True):
         """Initialize the data loader with supported coins and advanced caching"""
         self.use_live_data = use_live_data
+        self.testnet = testnet
         self.supported_coins = {
-            'BTC/USD': 'Bitcoin',
-            'ETH/USD': 'Ethereum',
-            'SOL/USD': 'Solana',
-            'DOGE/USD': 'Dogecoin',
-            'SHIB/USD': 'Shiba Inu',
-            'ADA/USD': 'Cardano',
-            'XRP/USD': 'Ripple',
-            'DOT/USD': 'Polkadot',
-            'MATIC/USD': 'Polygon',
-            'AVAX/USD': 'Avalanche'
+            'BTCUSDT': 'Bitcoin',
+            'ETHUSDT': 'Ethereum',
+            'SOLUSDT': 'Solana',
+            'DOGEUSDT': 'Dogecoin',
+            'SHIBUSDT': 'Shiba Inu',
+            'ADAUSDT': 'Cardano',
+            'XRPUSDT': 'Ripple',
+            'DOTUSDT': 'Polkadot',
+            'MATICUSDT': 'Polygon',
+            'AVAXUSDT': 'Avalanche'
         }
 
         self._cache = {}
@@ -41,23 +43,35 @@ class CryptoDataLoader:
         }
 
         if self.use_live_data:
-            self._setup_exchange()
+            self._setup_client()
         self._setup_database()
 
-    def _setup_exchange(self):
-        """Setup ccxt exchange connection"""
+    def _setup_client(self):
+        """Setup Binance client connection"""
         try:
-            self.exchange = ccxt.binanceus({
-                'enableRateLimit': True,
-                'options': {
-                    'adjustForTimeDifference': True
-                }
-            })
-            self.exchange.load_markets()  # Load markets to validate symbols
-            logger.info("Exchange connection established and markets loaded")
+            api_key = os.environ.get('BINANCE_API_KEY')
+            api_secret = os.environ.get('BINANCE_API_SECRET')
+
+            if not api_key or not api_secret:
+                raise ValueError("API credentials not found")
+
+            self.client = Client(
+                api_key,
+                api_secret,
+                testnet=self.testnet,
+                tld='us' if not self.testnet else None
+            )
+            logger.info("Binance client initialized successfully")
+
+            # Test connection
+            self.client.ping()
+            logger.info("Binance API connection test successful")
+        except BinanceAPIException as e:
+            logger.error(f"Binance API error: {e}", exc_info=True)
+            raise
         except Exception as e:
-            logger.error(f"Exchange setup error: {e}", exc_info=True)
-            raise  # Re-raise to ensure proper initialization
+            logger.error(f"Client setup error: {e}", exc_info=True)
+            raise
 
     def _setup_database(self):
         """Setup database connection for persistent storage"""
@@ -75,7 +89,7 @@ class CryptoDataLoader:
 
     def _normalize_symbol(self, symbol: str) -> str:
         """Normalize symbol format for exchange"""
-        return symbol.replace('-', '/') if '-' in symbol else symbol
+        return symbol.replace('-', '').replace('/', '')
 
     def _get_from_cache(self, key: str, interval: str = '1m') -> Optional[pd.DataFrame]:
         """Get data from cache if valid"""
@@ -99,10 +113,10 @@ class CryptoDataLoader:
         period: str = '1d',
         interval: str = '1m'
     ) -> Optional[pd.DataFrame]:
-        """Fetch historical data using ccxt"""
+        """Fetch historical data using Binance API"""
         try:
-            if not self.exchange and self.use_live_data:
-                raise ValueError("Exchange not initialized")
+            if not self.client and self.use_live_data:
+                raise ValueError("Client not initialized")
 
             symbol = self._normalize_symbol(symbol)
             if symbol not in self.supported_coins:
@@ -120,39 +134,50 @@ class CryptoDataLoader:
                 # Return mock data for testing
                 return self._get_mock_data(symbol, period, interval)
 
-            # Convert period and interval to ccxt format
-            timeframe = interval
-            since = None
+            # Convert period to milliseconds
+            start_time = None
             if period == '1d':
-                since = int((datetime.now() - timedelta(days=1)).timestamp() * 1000)
+                start_time = int((datetime.now() - timedelta(days=1)).timestamp() * 1000)
             elif period == '7d':
-                since = int((datetime.now() - timedelta(days=7)).timestamp() * 1000)
+                start_time = int((datetime.now() - timedelta(days=7)).timestamp() * 1000)
             elif period == '30d':
-                since = int((datetime.now() - timedelta(days=30)).timestamp() * 1000)
+                start_time = int((datetime.now() - timedelta(days=30)).timestamp() * 1000)
 
             # Implement retry logic
             max_retries = 3
             for attempt in range(max_retries):
                 try:
-                    ohlcv = self.exchange.fetch_ohlcv(
-                        symbol,
-                        timeframe=timeframe,
-                        since=since,
+                    klines = self.client.get_klines(
+                        symbol=symbol,
+                        interval=interval,
+                        startTime=start_time,
                         limit=1000
                     )
 
-                    if not ohlcv:
+                    if not klines:
                         logger.warning(f"No data received for {symbol}")
                         if attempt < max_retries - 1:
                             continue
                         return None
 
                     df = pd.DataFrame(
-                        ohlcv,
-                        columns=['timestamp', 'Open', 'High', 'Low', 'Close', 'Volume']
+                        klines,
+                        columns=[
+                            'timestamp', 'Open', 'High', 'Low', 'Close', 'Volume',
+                            'close_time', 'quote_av', 'trades', 'tb_base_av', 'tb_quote_av', 'ignore'
+                        ]
                     )
+
+                    # Convert string values to float
+                    for col in ['Open', 'High', 'Low', 'Close', 'Volume']:
+                        df[col] = pd.to_numeric(df[col], errors='coerce')
+
+                    # Convert timestamp to datetime
                     df['timestamp'] = pd.to_datetime(df['timestamp'], unit='ms')
                     df.set_index('timestamp', inplace=True)
+
+                    # Drop unnecessary columns
+                    df = df[['Open', 'High', 'Low', 'Close', 'Volume']]
 
                     # Add technical indicators
                     df = self._add_technical_indicators(df)
@@ -163,6 +188,12 @@ class CryptoDataLoader:
 
                     return df
 
+                except BinanceAPIException as e:
+                    if e.code == -1003:  # Too many requests
+                        logger.warning(f"Rate limit hit, waiting before retry: {e}")
+                        time.sleep(2 ** attempt)  # Exponential backoff
+                    else:
+                        raise
                 except Exception as e:
                     if attempt < max_retries - 1:
                         logger.warning(f"Retry {attempt + 1} for {symbol}: {e}")
@@ -173,6 +204,66 @@ class CryptoDataLoader:
         except Exception as e:
             logger.error(f"Error fetching data for {symbol}: {e}", exc_info=True)
             return None
+
+    def _add_to_cache(self, key: str, data: pd.DataFrame):
+        """Add data to cache with memory management"""
+        try:
+            if len(self._cache) > 100:  # Maximum 100 cached items
+                oldest_key = min(self._cache.items(), key=lambda x: x[1][1])[0]
+                del self._cache[oldest_key]
+
+            self._cache[key] = (data.copy(), time.time())
+            logger.debug(f"Added to cache: {key}")
+        except Exception as e:
+            logger.error(f"Cache error for {key}: {e}", exc_info=True)
+
+    def _save_to_database(self, symbol: str, df: pd.DataFrame):
+        """Save market data to database for historical analysis"""
+        if not self.engine:
+            return
+
+        try:
+            table_name = f"market_data_{symbol.lower()}"
+            df.to_sql(
+                table_name,
+                self.engine,
+                if_exists='append',
+                index=True
+            )
+            logger.debug(f"Saved {len(df)} rows to database for {symbol}")
+        except Exception as e:
+            logger.error(f"Database error for {symbol}: {e}", exc_info=True)
+
+    def _add_technical_indicators(self, df: pd.DataFrame) -> pd.DataFrame:
+        """Calculate basic technical indicators"""
+        try:
+            df = df.copy()
+
+            # Basic metrics
+            df['Returns'] = df['Close'].pct_change()
+            df['Volatility'] = df['Returns'].rolling(window=20).std()
+            df['Volume_MA'] = df['Volume'].rolling(window=20).mean()
+            df['Volume_Ratio'] = df['Volume'] / df['Volume_MA']
+
+            # Moving averages
+            df['SMA_20'] = df['Close'].rolling(window=20).mean()
+            df['EMA_20'] = df['Close'].ewm(span=20, adjust=False).mean()
+
+            # RSI
+            delta = df['Close'].diff()
+            gain = (delta.where(delta > 0, 0)).rolling(window=14).mean()
+            loss = (-delta.where(delta < 0, 0)).rolling(window=14).mean()
+            rs = gain / loss
+            df['RSI'] = 100 - (100 / (1 + rs))
+
+            # Clean up NaN values
+            df = df.fillna(method='bfill').fillna(method='ffill').fillna(0)
+
+            return df
+
+        except Exception as e:
+            logger.error(f"Error calculating indicators: {e}", exc_info=True)
+            return df
 
     def _get_mock_data(self, symbol: str, period: str, interval: str) -> pd.DataFrame:
         """Generate mock data for testing"""
@@ -198,85 +289,6 @@ class CryptoDataLoader:
 
         return self._add_technical_indicators(df)
 
-    def _add_technical_indicators(self, df: pd.DataFrame) -> pd.DataFrame:
-        """Calculate comprehensive technical indicators"""
-        try:
-            df = df.copy()
-
-            # Basic indicators
-            df['Returns'] = df['Close'].pct_change()
-            df['Volatility'] = df['Returns'].rolling(window=20).std()
-            df['Volume_MA'] = df['Volume'].rolling(window=20).mean()
-            df['Volume_Ratio'] = df['Volume'] / df['Volume_MA']
-
-            # Moving averages
-            for period in [20, 50, 200]:
-                df[f'SMA_{period}'] = df['Close'].rolling(window=period).mean()
-                df[f'EMA_{period}'] = df['Close'].ewm(span=period, adjust=False).mean()
-
-            # RSI
-            delta = df['Close'].diff()
-            gain = delta.where(delta > 0, 0)
-            loss = -delta.where(delta < 0, 0)
-            avg_gain = gain.rolling(window=14).mean()
-            avg_loss = loss.rolling(window=14).mean()
-            rs = avg_gain / avg_loss
-            df['RSI'] = 100 - (100 / (1 + rs))
-
-            # MACD
-            exp1 = df['Close'].ewm(span=12, adjust=False).mean()
-            exp2 = df['Close'].ewm(span=26, adjust=False).mean()
-            df['MACD'] = exp1 - exp2
-            df['Signal'] = df['MACD'].ewm(span=9, adjust=False).mean()
-            df['MACD_Hist'] = df['MACD'] - df['Signal']
-
-            # Bollinger Bands
-            df['BB_Middle'] = df['Close'].rolling(window=20).mean()
-            df['BB_Upper'] = df['BB_Middle'] + 2 * df['Close'].rolling(window=20).std()
-            df['BB_Lower'] = df['BB_Middle'] - 2 * df['Close'].rolling(window=20).std()
-
-            # Clean up NaN values
-            df = df.fillna(method='bfill').fillna(method='ffill').fillna(0)
-
-            return df
-
-        except Exception as e:
-            logger.error(f"Error calculating indicators: {e}", exc_info=True)
-            return df
-
-    def _add_to_cache(self, key: str, data: pd.DataFrame):
-        """Add data to cache with memory management"""
-        try:
-            if len(self._cache) > 100:  # Maximum 100 cached items
-                oldest_key = min(self._cache.items(), key=lambda x: x[1][1])[0]
-                del self._cache[oldest_key]
-
-            self._cache[key] = (data.copy(), time.time())
-            logger.debug(f"Added to cache: {key}")
-        except Exception as e:
-            logger.error(f"Cache error for {key}: {e}", exc_info=True)
-
-    def _save_to_database(self, symbol: str, df: pd.DataFrame):
-        """Save market data to database for historical analysis"""
-        if not self.engine:
-            return
-
-        try:
-            table_name = f"market_data_{symbol.lower().replace('/', '_')}"
-            df.to_sql(
-                table_name,
-                self.engine,
-                if_exists='append',
-                index=True
-            )
-            logger.debug(f"Saved {len(df)} rows to database for {symbol}")
-        except Exception as e:
-            logger.error(f"Database error for {symbol}: {e}", exc_info=True)
-
-    def get_available_coins(self) -> Dict[str, str]:
-        """Return dictionary of supported cryptocurrencies"""
-        return self.supported_coins.copy()
-
     def get_market_summary(self, symbol: str) -> Dict[str, Union[float, str]]:
         """Get comprehensive market summary"""
         try:
@@ -297,10 +309,13 @@ class CryptoDataLoader:
                 'low_24h': df['Low'].min(),
                 'volatility': df['Returns'].std() * 100,
                 'rsi': df['RSI'].iloc[-1],
-                'macd': df['MACD'].iloc[-1],
-                'trend': 'Bullish' if current_price > df['SMA_200'].iloc[-1] else 'Bearish'
+                'trend': 'Bullish' if current_price > df['SMA_20'].iloc[-1] else 'Bearish'
             }
 
         except Exception as e:
             logger.error(f"Error getting market summary for {symbol}: {e}", exc_info=True)
             return {}
+
+    def get_available_coins(self) -> Dict[str, str]:
+        """Return dictionary of supported cryptocurrencies"""
+        return self.supported_coins.copy()

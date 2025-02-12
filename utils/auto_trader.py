@@ -1,4 +1,3 @@
-import asyncio
 import logging
 from datetime import datetime, timedelta
 import time
@@ -19,7 +18,7 @@ from utils.prediction_model import PredictionModel
 class AutoTrader:
     def __init__(self, symbol: str, initial_balance: float = 10000, risk_per_trade: float = 0.02, testnet: bool = True):
         self.logger = logging.getLogger(__name__)
-        self.symbol = symbol.replace("-", "/")  # Convert BTC-USDT to BTC/USDT format
+        self.symbol = self._format_symbol(symbol)  # Convert BTC-USDT to BTCUSDT format
         self.initial_balance = initial_balance
         self.risk_per_trade = risk_per_trade
         self.testnet = testnet
@@ -39,7 +38,7 @@ class AutoTrader:
 
         # Initialize components
         self.setup_logging()
-        self.data_loader = CryptoDataLoader()
+        self.data_loader = CryptoDataLoader(testnet=testnet)
         self.indicators = TechnicalIndicators()
         self.prediction_model = PredictionModel()
 
@@ -96,6 +95,10 @@ class AutoTrader:
         self.last_action_time = None
         self.active_strategy = None
 
+    def _format_symbol(self, symbol: str) -> str:
+        """Convert symbol to Binance format"""
+        return symbol.replace('-', '').replace('/', '')
+
     def setup_logging(self):
         """Configure logging with proper format and file output"""
         log_filename = f'trading_log_{self.symbol}_{datetime.now().strftime("%Y%m%d")}.log'
@@ -105,6 +108,29 @@ class AutoTrader:
             format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
         )
         self.logger = logging.getLogger(__name__)
+
+    def calculate_market_volatility(self, df: pd.DataFrame) -> Optional[float]:
+        """Calculate market volatility using standard deviation"""
+        try:
+            returns = df['Close'].pct_change().dropna()
+            volatility = returns.std()
+            self.logger.info(f"Calculated volatility: {volatility}")
+            return volatility
+        except Exception as e:
+            self.logger.error(f"Error calculating volatility: {str(e)}")
+            return None
+
+    def adjust_strategies_parameters(self, volatility: Optional[float]):
+        """Adjust strategy parameters based on market volatility"""
+        if volatility is None:
+            return
+
+        try:
+            for strategy in self.strategies.values():
+                strategy.optimize_parameters({'volatility': volatility})
+            self.logger.info("Strategy parameters updated based on volatility")
+        except Exception as e:
+            self.logger.error(f"Error adjusting parameters: {str(e)}")
 
     def analyze_market(self):
         """Analyze market data and generate trading signals"""
@@ -121,30 +147,28 @@ class AutoTrader:
                 self.logger.error("Unable to get market data")
                 return None
 
-            # Add technical indicators with error handling
+            # Add technical indicators and analyze volatility
             try:
                 df_short = self.indicators.add_all_indicators(df_short)
                 market_volatility = self.calculate_market_volatility(df_medium)
                 self.adjust_strategies_parameters(market_volatility)
             except Exception as e:
-                self.logger.error(f"Error adding technical indicators: {str(e)}")
-                return None
-
-            # Merge timeframes
-            df = self.merge_timeframes(df_short, df_medium, df_long)
-            if df is None:
+                self.logger.error(f"Error analyzing market conditions: {str(e)}")
                 return None
 
             # Get AI predictions
             try:
-                ai_signal = self.prediction_model.analyze_market_with_ai(df, self._get_social_data())
+                ai_signal = self.prediction_model.analyze_market_with_ai(
+                    df_short, 
+                    self._get_social_data()
+                )
                 if ai_signal and ai_signal['confidence'] > 0.75:
                     return {
                         'action': 'buy' if ai_signal['technical_score'] > 0.5 else 'sell',
                         'confidence': ai_signal['confidence'],
                         'size_factor': ai_signal['suggested_position_size'],
-                        'target_price': self._calculate_target_price(df, ai_signal),
-                        'stop_loss': self._calculate_stop_loss(df, ai_signal)
+                        'target_price': self._calculate_target_price(df_short, ai_signal),
+                        'stop_loss': self._calculate_stop_loss(df_short, ai_signal)
                     }
             except Exception as e:
                 self.logger.warning(f"AI analysis error (non-critical): {str(e)}")
@@ -152,12 +176,13 @@ class AutoTrader:
             best_signal = None
             best_confidence = 0
 
+            # Try each strategy
             for strategy_name, strategy in self.strategies.items():
-                if not strategy.is_strategy_active():
+                if not hasattr(strategy, 'is_strategy_active') or not strategy.is_strategy_active():
                     continue
 
                 try:
-                    signal = strategy.generate_signals(df)
+                    signal = strategy.generate_signals(df_short)
                     if not signal:
                         continue
 
@@ -165,7 +190,7 @@ class AutoTrader:
                         'available_capital': self.balance,
                         'total_capital': self.initial_balance,
                         'current_spread': 0.001,
-                        'market_trend': 1 if df['Close'].iloc[-1] > df['Close'].iloc[-20].mean() else -1
+                        'market_trend': 1 if df_short['Close'].iloc[-1] > df_short['SMA_20'].iloc[-1] else -1
                     }
 
                     if (signal['action'] != 'hold' and 
@@ -179,7 +204,7 @@ class AutoTrader:
                     continue
 
             if best_signal:
-                best_signal['price'] = df['Close'].iloc[-1]
+                best_signal['price'] = df_short['Close'].iloc[-1]
                 return best_signal
 
             return None
@@ -190,15 +215,11 @@ class AutoTrader:
 
     def _get_social_data(self):
         """Get social media data for sentiment analysis"""
-        try:
-            return {
-                'sentiment_score': 0.5,
-                'volume_score': 0.5,
-                'trend_score': 0.5
-            }
-        except Exception as e:
-            self.logger.error(f"Error getting social data: {str(e)}")
-            return None
+        return {
+            'sentiment_score': 0.5,
+            'volume_score': 0.5,
+            'trend_score': 0.5
+        }
 
     def _calculate_target_price(self, df: pd.DataFrame, ai_signal: Dict[str, Any]) -> float:
         """Calculate target price based on AI signals"""
@@ -318,29 +339,6 @@ class AutoTrader:
                 self.notifier.send_error_notification(self.symbol, str(e))
         finally:
             self.logger.info(f"Bot stopped. Final balance: {self.balance}")
-
-    def calculate_market_volatility(self, df: pd.DataFrame) -> Optional[float]:
-        """Calculate market volatility using standard deviation"""
-        try:
-            returns = df['Close'].pct_change().dropna()
-            volatility = returns.std()
-            self.logger.info(f"Calculated volatility: {volatility}")
-            return volatility
-        except Exception as e:
-            self.logger.error(f"Error calculating volatility: {str(e)}")
-            return None
-
-    def adjust_strategies_parameters(self, volatility: Optional[float]):
-        """Adjust strategy parameters based on market volatility"""
-        if volatility is None:
-            return
-
-        try:
-            for strategy in self.strategies.values():
-                strategy.optimize_parameters({'volatility': volatility})
-            self.logger.info("Strategy parameters updated based on volatility")
-        except Exception as e:
-            self.logger.error(f"Error adjusting parameters: {str(e)}")
 
     def merge_timeframes(self, df_short: pd.DataFrame, df_medium: pd.DataFrame, df_long: pd.DataFrame) -> Optional[pd.DataFrame]:
         """Merge data from different timeframes"""

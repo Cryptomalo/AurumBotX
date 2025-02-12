@@ -3013,7 +3013,7 @@ requires-dist = [
     { name = "solana", specifier = "==0.25.1" },
     { name = "solana-sdk", specifier = "==0.25.6" },
     { name = "sqlalchemy", specifier = "==2.0.38" },
-    { name = "streamlit", specifier = ">=1.42.0" },
+    { name = "streamlit", specifier = ">=1.28.0" },
     { name = "streamlit-autorefresh", specifier = ">=1.0.1" },
     { name = "streamlit-extras", specifier = ">=0.5.0" },
     { name = "streamlit-option-menu", specifier = ">=0.4.0" },
