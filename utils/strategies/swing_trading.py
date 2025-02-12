@@ -1,9 +1,10 @@
 import pandas as pd
-from typing import Dict, Any
+from typing import Dict, Any, List, Optional
 import numpy as np
 from utils.strategies.base_strategy import BaseStrategy
 from openai import OpenAI
 import os
+import asyncio
 
 class SwingTradingStrategy(BaseStrategy):
     def __init__(self, config: Dict[str, Any]):
@@ -21,9 +22,14 @@ class SwingTradingStrategy(BaseStrategy):
             print(f"OpenAI initialization failed: {str(e)}")
             self.has_sentiment = False
 
-    def analyze_market(self, df: pd.DataFrame) -> Dict[str, Any]:
+    async def analyze_market(
+        self, 
+        market_data: pd.DataFrame, 
+        sentiment_data: Optional[Dict] = None
+    ) -> List[Dict[str, Any]]:
         """Analizza il mercato per swing trading"""
         # Calcola indicatori tecnici
+        df = market_data.copy()
         df['SMA_20'] = df['Close'].rolling(window=20).mean()
         df['SMA_50'] = df['Close'].rolling(window=50).mean()
 
@@ -40,12 +46,12 @@ class SwingTradingStrategy(BaseStrategy):
 
         # Analisi del sentiment con fallback
         sentiment_score = (
-            self._analyze_market_sentiment()
+            await self._analyze_market_sentiment()
             if self.has_sentiment
-            else self._technical_sentiment(df)
+            else await self._technical_sentiment(df)
         )
 
-        analysis = {
+        analysis = [{
             'trend_direction': trend_direction,
             'trend_strength': trend_strength,
             'volatility': volatility,
@@ -54,11 +60,11 @@ class SwingTradingStrategy(BaseStrategy):
             'current_price': df['Close'].iloc[-1],
             'sma_20': df['SMA_20'].iloc[-1],
             'sma_50': df['SMA_50'].iloc[-1]
-        }
+        }]
 
         return analysis
 
-    def _technical_sentiment(self, df: pd.DataFrame) -> float:
+    async def _technical_sentiment(self, df: pd.DataFrame) -> float:
         """Calcola sentiment basato su analisi tecnica quando OpenAI non è disponibile"""
         try:
             # Calcola trend di lungo periodo
@@ -90,14 +96,14 @@ class SwingTradingStrategy(BaseStrategy):
             print(f"Error in technical sentiment: {e}")
             return 0.5
 
-    def _analyze_market_sentiment(self) -> float:
+    async def _analyze_market_sentiment(self) -> float:
         """Analizza il sentiment del mercato usando OpenAI"""
         try:
             if not self.has_sentiment:
                 return 0.5
 
             response = self.client.chat.completions.create(
-                model="gpt-4",  # Using the current stable model
+                model="gpt-4",  # Latest stable model
                 messages=[{
                     "role": "system",
                     "content": "Analyze the current market sentiment for long-term crypto trading and provide a sentiment score between 0 and 1."
@@ -158,13 +164,13 @@ class SwingTradingStrategy(BaseStrategy):
 
         return signal
 
-    def validate_trade(self, signal: Dict[str, Any], current_portfolio: Dict[str, Any]) -> bool:
+    async def validate_trade(self, signal: Dict[str, Any], portfolio: Dict[str, Any]) -> bool:
         """Valida un potenziale trade di swing"""
         if signal['action'] == 'hold':
             return False
 
         # Verifica capitale disponibile
-        required_capital = current_portfolio.get('available_capital', 0) * signal['size_factor']
+        required_capital = portfolio.get('available_capital', 0) * signal['size_factor']
         min_trade_size = 500  # Dimensione minima per swing trading
 
         if required_capital < min_trade_size:
@@ -172,14 +178,44 @@ class SwingTradingStrategy(BaseStrategy):
 
         # Verifica rischio
         risk_amount = abs(signal['target_price'] - signal['stop_loss']) * required_capital
-        max_risk = current_portfolio.get('total_capital', 0) * 0.05  # 5% rischio massimo per trade
+        max_risk = portfolio.get('total_capital', 0) * 0.05  # 5% rischio massimo per trade
 
         # Verifica timing di mercato
         market_conditions_favorable = (
             signal['confidence'] > 0.8 and
-            current_portfolio.get('market_trend', 0) * (
+            portfolio.get('market_trend', 0) * (
                 1 if signal['action'] == 'buy' else -1
             ) > 0
         )
 
         return risk_amount <= max_risk and market_conditions_favorable
+
+    async def execute_trade(self, signal: Dict[str, Any], market_data: Dict[str, Any]) -> Dict[str, Any]:
+        """Esegue il trade basato sul segnale"""
+        try:
+            if signal['action'] == 'hold':
+                return {'success': False, 'reason': 'No trade signal'}
+
+            current_price = market_data.get('current_price')
+            if not current_price:
+                return {'success': False, 'reason': 'Missing price data'}
+
+            # Simula esecuzione trade
+            execution = {
+                'success': True,
+                'action': signal['action'],
+                'price': current_price,
+                'timestamp': pd.Timestamp.now().isoformat(),
+                'size_factor': signal['size_factor'],
+                'target_price': signal['target_price'],
+                'stop_loss': signal['stop_loss'],
+                'confidence': signal['confidence']
+            }
+
+            return execution
+
+        except Exception as e:
+            return {
+                'success': False,
+                'reason': f'Execution error: {str(e)}'
+            }

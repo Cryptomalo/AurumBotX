@@ -49,15 +49,15 @@ args = "WebSocket Test"
 
 [[workflows.workflow.tasks]]
 task = "workflow.run"
-args = "AurumBot"
-
-[[workflows.workflow.tasks]]
-task = "workflow.run"
 args = "Strategy Tests"
 
 [[workflows.workflow.tasks]]
 task = "workflow.run"
 args = "Extended Market Test"
+
+[[workflows.workflow.tasks]]
+task = "workflow.run"
+args = "AurumBot"
 
 [[workflows.workflow]]
 name = "Trading Bot Tests"
@@ -71,7 +71,8 @@ task = "packager.installForAll"
 
 [[workflows.workflow.tasks]]
 task = "shell.exec"
-args = "python test_bot.py"
+args = "python test_strategies.py"
+waitForPort = 5000
 
 [[workflows.workflow]]
 name = "Test Suite"
@@ -140,21 +141,6 @@ task = "shell.exec"
 args = "python -m pytest utils/test_suite.py -v"
 
 [[workflows.workflow]]
-name = "AurumBot"
-author = "agent"
-
-[workflows.workflow.metadata]
-agentRequireRestartOnSave = false
-
-[[workflows.workflow.tasks]]
-task = "packager.installForAll"
-
-[[workflows.workflow.tasks]]
-task = "shell.exec"
-args = "streamlit run app.py --server.port=8502 --server.address=0.0.0.0"
-waitForPort = 8502
-
-[[workflows.workflow]]
 name = "Strategy Tests"
 author = "agent"
 
@@ -182,6 +168,21 @@ task = "packager.installForAll"
 task = "shell.exec"
 args = "python test_bot.py"
 
+[[workflows.workflow]]
+name = "AurumBot"
+author = "agent"
+
+[workflows.workflow.metadata]
+agentRequireRestartOnSave = false
+
+[[workflows.workflow.tasks]]
+task = "packager.installForAll"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "streamlit run app.py --server.port=8503 --server.address=0.0.0.0"
+waitForPort = 8503
+
 [[ports]]
 localPort = 5000
 externalPort = 80
@@ -205,3 +206,7 @@ externalPort = 3001
 [[ports]]
 localPort = 8502
 externalPort = 3002
+
+[[ports]]
+localPort = 8503
+externalPort = 3003

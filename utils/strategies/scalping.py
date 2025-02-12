@@ -3,6 +3,7 @@ from typing import Dict, Any, List, Optional
 import numpy as np
 from utils.strategies.base_strategy import BaseStrategy
 import logging
+import asyncio
 
 logger = logging.getLogger(__name__)
 
@@ -21,7 +22,11 @@ class ScalpingStrategy(BaseStrategy):
         self.min_profit_factor = 1.5  # Rapporto minimo rischio/rendimento
         self.logger = logger
 
-    async def analyze_market(self, market_data: pd.DataFrame, sentiment_data: Optional[Dict] = None) -> List[Dict]:
+    async def analyze_market(
+        self, 
+        market_data: pd.DataFrame, 
+        sentiment_data: Optional[Dict] = None
+    ) -> List[Dict[str, Any]]:
         """Analisi di mercato ultra-rapida con rilevamento anomalie"""
         try:
             if market_data is None or market_data.empty:
@@ -45,13 +50,6 @@ class ScalpingStrategy(BaseStrategy):
             momentum = close.pct_change(periods=3).iloc[-1]
             price_trend = close.pct_change(3).ewm(span=3).mean().iloc[-1]  # Media mobile esponenziale
 
-            # Indicatori tecnici
-            rsi = market_data.get('RSI_14', market_data.get('rsi_14', 50))
-            macd = market_data.get('MACD', market_data.get('macd', 0))
-            macd_signal = market_data.get('MACD_Signal', market_data.get('macd_signal', 0))
-            bb_upper = market_data.get('BB_Upper', market_data.get('bb_upper'))
-            bb_lower = market_data.get('BB_Lower', market_data.get('bb_lower'))
-
             current_price = close.iloc[-1]
 
             # Calcolo livelli dinamici
@@ -62,6 +60,9 @@ class ScalpingStrategy(BaseStrategy):
             # Take profit adattivo basato sulla volatilità
             adaptive_profit_target = max(self.profit_target, volatility * 0.5)
             adaptive_stop_loss = min(self.initial_stop_loss, volatility * 0.3)
+
+            # Integrazione sentiment se disponibile
+            sentiment_score = sentiment_data.get('sentiment_score', 0.5) if sentiment_data else 0.5
 
             analysis = [{
                 'volume_24h': volume.iloc[-1],
@@ -75,13 +76,9 @@ class ScalpingStrategy(BaseStrategy):
                 'nearest_resistance': recent_high,
                 'nearest_support': recent_low,
                 'price_range': price_range,
-                'bb_position': (current_price - bb_lower.iloc[-1]) / (bb_upper.iloc[-1] - bb_lower.iloc[-1]) if bb_upper is not None else 0.5,
-                'macd': macd.iloc[-1] if isinstance(macd, pd.Series) else macd,
-                'macd_signal': macd_signal.iloc[-1] if isinstance(macd_signal, pd.Series) else macd_signal,
-                'rsi': rsi.iloc[-1] if isinstance(rsi, pd.Series) else rsi,
                 'adaptive_profit': adaptive_profit_target,
                 'adaptive_stop': adaptive_stop_loss,
-                'sentiment_score': sentiment_data.get('sentiment_score', 0.0) if sentiment_data else 0.0
+                'sentiment_score': sentiment_score
             }]
 
             return analysis
@@ -109,31 +106,22 @@ class ScalpingStrategy(BaseStrategy):
             volatility_ok = analysis.get('volatility', 0) > self.min_volatility * 0.7
             strong_momentum = abs(analysis.get('momentum', 0)) > self.min_volatility
 
-            # Analisi tecnica avanzata
-            price_trend = analysis.get('price_trend', 0)
-            macd = analysis.get('macd', 0)
-            macd_signal = analysis.get('macd_signal', 0)
-            rsi = analysis.get('rsi', 50)
-            bb_position = analysis.get('bb_position', 0.5)
-
             # Calcolo score trend con pesi
             trend_factors = [
-                (1 if price_trend > 0 else -1) * 2.0,  # Maggior peso al trend
+                (1 if analysis.get('price_trend', 0) > 0 else -1) * 2.0,  # Maggior peso al trend
                 (1 if analysis.get('momentum', 0) > 0 else -1) * 1.5,
-                (1 if macd > macd_signal else -1),
-                (1 if rsi < self.rsi_oversold else (-1 if rsi > self.rsi_overbought else 0)) * 1.5,
-                (1 if bb_position < 0.2 else (-1 if bb_position > 0.8 else 0))
+                (1 if analysis.get('volume_trend', 0) > 0 else -1),
+                (1 if analysis.get('sentiment_score', 0.5) > 0.6 else -1) * 1.2  # Integrazione sentiment
             ]
 
-            trend_score = sum(trend_factors) / 7.0  # Normalizzato tra -1 e 1
+            trend_score = sum(trend_factors) / 5.7  # Normalizzato tra -1 e 1
 
             # Calcolo forza segnale con più indicatori
             signal_strength = min(1.0, (
                 (analysis.get('volume_ratio', 1) - 1) * 0.15 +
                 (analysis.get('volatility', 0) / self.min_volatility) * 0.15 +
                 abs(analysis.get('momentum', 0)) * 0.2 +
-                abs(analysis.get('sentiment_score', 0)) * 0.2 +
-                (abs(macd) / analysis.get('current_price', 1)) * 0.3
+                analysis.get('sentiment_score', 0.5) * 0.2
             ))
 
             # Generazione segnali con condizioni ottimizzate
@@ -180,9 +168,7 @@ class ScalpingStrategy(BaseStrategy):
             }
 
     async def validate_trade(self, signal: Dict[str, Any], portfolio: Dict[str, Any]) -> bool:
-        """
-        Validates a potential scalping trade
-        """
+        """Validates a potential scalping trade"""
         try:
             if signal['action'] == 'hold':
                 return False
@@ -209,29 +195,27 @@ class ScalpingStrategy(BaseStrategy):
             return False
 
     async def execute_trade(self, signal: Dict[str, Any]) -> Dict[str, Any]:
-        """
-        Executes a scalping trade based on the signal
-        """
+        """Executes a scalping trade based on the signal"""
         try:
-            # Implementation for testnet
-            current_price = signal.get('current_price', 0)
-            trend_direction = 1 if signal.get('action') == 'buy' else -1
+            if signal['action'] == 'hold':
+                return {'success': False, 'reason': 'No trade signal'}
 
-            result = {
-                'action': signal['action'],
-                'entry_price': current_price,
-                'target_price': current_price * (1 + trend_direction * self.profit_target),
-                'stop_loss': current_price * (1 - trend_direction * self.initial_stop_loss),
-                'size_factor': signal.get('size_factor', 0.0),
-                'timestamp': pd.Timestamp.now().isoformat(),
+            # Simulate trade execution for testnet
+            execution = {
                 'success': True,
-                'error': None
+                'action': signal['action'],
+                'price': signal.get('current_price', 0),
+                'timestamp': pd.Timestamp.now().isoformat(),
+                'size_factor': signal.get('size_factor', 0.0),
+                'target_price': signal.get('target_price'),
+                'stop_loss': signal.get('stop_loss'),
+                'confidence': signal.get('confidence', 0.0)
             }
 
             # Update performance metrics
-            self.update_performance(result)
+            self.update_performance(execution)
 
-            return result
+            return execution
 
         except Exception as e:
             self.logger.error(f"Trade execution error: {str(e)}")
