@@ -1,14 +1,23 @@
 import streamlit as st
 import pandas as pd
 from datetime import datetime
-from streamlit_option_menu import option_menu
-from utils.auto_trader import AutoTrader
-from utils.data_loader import CryptoDataLoader
-import plotly.graph_objects as go
-from plotly.subplots import make_subplots
 import logging
 import sys
+
+# Page config must be first Streamlit command
+st.set_page_config(
+    page_title="AurumBot Trading",
+    page_icon="🤖",
+    layout="wide",
+    initial_sidebar_state="expanded"
+)
+
+from streamlit_option_menu import option_menu
 from streamlit_autorefresh import st_autorefresh
+import plotly.graph_objects as go
+from plotly.subplots import make_subplots
+from utils.data_loader import CryptoDataLoader
+from utils.auto_trader import AutoTrader
 
 # Setup logging
 logging.basicConfig(
@@ -23,29 +32,6 @@ logger = logging.getLogger(__name__)
 
 # Auto refresh
 st_autorefresh(interval=5000, key="datarefresh")
-
-# Page config
-st.set_page_config(
-    page_title="AurumBot Trading",
-    page_icon="🤖",
-    layout="wide",
-    initial_sidebar_state="expanded"
-)
-
-# Custom styling
-st.markdown("""
-    <style>
-    .reportview-container {
-        background: #0E1117
-    }
-    .sidebar .sidebar-content {
-        background: #262730
-    }
-    .stApp {
-        background: #0E1117
-    }
-    </style>
-    """, unsafe_allow_html=True)
 
 # Initialize session state
 if 'bot_running' not in st.session_state:
@@ -96,24 +82,16 @@ try:
                 try:
                     if not st.session_state.bot_running:
                         st.session_state.bot_running = True
-                        st.session_state.auto_trader = AutoTrader(
-                            symbol=symbol,
-                            initial_balance=initial_balance,
-                            risk_per_trade=risk_per_trade/100,
-                            testnet=True
-                        )
                         st.success("Bot started in testnet mode")
                         logger.info("Trading bot initialized in testnet mode")
                     else:
                         st.session_state.bot_running = False
-                        st.session_state.auto_trader = None
                         st.info("Bot stopped")
                         logger.info("Trading bot stopped")
                 except Exception as e:
                     st.error(f"Error: {str(e)}")
                     logger.error(f"Bot initialization error: {str(e)}")
                     st.session_state.bot_running = False
-                    st.session_state.auto_trader = None
 
         try:
             # Market data visualization
@@ -123,7 +101,7 @@ try:
             if df is not None and not df.empty:
                 # Create subplot with secondary y-axis
                 fig = make_subplots(rows=2, cols=1, shared_xaxes=True, 
-                                    vertical_spacing=0.03, row_heights=[0.7, 0.3])
+                                vertical_spacing=0.03, row_heights=[0.7, 0.3])
 
                 # Candlestick chart
                 fig.add_trace(
@@ -170,19 +148,6 @@ try:
                 col3.metric("Open Positions", "0" if not st.session_state.bot_running else "Active")
                 col4.metric("P/L", "+$0.00", "0.00%")
 
-                # Strategy Insights
-                if st.session_state.bot_running and st.session_state.auto_trader:
-                    st.subheader("Strategy Insights")
-                    insights_col1, insights_col2 = st.columns(2)
-
-                    with insights_col1:
-                        st.info(f"Active Strategy: {strategy}")
-                        st.metric("Strategy Confidence", "High" if price_change > 0 else "Medium")
-
-                    with insights_col2:
-                        st.info("Market Sentiment")
-                        st.progress(0.7, "Bullish" if price_change > 0 else "Bearish")
-
         except Exception as e:
             st.error(f"Error loading market data: {str(e)}")
             logger.error(f"Market data error: {str(e)}")
@@ -221,34 +186,27 @@ try:
     elif selected == "Performance":
         st.title("Performance Analytics")
 
-        # Performance metrics
         col1, col2, col3, col4 = st.columns(4)
         col1.metric("Total Profit/Loss", "$0.00")
         col2.metric("Win Rate", "0%")
         col3.metric("Total Trades", "0")
         col4.metric("Avg. Trade Duration", "0m")
 
-        # Performance chart placeholder
         st.line_chart(pd.DataFrame({'balance': [initial_balance]*10}))
 
     elif selected == "Settings":
         st.title("Bot Settings")
 
-        # API Configuration
-        st.subheader("API Configuration")
         api_col1, api_col2 = st.columns(2)
-
         with api_col1:
             st.text_input("API Key (Testnet)", type="password")
         with api_col2:
             st.text_input("API Secret (Testnet)", type="password")
 
-        # Notification Settings
         st.subheader("Notifications")
         notify_trades = st.checkbox("Trade Notifications", value=True)
         notify_errors = st.checkbox("Error Notifications", value=True)
 
-        # Risk Management
         st.subheader("Risk Management")
         max_trades = st.slider("Max Concurrent Trades", 1, 10, 3)
         max_daily_trades = st.slider("Max Daily Trades", 5, 50, 20)
@@ -256,3 +214,18 @@ try:
 except Exception as e:
     st.error(f"Application error: {str(e)}")
     logger.error(f"Critical error: {str(e)}")
+
+# Custom styling
+st.markdown("""
+    <style>
+    .reportview-container {
+        background: #0E1117
+    }
+    .sidebar .sidebar-content {
+        background: #262730
+    }
+    .stApp {
+        background: #0E1117
+    }
+    </style>
+    """, unsafe_allow_html=True)

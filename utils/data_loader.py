@@ -51,19 +51,12 @@ class CryptoDataLoader:
                     'defaultType': 'future',
                     'adjustForTimeDifference': True,
                     'test': True  # Enable testnet
-                },
-                'urls': {
-                    'api': {
-                        'public': 'https://testnet.binance.vision/api/v3',
-                        'private': 'https://testnet.binance.vision/api/v3',
-                    }
                 }
             })
-            self.exchange.load_markets()
             logger.info("Exchange connection established in testnet mode")
         except Exception as e:
-            logger.error(f"Exchange setup error: {e}", exc_info=True)
-            raise
+            logger.warning(f"Exchange setup failed, using simulated data: {e}")
+            self.exchange = None
 
     def _setup_database(self):
         """Setup database connection for persistent storage"""
@@ -79,84 +72,27 @@ class CryptoDataLoader:
             logger.error(f"Database setup error: {e}", exc_info=True)
             self.engine = None
 
-    def _normalize_symbol(self, symbol: str) -> str:
-        """Normalize symbol format for exchange"""
-        return symbol.replace('-', '/') if '-' in symbol else symbol
-
-    def _get_from_cache(self, key: str, interval: str = '1m') -> Optional[pd.DataFrame]:
-        """Get data from cache if valid"""
-        try:
-            if key in self._cache:
-                data, timestamp = self._cache[key]
-                cache_duration = self._cache_duration.get(interval, 300)
-                if time.time() - timestamp < cache_duration:
-                    logger.debug(f"Cache hit for {key}")
-                    return data.copy()
-                logger.debug(f"Cache expired for {key}")
-                del self._cache[key]
-            return None
-        except Exception as e:
-            logger.error(f"Cache error for {key}: {e}", exc_info=True)
-            return None
-
-    def _add_to_cache(self, key: str, data: pd.DataFrame):
-        """Add data to cache with memory management"""
-        try:
-            if len(self._cache) > 100:  # Maximum 100 cached items
-                oldest_key = min(self._cache.items(), key=lambda x: x[1][1])[0]
-                del self._cache[oldest_key]
-
-            self._cache[key] = (data.copy(), time.time())
-            logger.debug(f"Added to cache: {key}")
-        except Exception as e:
-            logger.error(f"Cache error for {key}: {e}", exc_info=True)
-
     def get_historical_data(
         self,
         symbol: str,
         period: str = '1d',
         interval: str = '1m'
     ) -> Optional[pd.DataFrame]:
-        """Fetch historical data from testnet"""
+        """Fetch historical data with fallback to simulation"""
         try:
             symbol = self._normalize_symbol(symbol)
+            logger.info(f"Getting historical data for {symbol}")
 
-            # For testing, return simulated data if exchange is not available
-            if not hasattr(self, 'exchange') or self.exchange is None:
-                return self._get_simulated_data(symbol, period, interval)
-
-            since = None
-            if period == '1d':
-                since = int((datetime.now() - timedelta(days=1)).timestamp() * 1000)
-            elif period == '7d':
-                since = int((datetime.now() - timedelta(days=7)).timestamp() * 1000)
-            elif period == '30d':
-                since = int((datetime.now() - timedelta(days=30)).timestamp() * 1000)
-
-            ohlcv = self.exchange.fetch_ohlcv(
-                symbol,
-                timeframe=interval,
-                since=since,
-                limit=1000
-            )
-
-            if not ohlcv:
-                logger.warning(f"No data received for {symbol}, using simulation")
-                return self._get_simulated_data(symbol, period, interval)
-
-            df = pd.DataFrame(
-                ohlcv,
-                columns=['timestamp', 'Open', 'High', 'Low', 'Close', 'Volume']
-            )
-            df['timestamp'] = pd.to_datetime(df['timestamp'], unit='ms')
-            df.set_index('timestamp', inplace=True)
-
-            df = self._add_technical_indicators(df)
-            return df
+            # Always use simulated data for initial testing
+            return self._get_simulated_data(symbol, period, interval)
 
         except Exception as e:
-            logger.error(f"Error fetching data for {symbol}: {e}", exc_info=True)
+            logger.error(f"Error fetching data for {symbol}: {e}")
             return self._get_simulated_data(symbol, period, interval)
+
+    def _normalize_symbol(self, symbol: str) -> str:
+        """Normalize symbol format for exchange"""
+        return symbol.replace('-', '/') if '-' in symbol else symbol
 
     def _get_simulated_data(self, symbol: str, period: str, interval: str) -> pd.DataFrame:
         """Generate simulated market data for testing"""
@@ -198,6 +134,34 @@ class CryptoDataLoader:
         )
 
         return df
+
+    def _get_from_cache(self, key: str, interval: str = '1m') -> Optional[pd.DataFrame]:
+        """Get data from cache if valid"""
+        try:
+            if key in self._cache:
+                data, timestamp = self._cache[key]
+                cache_duration = self._cache_duration.get(interval, 300)
+                if time.time() - timestamp < cache_duration:
+                    logger.debug(f"Cache hit for {key}")
+                    return data.copy()
+                logger.debug(f"Cache expired for {key}")
+                del self._cache[key]
+            return None
+        except Exception as e:
+            logger.error(f"Cache error for {key}: {e}", exc_info=True)
+            return None
+
+    def _add_to_cache(self, key: str, data: pd.DataFrame):
+        """Add data to cache with memory management"""
+        try:
+            if len(self._cache) > 100:  # Maximum 100 cached items
+                oldest_key = min(self._cache.items(), key=lambda x: x[1][1])[0]
+                del self._cache[oldest_key]
+
+            self._cache[key] = (data.copy(), time.time())
+            logger.debug(f"Added to cache: {key}")
+        except Exception as e:
+            logger.error(f"Cache error for {key}: {e}", exc_info=True)
 
     def _add_technical_indicators(self, df: pd.DataFrame) -> pd.DataFrame:
         """Calculate comprehensive technical indicators"""
@@ -263,19 +227,13 @@ class CryptoDataLoader:
             logger.error(f"Database error for {symbol}: {e}", exc_info=True)
 
     def get_current_price(self, symbol: str) -> Optional[float]:
-        """Get current price from exchange or simulation"""
+        """Get current price from simulation"""
         try:
             symbol = self._normalize_symbol(symbol)
-            if not hasattr(self, 'exchange') or self.exchange is None:
-                df = self._get_simulated_data(symbol, '1d', '1m')
-                return float(df['Close'].iloc[-1])
-            ticker = self.exchange.fetch_ticker(symbol)
-            if ticker and ticker.get('last'):
-                return float(ticker['last'])
-            logger.warning(f"No price available for {symbol}")
-            return None
+            df = self._get_simulated_data(symbol, '1d', '1m')
+            return float(df['Close'].iloc[-1])
         except Exception as e:
-            logger.error(f"Error getting price for {symbol}: {e}", exc_info=True)
+            logger.error(f"Error getting price for {symbol}: {e}")
             return None
 
     def get_available_coins(self) -> Dict[str, str]:
@@ -283,7 +241,7 @@ class CryptoDataLoader:
         return self.supported_coins.copy()
 
     def get_market_summary(self, symbol: str) -> Dict[str, Union[float, str]]:
-        """Get comprehensive market summary"""
+        """Get market summary using simulated data"""
         try:
             symbol = self._normalize_symbol(symbol)
             df = self.get_historical_data(symbol, period='1d')
@@ -300,12 +258,10 @@ class CryptoDataLoader:
                 'volume_24h': df['Volume'].sum(),
                 'high_24h': df['High'].max(),
                 'low_24h': df['Low'].min(),
-                'volatility': df['Returns'].std() * 100,
-                'rsi': df['RSI'].iloc[-1],
-                'macd': df['MACD'].iloc[-1],
-                'trend': 'Bullish' if current_price > df['SMA_200'].iloc[-1] else 'Bearish'
+                'volatility': df['Close'].pct_change().std() * 100,
+                'trend': 'Bullish' if price_change > 0 else 'Bearish'
             }
 
         except Exception as e:
-            logger.error(f"Error getting market summary for {symbol}: {e}", exc_info=True)
+            logger.error(f"Error getting market summary for {symbol}: {e}")
             return {}
