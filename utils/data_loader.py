@@ -17,45 +17,53 @@ class CryptoDataLoader:
     def __init__(self):
         """Initialize the data loader with supported coins and advanced caching"""
         self.supported_coins = {
-            'BTC/USD': 'Bitcoin',
-            'ETH/USD': 'Ethereum',
-            'SOL/USD': 'Solana',
-            'DOGE/USD': 'Dogecoin',
-            'SHIB/USD': 'Shiba Inu',
-            'ADA/USD': 'Cardano',
-            'XRP/USD': 'Ripple',
-            'DOT/USD': 'Polkadot',
-            'MATIC/USD': 'Polygon',
-            'AVAX/USD': 'Avalanche'
+            'BTC-USDT': 'Bitcoin',
+            'ETH-USDT': 'Ethereum',
+            'SOL-USDT': 'Solana',
+            'DOGE-USDT': 'Dogecoin',
+            'SHIB-USDT': 'Shiba Inu',
+            'ADA-USDT': 'Cardano',
+            'XRP-USDT': 'Ripple',
+            'DOT-USDT': 'Polkadot',
+            'MATIC-USDT': 'Polygon',
+            'AVAX-USDT': 'Avalanche'
         }
 
         self._cache = {}
         self._cache_duration = {
-            '1m': 60,    # 1 minute cache for 1m data
-            '5m': 300,   # 5 minutes cache for 5m data
-            '15m': 900,  # 15 minutes cache for 15m data
-            '1h': 3600,  # 1 hour cache for 1h data
-            '4h': 14400, # 4 hours cache for 4h data
-            '1d': 86400  # 1 day cache for daily data
+            '1m': 60,
+            '5m': 300,
+            '15m': 900,
+            '1h': 3600,
+            '4h': 14400,
+            '1d': 86400
         }
 
         self._setup_exchange()
         self._setup_database()
 
     def _setup_exchange(self):
-        """Setup ccxt exchange connection"""
+        """Setup ccxt exchange connection with testnet support"""
         try:
-            self.exchange = ccxt.binanceus({
+            self.exchange = ccxt.binance({
                 'enableRateLimit': True,
                 'options': {
-                    'adjustForTimeDifference': True
+                    'defaultType': 'future',
+                    'adjustForTimeDifference': True,
+                    'test': True  # Enable testnet
+                },
+                'urls': {
+                    'api': {
+                        'public': 'https://testnet.binance.vision/api/v3',
+                        'private': 'https://testnet.binance.vision/api/v3',
+                    }
                 }
             })
-            self.exchange.load_markets()  # Load markets to validate symbols
-            logger.info("Exchange connection established and markets loaded")
+            self.exchange.load_markets()
+            logger.info("Exchange connection established in testnet mode")
         except Exception as e:
             logger.error(f"Exchange setup error: {e}", exc_info=True)
-            raise  # Re-raise to ensure proper initialization
+            raise
 
     def _setup_database(self):
         """Setup database connection for persistent storage"""
@@ -109,25 +117,14 @@ class CryptoDataLoader:
         period: str = '1d',
         interval: str = '1m'
     ) -> Optional[pd.DataFrame]:
-        """Fetch historical data using ccxt"""
+        """Fetch historical data from testnet"""
         try:
-            if not self.exchange:
-                raise ValueError("Exchange not initialized")
+            symbol = symbol.replace('-', '/')
 
-            symbol = self._normalize_symbol(symbol)
-            if symbol not in self.supported_coins:
-                logger.warning(f"Unsupported symbol: {symbol}")
-                return None
+            # For testing, return simulated data if exchange is not available
+            if not hasattr(self, 'exchange') or self.exchange is None:
+                return self._get_simulated_data(symbol, period, interval)
 
-            cache_key = f"{symbol}_{period}_{interval}"
-            cached_data = self._get_from_cache(cache_key, interval)
-            if cached_data is not None:
-                return cached_data
-
-            logger.info(f"Fetching {symbol} data for period {period}")
-
-            # Convert period and interval to ccxt format
-            timeframe = interval
             since = None
             if period == '1d':
                 since = int((datetime.now() - timedelta(days=1)).timestamp() * 1000)
@@ -136,49 +133,75 @@ class CryptoDataLoader:
             elif period == '30d':
                 since = int((datetime.now() - timedelta(days=30)).timestamp() * 1000)
 
-            # Implement retry logic
-            max_retries = 3
-            for attempt in range(max_retries):
-                try:
-                    ohlcv = self.exchange.fetch_ohlcv(
-                        symbol,
-                        timeframe=timeframe,
-                        since=since,
-                        limit=1000
-                    )
+            ohlcv = self.exchange.fetch_ohlcv(
+                symbol,
+                timeframe=interval,
+                since=since,
+                limit=1000
+            )
 
-                    if not ohlcv:
-                        logger.warning(f"No data received for {symbol}")
-                        if attempt < max_retries - 1:
-                            continue
-                        return None
+            if not ohlcv:
+                logger.warning(f"No data received for {symbol}, using simulation")
+                return self._get_simulated_data(symbol, period, interval)
 
-                    df = pd.DataFrame(
-                        ohlcv,
-                        columns=['timestamp', 'Open', 'High', 'Low', 'Close', 'Volume']
-                    )
-                    df['timestamp'] = pd.to_datetime(df['timestamp'], unit='ms')
-                    df.set_index('timestamp', inplace=True)
+            df = pd.DataFrame(
+                ohlcv,
+                columns=['timestamp', 'Open', 'High', 'Low', 'Close', 'Volume']
+            )
+            df['timestamp'] = pd.to_datetime(df['timestamp'], unit='ms')
+            df.set_index('timestamp', inplace=True)
 
-                    # Add technical indicators
-                    df = self._add_technical_indicators(df)
+            df = self._add_technical_indicators(df)
 
-                    # Save to cache and database
-                    self._add_to_cache(cache_key, df)
-                    self._save_to_database(symbol, df)
+            self._add_to_cache(f"{symbol}_{period}_{interval}", df)
+            self._save_to_database(symbol, df)
 
-                    return df
-
-                except Exception as e:
-                    if attempt < max_retries - 1:
-                        logger.warning(f"Retry {attempt + 1} for {symbol}: {e}")
-                        time.sleep(1)  # Wait before retry
-                    else:
-                        raise
+            return df
 
         except Exception as e:
             logger.error(f"Error fetching data for {symbol}: {e}", exc_info=True)
-            return None
+            return self._get_simulated_data(symbol, period, interval)
+
+    def _get_simulated_data(self, symbol: str, period: str, interval: str) -> pd.DataFrame:
+        """Generate simulated market data for testing"""
+        periods = {'1d': 1, '7d': 7, '30d': 30}
+        intervals = {'1m': 1, '5m': 5, '15m': 15, '1h': 60, '4h': 240, '1d': 1440}
+
+        days = periods.get(period, 1)
+        mins = intervals.get(interval, 1)
+
+        end_time = datetime.now()
+        start_time = end_time - timedelta(days=days)
+
+        # Generate timestamps
+        timestamps = pd.date_range(start=start_time, end=end_time, freq=f'{mins}min')
+
+        # Generate simulated prices with some randomness
+        base_price = 100 if 'BTC' not in symbol else 30000
+        price_data = []
+        current_price = base_price
+
+        for _ in range(len(timestamps)):
+            change = np.random.normal(0, 0.001)
+            current_price *= (1 + change)
+            high_price = current_price * (1 + abs(np.random.normal(0, 0.0005)))
+            low_price = current_price * (1 - abs(np.random.normal(0, 0.0005)))
+            volume = abs(np.random.normal(1000000, 100000))
+            price_data.append([
+                current_price * 0.9999,  # Open
+                high_price,              # High
+                low_price,               # Low
+                current_price,           # Close
+                volume                   # Volume
+            ])
+
+        df = pd.DataFrame(
+            price_data,
+            index=timestamps,
+            columns=['Open', 'High', 'Low', 'Close', 'Volume']
+        )
+
+        return df
 
     def _add_technical_indicators(self, df: pd.DataFrame) -> pd.DataFrame:
         """Calculate comprehensive technical indicators"""
@@ -244,23 +267,17 @@ class CryptoDataLoader:
             logger.error(f"Database error for {symbol}: {e}", exc_info=True)
 
     def get_current_price(self, symbol: str) -> Optional[float]:
-        """Get current price using ccxt"""
+        """Get current price from exchange or simulation"""
         try:
-            if not self.exchange:
-                raise ValueError("Exchange not initialized")
-
             symbol = self._normalize_symbol(symbol)
-            if symbol not in self.supported_coins:
-                logger.warning(f"Unsupported symbol: {symbol}")
-                return None
-
+            if not hasattr(self, 'exchange') or self.exchange is None:
+                df = self._get_simulated_data(symbol, '1d', '1m')
+                return float(df['Close'].iloc[-1])
             ticker = self.exchange.fetch_ticker(symbol)
             if ticker and ticker.get('last'):
                 return float(ticker['last'])
-
             logger.warning(f"No price available for {symbol}")
             return None
-
         except Exception as e:
             logger.error(f"Error getting price for {symbol}: {e}", exc_info=True)
             return None

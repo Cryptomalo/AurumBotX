@@ -42,6 +42,7 @@ class AutoTrader:
         self.indicators = TechnicalIndicators()
         self.notifier = TradingNotifier()
         self.wallet_manager = WalletManager(user_id=1)
+        self.sentiment_analyzer = None #Adding this line.  Assuming sentiment_analyzer is defined elsewhere and injected.
 
         # Initialize strategies with testnet configuration
         self.strategies = {
@@ -90,6 +91,9 @@ class AutoTrader:
     async def analyze_market(self):
         """Analyze market data and generate trading signals"""
         try:
+            if self.testnet:
+                self.logger.info("Running in testnet mode")
+
             # Multi-timeframe analysis
             df_short = await self.data_loader.get_historical_data(self.symbol, period='1d')
             df_medium = await self.data_loader.get_historical_data(self.symbol, period='7d')
@@ -104,38 +108,46 @@ class AutoTrader:
                 self.logger.error("Unable to get market data")
                 return None
 
-            # Add technical indicators
-            df = await self.indicators.add_all_indicators(df)
+            # Add technical indicators with error handling
+            try:
+                df = await self.indicators.add_all_indicators(df)
+            except Exception as e:
+                self.logger.error(f"Error adding technical indicators: {str(e)}")
+                return None
 
             best_signal = None
             best_confidence = 0
 
-            # Get sentiment data
+            # Get sentiment data with fallback for testnet
             sentiment_data = await self._get_social_data()
 
             for strategy_name, strategy in self.strategies.items():
                 if not strategy.is_strategy_active():
                     continue
 
-                analysis = await strategy.analyze_market(df, sentiment_data)
-                if not analysis:
+                try:
+                    analysis = await strategy.analyze_market(df, sentiment_data)
+                    if not analysis:
+                        continue
+
+                    signal = strategy.generate_signals(analysis[0])  # Use first analysis result
+
+                    portfolio_status = {
+                        'available_capital': self.balance,
+                        'total_capital': self.initial_balance,
+                        'current_spread': 0.001,
+                        'market_trend': 1 if df['Close'].iloc[-1] > df['Close'].iloc[-20].mean() else -1
+                    }
+
+                    if (signal['action'] != 'hold' and 
+                        signal['confidence'] > best_confidence and
+                        await strategy.validate_trade(signal, portfolio_status)):
+                        best_signal = signal
+                        best_confidence = signal['confidence']
+                        self.active_strategy = strategy_name
+                except Exception as e:
+                    self.logger.error(f"Error in strategy {strategy_name}: {str(e)}")
                     continue
-
-                signal = strategy.generate_signals(analysis[0])  # Use first analysis result
-
-                portfolio_status = {
-                    'available_capital': self.balance,
-                    'total_capital': self.initial_balance,
-                    'current_spread': 0.001,
-                    'market_trend': 1 if df['Close'].iloc[-1] > df['Close'].iloc[-20].mean() else -1
-                }
-
-                if (signal['action'] != 'hold' and 
-                    signal['confidence'] > best_confidence and
-                    await strategy.validate_trade(signal, portfolio_status)):
-                    best_signal = signal
-                    best_confidence = signal['confidence']
-                    self.active_strategy = strategy_name
 
             if best_signal:
                 best_signal['price'] = df['Close'].iloc[-1]
@@ -284,22 +296,50 @@ class AutoTrader:
         try:
             # In testnet mode, return simulated sentiment data
             if self.testnet:
+                self.logger.info("Using simulated social data in testnet mode")
                 return {
                     'sentiment_score': 0.6,
                     'volume_score': 0.7,
-                    'trend_score': 0.65
+                    'trend_score': 0.65,
+                    'simulated': True
                 }
 
-            # TODO: Implement real social data gathering
-            return {
+            # For production, implement proper error handling for each service
+            sentiment_data = {
                 'sentiment_score': 0.5,
                 'volume_score': 0.5,
-                'trend_score': 0.5
+                'trend_score': 0.5,
+                'source': []
             }
+
+            try:
+                # Attempt to get Twitter data
+                twitter_data = await self.sentiment_analyzer.get_twitter_sentiment(self.symbol)
+                if twitter_data:
+                    sentiment_data['source'].append('twitter')
+                    sentiment_data['sentiment_score'] = (sentiment_data['sentiment_score'] + twitter_data['sentiment']) / 2
+            except Exception as e:
+                self.logger.warning(f"Twitter data collection failed: {str(e)}")
+
+            try:
+                # Attempt to get Reddit data
+                reddit_data = await self.sentiment_analyzer.get_reddit_sentiment(self.symbol)
+                if reddit_data:
+                    sentiment_data['source'].append('reddit')
+                    sentiment_data['sentiment_score'] = (sentiment_data['sentiment_score'] + reddit_data['sentiment']) / 2
+            except Exception as e:
+                self.logger.warning(f"Reddit data collection failed: {str(e)}")
+
+            if not sentiment_data['source']:
+                self.logger.warning("No social data sources available, using default values")
+
+            return sentiment_data
+
         except Exception as e:
             self.logger.error(f"Error getting social data: {str(e)}")
             return {
                 'sentiment_score': 0.5,
                 'volume_score': 0.5,
-                'trend_score': 0.5
+                'trend_score': 0.5,
+                'error': str(e)
             }

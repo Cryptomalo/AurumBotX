@@ -1,13 +1,14 @@
 import streamlit as st
-import logging
-import sys
+import pandas as pd
 from datetime import datetime
 from streamlit_option_menu import option_menu
-from utils.data_loader import CryptoDataLoader
 from utils.auto_trader import AutoTrader
-from utils.wallet_manager import WalletManager
+from utils.data_loader import CryptoDataLoader
 import plotly.graph_objects as go
 from plotly.subplots import make_subplots
+import logging
+import sys
+from streamlit_autorefresh import st_autorefresh
 
 # Setup logging
 logging.basicConfig(
@@ -20,225 +21,239 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
+# Auto refresh
+st_autorefresh(interval=5000, key="datarefresh")
+
 # Page config
 st.set_page_config(
-    page_title="AurumBot",
+    page_title="AurumBot Trading",
     page_icon="🤖",
     layout="wide",
-    initial_sidebar_state="collapsed"
+    initial_sidebar_state="expanded"
 )
 
-# Custom CSS for better UI
+# Custom styling
 st.markdown("""
-<style>
+    <style>
+    .reportview-container {
+        background: #0E1117
+    }
+    .sidebar .sidebar-content {
+        background: #262730
+    }
     .stApp {
-        background-color: #0E1117;
-        color: #FFFFFF;
+        background: #0E1117
     }
-    div[data-testid="stSidebarNav"] {
-        background-color: #1A1A1A;
-        padding-top: 2rem;
-        position: fixed;
-        top: 0;
-        left: 0;
-        height: 100%;
-        width: auto;
-    }
-    .main {
-        margin-left: 0;
-    }
-    .css-1d391kg {
-        background-color: #1A1A1A;
-    }
-    section[data-testid="stSidebar"] > div {
-        background-color: #1A1A1A;
-        padding: 1rem;
-    }
-    .stTabs [data-baseweb="tab-list"] button[data-baseweb="tab"] {
-        background-color: #1A1A1A;
-        border-radius: 4px 4px 0 0;
-        padding: 10px 20px;
-        color: #E0E0E0;
-    }
-    .stTabs [data-baseweb="tab-list"] button[data-baseweb="tab"][aria-selected="true"] {
-        background-color: #2D2D2D;
-        color: #FFFFFF;
-    }
-    /* Improve button contrast */
-    .stButton>button {
-        background-color: #FF9900;
-        color: #000000;
-        font-weight: 500;
-    }
-    .stButton>button:hover {
-        background-color: #FFB84D;
-        color: #000000;
-    }
-    /* Improve metrics visibility */
-    div[data-testid="stMetricValue"] {
-        color: #FFFFFF;
-        font-size: 24px;
-        font-weight: 600;
-    }
-    div[data-testid="stMetricDelta"] {
-        color: #00FF00;
-        font-weight: 500;
-    }
-    div[data-testid="stMetricDelta"].negative {
-        color: #FF4B4B;
-    }
-    /* Better menu contrast */
-    .nav-link {
-        background-color: #1A1A1A !important;
-        color: #E0E0E0 !important;
-    }
-    .nav-link:hover {
-        background-color: #2D2D2D !important;
-        color: #FFFFFF !important;
-    }
-    .nav-link.active {
-        background-color: #FF9900 !important;
-        color: #000000 !important;
-    }
-</style>
-""", unsafe_allow_html=True)
+    </style>
+    """, unsafe_allow_html=True)
 
-def initialize_session_state():
-    """Initialize session state variables"""
-    if 'page' not in st.session_state:
-        st.session_state.page = "Dashboard"
-    if 'bot_running' not in st.session_state:
-        st.session_state.bot_running = False
+# Initialize session state
+if 'bot_running' not in st.session_state:
+    st.session_state.bot_running = False
+if 'selected_strategy' not in st.session_state:
+    st.session_state.selected_strategy = 'scalping'
+if 'auto_trader' not in st.session_state:
+    st.session_state.auto_trader = None
 
-def render_sidebar():
-    """Render collapsible sidebar with navigation"""
+try:
+    # Sidebar
     with st.sidebar:
         st.title("🤖 AurumBot")
 
         selected = option_menu(
-            "",  # empty menu title for cleaner look
-            ["Dashboard", "Trading", "Wallet"],
-            icons=['house', 'graph-up', 'wallet2'],
+            menu_title=None,
+            options=["Dashboard", "Strategy Config", "Performance", "Settings"],
+            icons=['house', 'gear', 'graph-up', 'sliders'],
             menu_icon="cast",
             default_index=0,
-            styles={
-                "container": {"padding": "0!important", "background-color": "#1E1E1E"},
-                "icon": {"color": "orange", "font-size": "25px"}, 
-                "nav-link": {"font-size": "16px", "text-align": "left", "margin":"0px"},
-                "nav-link-selected": {"background-color": "#2E2E2E"},
-            }
         )
 
-        st.session_state.page = selected
-        return selected
+        st.subheader("Trading Settings")
+        initial_balance = st.number_input("Initial Balance (USDT)", value=1000.0, step=100.0)
+        risk_per_trade = st.slider("Risk per Trade (%)", min_value=0.1, max_value=5.0, value=1.0, step=0.1)
 
-def render_trading_chart(data_loader: CryptoDataLoader):
-    """Render trading chart with key metrics"""
-    st.subheader("Market Analysis")
+        strategy = st.selectbox(
+            "Trading Strategy",
+            ['Scalping', 'DEX Sniping', 'Meme Coin']
+        )
 
-    col1, col2 = st.columns([3, 1])
+        # Testnet indicator
+        st.sidebar.markdown("---")
+        st.sidebar.info("🔒 Running in Testnet Mode")
 
-    with col1:
-        selected_coin = st.selectbox("Select Trading Pair", ["BTC-USD", "ETH-USD", "SOL-USD", "DOGE-USD"])
-        timeframe = st.select_slider("Timeframe", options=["1H", "4H", "1D", "1W"], value="1D")
+    # Main content
+    if selected == "Dashboard":
+        st.title("Trading Dashboard")
 
-        df = data_loader.get_historical_data(selected_coin, timeframe)
+        # Market selection
+        col1, col2, col3 = st.columns([2,1,1])
+        with col1:
+            symbol = st.selectbox("Trading Pair", ["BTC-USDT", "ETH-USDT", "SOL-USDT"])
+        with col2:
+            timeframe = st.selectbox("Timeframe", ["1m", "5m", "15m", "1h", "4h", "1d"])
+        with col3:
+            if st.button("Start Bot" if not st.session_state.bot_running else "Stop Bot"):
+                try:
+                    if not st.session_state.bot_running:
+                        st.session_state.bot_running = True
+                        st.session_state.auto_trader = AutoTrader(
+                            symbol=symbol,
+                            initial_balance=initial_balance,
+                            risk_per_trade=risk_per_trade/100,
+                            testnet=True
+                        )
+                        st.success("Bot started in testnet mode")
+                        logger.info("Trading bot initialized in testnet mode")
+                    else:
+                        st.session_state.bot_running = False
+                        st.session_state.auto_trader = None
+                        st.info("Bot stopped")
+                        logger.info("Trading bot stopped")
+                except Exception as e:
+                    st.error(f"Error: {str(e)}")
+                    logger.error(f"Bot initialization error: {str(e)}")
+                    st.session_state.bot_running = False
+                    st.session_state.auto_trader = None
 
-        if df is not None and not df.empty:
-            fig = make_subplots(rows=2, cols=1, shared_xaxes=True, 
-                                  vertical_spacing=0.03, row_heights=[0.7, 0.3])
+        try:
+            # Market data visualization
+            data_loader = CryptoDataLoader()
+            df = data_loader.get_historical_data(symbol, period='1d', interval=timeframe)
 
-            # Candlestick chart
-            fig.add_trace(go.Candlestick(
-                x=df.index, open=df['Open'], high=df['High'],
-                low=df['Low'], close=df['Close'], name="OHLC"
-            ), row=1, col=1)
+            if df is not None and not df.empty:
+                # Create subplot with secondary y-axis
+                fig = make_subplots(rows=2, cols=1, shared_xaxes=True, 
+                                vertical_spacing=0.03, row_heights=[0.7, 0.3])
 
-            # Volume bars
-            fig.add_trace(go.Bar(
-                x=df.index, y=df['Volume'], name="Volume",
-                marker_color='rgba(128,128,128,0.5)'
-            ), row=2, col=1)
+                # Candlestick chart
+                fig.add_trace(
+                    go.Candlestick(
+                        x=df.index,
+                        open=df['Open'],
+                        high=df['High'],
+                        low=df['Low'],
+                        close=df['Close'],
+                        name="OHLC"
+                    ),
+                    row=1, col=1
+                )
 
-            fig.update_layout(
-                height=600,
-                template='plotly_dark',
-                xaxis_rangeslider_visible=False,
-                margin=dict(l=0, r=0, t=30, b=0)
-            )
+                # Volume bars
+                colors = ['red' if row['Open'] > row['Close'] else 'green' for index, row in df.iterrows()]
+                fig.add_trace(
+                    go.Bar(
+                        x=df.index,
+                        y=df['Volume'],
+                        name="Volume",
+                        marker_color=colors,
+                        opacity=0.5
+                    ),
+                    row=2, col=1
+                )
 
-            st.plotly_chart(fig, use_container_width=True)
+                fig.update_layout(
+                    height=600,
+                    template='plotly_dark',
+                    xaxis_rangeslider_visible=False,
+                    title=f"{symbol} - {timeframe}"
+                )
 
-    with col2:
-        current_price = df['Close'].iloc[-1] if df is not None and not df.empty else 0
-        price_change = ((current_price - df['Open'].iloc[-1])/df['Open'].iloc[-1] * 100
-                       if df is not None and not df.empty else 0)
+                st.plotly_chart(fig, use_container_width=True)
 
-        st.metric("Current Price", f"${current_price:,.2f}", f"{price_change:+.2f}%")
+                # Trading metrics
+                col1, col2, col3, col4 = st.columns(4)
+                current_price = df['Close'].iloc[-1]
+                price_change = ((current_price - df['Open'].iloc[-1]) / df['Open'].iloc[-1] * 100)
 
-        # Trading controls
-        st.subheader("Trading Controls")
-        if st.button("Start Bot" if not st.session_state.bot_running else "Stop Bot"):
-            st.session_state.bot_running = not st.session_state.bot_running
+                col1.metric("Current Price", f"${current_price:,.2f}", f"{price_change:.2f}%")
+                col2.metric("24h Volume", f"${df['Volume'].sum():,.0f}")
+                col3.metric("Open Positions", "0" if not st.session_state.bot_running else "Active")
+                col4.metric("P/L", "+$0.00", "0.00%")
 
-        st.metric("24h PnL", "+$234.56", "+2.3%")
-        st.metric("Open Positions", "3")
+                # Strategy Insights
+                if st.session_state.bot_running and st.session_state.auto_trader:
+                    st.subheader("Strategy Insights")
+                    insights_col1, insights_col2 = st.columns(2)
 
-def render_wallet_section(wallet_manager: WalletManager):
-    """Render wallet information and balances"""
-    st.subheader("Wallet Overview")
+                    with insights_col1:
+                        st.info(f"Active Strategy: {strategy}")
+                        st.metric("Strategy Confidence", "High" if price_change > 0 else "Medium")
 
-    col1, col2, col3 = st.columns(3)
+                    with insights_col2:
+                        st.info("Market Sentiment")
+                        st.progress(0.7, "Bullish" if price_change > 0 else "Bearish")
 
-    with col1:
-        st.metric("Total Balance", "$10,432.21", "+5.2%")
-    with col2:
-        st.metric("Available Balance", "$8,654.32")
-    with col3:
-        st.metric("Locked in Orders", "$1,777.89")
+        except Exception as e:
+            st.error(f"Error loading market data: {str(e)}")
+            logger.error(f"Market data error: {str(e)}")
 
-    # Asset distribution
-    st.subheader("Asset Distribution")
-    assets = {
-        "BTC": 0.25,
-        "ETH": 2.5,
-        "SOL": 45.0,
-        "USDT": 5000.0
-    }
+except Exception as e:
+    st.error(f"Application error: {str(e)}")
+    logger.error(f"Critical error: {str(e)}")
 
-    # Create two columns for assets
-    cols = st.columns(len(assets))
-    for col, (asset, amount) in zip(cols, assets.items()):
-        col.metric(asset, f"{amount:g}")
+    
+elif selected == "Strategy Config":
+    st.title("Strategy Configuration")
 
-def main():
-    try:
-        initialize_session_state()
+    # Strategy specific parameters
+    if strategy == "Scalping":
+        col1, col2 = st.columns(2)
+        with col1:
+            st.number_input("Volume Threshold", value=1000000)
+            st.number_input("Min Volatility", value=0.002, format="%.4f")
+        with col2:
+            st.number_input("Profit Target", value=0.005, format="%.4f")
+            st.number_input("Stop Loss", value=0.003, format="%.4f")
 
-        # Initialize components
-        data_loader = CryptoDataLoader()
-        wallet_manager = WalletManager(user_id="default")  # Using default user ID for now
+    elif strategy == "DEX Sniping":
+        col1, col2 = st.columns(2)
+        with col1:
+            st.number_input("Min Liquidity (ETH)", value=5)
+            st.number_input("Max Buy Tax (%)", value=10)
+        with col2:
+            st.number_input("Min Holders", value=50)
+            st.text_input("RPC URL", value="https://data-seed-prebsc-1-s1.binance.org:8545/")
 
-        # Render sidebar and get selected page
-        selected_page = render_sidebar()
+    elif strategy == "Meme Coin":
+        col1, col2 = st.columns(2)
+        with col1:
+            st.number_input("Sentiment Threshold", value=0.75, format="%.2f")
+            st.number_input("Volume Increase (%)", value=200)
+        with col2:
+            st.number_input("Max Entry Price", value=0.01, format="%.4f")
+            st.number_input("Min Social Score", value=7.5, format="%.1f")
 
-        # Main content area
-        if selected_page == "Dashboard":
-            st.title("Trading Dashboard")
-            render_trading_chart(data_loader)
-            render_wallet_section(wallet_manager)
+elif selected == "Performance":
+    st.title("Performance Analytics")
 
-        elif selected_page == "Trading":
-            st.title("Advanced Trading")
-            render_trading_chart(data_loader)
+    # Performance metrics
+    col1, col2, col3, col4 = st.columns(4)
+    col1.metric("Total Profit/Loss", "$0.00")
+    col2.metric("Win Rate", "0%")
+    col3.metric("Total Trades", "0")
+    col4.metric("Avg. Trade Duration", "0m")
 
-        elif selected_page == "Wallet":
-            st.title("Wallet Management")
-            render_wallet_section(wallet_manager)
+    # Performance chart placeholder
+    st.line_chart(pd.DataFrame({'balance': [initial_balance]*10}))
 
-    except Exception as e:
-        logger.error(f"Application error: {str(e)}", exc_info=True)
-        st.error(f"An error occurred: {str(e)}")
+elif selected == "Settings":
+    st.title("Bot Settings")
 
-if __name__ == "__main__":
-    main()
+    # API Configuration
+    st.subheader("API Configuration")
+    api_col1, api_col2 = st.columns(2)
+
+    with api_col1:
+        st.text_input("API Key (Testnet)", type="password")
+    with api_col2:
+        st.text_input("API Secret (Testnet)", type="password")
+
+    # Notification Settings
+    st.subheader("Notifications")
+    notify_trades = st.checkbox("Trade Notifications", value=True)
+    notify_errors = st.checkbox("Error Notifications", value=True)
+
+    # Risk Management
+    st.subheader("Risk Management")
+    max_trades = st.slider("Max Concurrent Trades", 1, 10, 3)
+    max_daily_trades = st.slider("Max Daily Trades", 5, 50, 20)
