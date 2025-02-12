@@ -11,6 +11,7 @@ import os
 import json
 from openai import OpenAI
 from typing import Dict, Any, List, Optional
+import pandas_ta as ta
 
 logging.basicConfig(level=logging.INFO)
 
@@ -29,34 +30,47 @@ class PredictionModel:
         """Create advanced technical indicators"""
         df = df.copy()
 
-        # Basic price features
-        df['returns'] = df['Close'].pct_change()
-        df['log_returns'] = np.log1p(df['returns'])
+        try:
+            # Basic price features
+            df['returns'] = df['Close'].pct_change()
+            df['log_returns'] = np.log1p(df['returns'])
 
-        # Volatility features
-        for window in [5, 10, 20, 30]:
-            df[f'volatility_{window}'] = df['returns'].rolling(window=window).std()
-            df[f'volume_ma_{window}'] = df['Volume'].rolling(window=window).mean()
+            # Volatility features
+            for window in [5, 10, 20, 30]:
+                df[f'volatility_{window}'] = df['returns'].rolling(window=window).std()
+                df[f'volume_ma_{window}'] = df['Volume'].rolling(window=window).mean()
 
-        # Price momentum
-        for period in [5, 10, 20, 30]:
-            df[f'momentum_{period}'] = df['Close'].pct_change(periods=period)
+            # Price momentum
+            for period in [5, 10, 20, 30]:
+                df[f'momentum_{period}'] = df['Close'].pct_change(periods=period)
 
-        # Moving averages and crossovers
-        for ma_period in [5, 10, 20, 50]:
-            df[f'sma_{ma_period}'] = df['Close'].rolling(window=ma_period).mean()
-            df[f'ema_{ma_period}'] = df['Close'].ewm(span=ma_period, adjust=False).mean()
+            # Moving averages and crossovers
+            for ma_period in [5, 10, 20, 50]:
+                df[f'sma_{ma_period}'] = df['Close'].rolling(window=ma_period).mean()
+                df[f'ema_{ma_period}'] = df['Close'].ewm(span=ma_period, adjust=False).mean()
 
-        # RSI
-        for period in [7, 14, 21]:
-            delta = df['Close'].diff()
-            gain = (delta.where(delta > 0, 0)).rolling(window=period).mean()
-            loss = (-delta.where(delta < 0, 0)).rolling(window=period).mean()
-            rs = gain / loss
-            df[f'RSI_{period}'] = 100 - (100 / (1 + rs))
+            # RSI
+            for period in [7, 14, 21]:
+                df[f'RSI_{period}'] = ta.rsi(df['Close'], length=period)
 
-        df = df.dropna()
-        return df
+            # MACD
+            macd = ta.macd(df['Close'])
+            df = pd.concat([df, macd], axis=1)
+
+            # Bollinger Bands
+            bb = ta.bbands(df['Close'])
+            df = pd.concat([df, bb], axis=1)
+
+            # Additional indicators
+            df['ADX'] = ta.adx(df['High'], df['Low'], df['Close'])
+            df['OBV'] = ta.obv(df['Close'], df['Volume'])
+
+            df = df.dropna()
+            return df
+
+        except Exception as e:
+            self.logger.error(f"Error creating features: {str(e)}")
+            return df
 
     def analyze_market_with_ai(self, market_data: pd.DataFrame, social_data: Dict) -> Optional[Dict]:
         """Market analysis using AI and multiple data sources"""
@@ -80,7 +94,12 @@ class PredictionModel:
                 'technical_score': technical_prediction.get('prediction', 0.5),
                 'sentiment_score': ai_analysis.get('sentiment', 0.5),
                 'confidence': confidence,
-                'suggested_position_size': self._calculate_position_size(confidence)
+                'suggested_position_size': self._calculate_position_size(confidence),
+                'indicators': {
+                    'rsi': market_features['RSI_14'].iloc[-1],
+                    'macd': market_features['MACD_12_26_9'].iloc[-1],
+                    'adx': market_features['ADX_14'].iloc[-1]
+                }
             }
 
         except Exception as e:
@@ -95,6 +114,8 @@ class PredictionModel:
             f"Price: {latest_data['Close']:.2f}\n"
             f"Volume: {latest_data['Volume']:.2f}\n"
             f"RSI: {latest_data.get('RSI_14', 0):.2f}\n"
+            f"MACD: {latest_data.get('MACD_12_26_9', 0):.4f}\n"
+            f"ADX: {latest_data.get('ADX_14', 0):.2f}\n"
             f"Recent volatility: {latest_data.get('volatility_20', 0):.4f}"
         )
 
@@ -135,8 +156,8 @@ class PredictionModel:
         technical_conf = technical_pred.get('confidence', 0.5)
         ai_conf = ai_analysis.get('confidence', 0.5)
 
-        # Weighted average of confidence scores
-        return 0.6 * technical_conf + 0.4 * ai_conf
+        # Weighted average of confidence scores with technical analysis having more weight
+        return 0.7 * technical_conf + 0.3 * ai_conf
 
     def _calculate_position_size(self, confidence: float) -> float:
         """Calculate suggested position size based on confidence"""
@@ -151,10 +172,20 @@ class PredictionModel:
             # Scale features
             X_scaled = self.scaler.fit_transform(X)
 
-            # Initialize models
+            # Initialize models with optimized parameters
             self.models = {
-                'rf': RandomForestRegressor(n_estimators=100, max_depth=10, random_state=42),
-                'gb': GradientBoostingRegressor(n_estimators=100, learning_rate=0.1, random_state=42)
+                'rf': RandomForestRegressor(
+                    n_estimators=200,
+                    max_depth=10,
+                    min_samples_split=5,
+                    random_state=42
+                ),
+                'gb': GradientBoostingRegressor(
+                    n_estimators=200,
+                    learning_rate=0.1,
+                    max_depth=5,
+                    random_state=42
+                )
             }
 
             # Time series cross-validation
@@ -172,11 +203,16 @@ class PredictionModel:
                     score = r2_score(y_val, pred)
                     cv_scores[name].append(score)
 
-            # Store metrics
+            # Store metrics and feature importance
             self.metrics = {
                 'cv_scores_mean': {name: np.mean(scores) for name, scores in cv_scores.items()},
                 'cv_scores_std': {name: np.std(scores) for name, scores in cv_scores.items()}
             }
+
+            # Store feature importance
+            for name, model in self.models.items():
+                if hasattr(model, 'feature_importances_'):
+                    self.feature_importance[name] = dict(zip(X.columns, model.feature_importances_))
 
             return self.metrics
 
@@ -204,13 +240,14 @@ class PredictionModel:
         """Generate ensemble predictions"""
         try:
             if not self.models:
-                raise ValueError("Models not trained. Call train() first.")
+                self.logger.warning("Models not trained. Using default models.")
+                self.train(df, target_column, prediction_horizon)
 
             X, _ = self._prepare_training_data(df, target_column, prediction_horizon)
             X_scaled = self.scaler.transform(X)
 
             predictions = {}
-            weights = {'rf': 0.6, 'gb': 0.4}
+            weights = {'rf': 0.6, 'gb': 0.4}  # Random Forest has slightly more weight
 
             # Get predictions from each model
             for name, model in self.models.items():
@@ -229,7 +266,8 @@ class PredictionModel:
                 'prediction': weighted_pred[-1],  # Latest prediction
                 'confidence': float(confidence[-1]),
                 'predictions': weighted_pred,
-                'model_predictions': predictions
+                'model_predictions': predictions,
+                'feature_importance': self.feature_importance
             }
 
         except Exception as e:
@@ -249,11 +287,15 @@ class PredictionModel:
 
     def load_model(self, path: str):
         """Load model from disk"""
-        saved_model = joblib.load(path)
-        self.models = saved_model['models']
-        self.scaler = saved_model['scaler']
-        self.metrics = saved_model['metrics']
-        self.feature_importance = saved_model['feature_importance']
+        try:
+            saved_model = joblib.load(path)
+            self.models = saved_model['models']
+            self.scaler = saved_model['scaler']
+            self.metrics = saved_model['metrics']
+            self.feature_importance = saved_model['feature_importance']
+        except Exception as e:
+            self.logger.error(f"Error loading model: {str(e)}")
+            raise
 
     # Placeholder functions -  replace with actual implementations
     def optimize_hyperparameters(self, df):
