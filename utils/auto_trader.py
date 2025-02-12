@@ -40,12 +40,28 @@ class AutoTrader:
         self.setup_logging()
         self.data_loader = CryptoDataLoader()
         self.indicators = TechnicalIndicators()
-        self.notifier = TradingNotifier()
-        self.wallet_manager = WalletManager(user_id=1)
-        self.sentiment_analyzer = None
+
+        # Disable external services in test mode
+        if self.testnet:
+            self.notifier = None
+            self.wallet_manager = None
+            self.sentiment_analyzer = None
+        else:
+            self.notifier = TradingNotifier()
+            self.wallet_manager = WalletManager(user_id=1)
+            self.sentiment_analyzer = None  # Will be initialized in production
 
         # Initialize strategies with testnet configuration
         self.strategies = {
+            'scalping': ScalpingStrategy({
+                'volume_threshold': 1000000,
+                'min_volatility': 0.002,
+                'profit_target': 0.005,
+                'initial_stop_loss': 0.003,
+                'trailing_stop': 0.002,
+                'testnet': testnet
+            })
+        } if self.testnet else {
             'meme_coin': MemeCoinStrategy({
                 'min_liquidity': 200000,
                 'sentiment_threshold': 0.75,
@@ -68,7 +84,7 @@ class AutoTrader:
                 'max_buy_tax': 10,
                 'min_holders': 50,
                 'testnet': testnet,
-                'rpc_url': 'https://data-seed-prebsc-1-s1.binance.org:8545/' if testnet else 'https://bsc-dataseed.binance.org/'
+                'rpc_url': 'https://bsc-dataseed.binance.org/'
             })
         }
 
@@ -270,56 +286,3 @@ class AutoTrader:
         except Exception as e:
             self.logger.error(f"Error merging timeframes: {str(e)}")
             return None
-
-    async def _get_social_data(self) -> Dict[str, float]:
-        """Get social media data for sentiment analysis"""
-        try:
-            # In testnet mode, return simulated sentiment data
-            if self.testnet:
-                self.logger.info("Using simulated social data in testnet mode")
-                return {
-                    'sentiment_score': 0.6,
-                    'volume_score': 0.7,
-                    'trend_score': 0.65,
-                    'simulated': True
-                }
-
-            # For production, implement proper error handling for each service
-            sentiment_data = {
-                'sentiment_score': 0.5,
-                'volume_score': 0.5,
-                'trend_score': 0.5,
-                'source': []
-            }
-
-            try:
-                # Attempt to get Twitter data
-                twitter_data = await self.sentiment_analyzer.get_twitter_sentiment(self.symbol)
-                if twitter_data:
-                    sentiment_data['source'].append('twitter')
-                    sentiment_data['sentiment_score'] = (sentiment_data['sentiment_score'] + twitter_data['sentiment']) / 2
-            except Exception as e:
-                self.logger.warning(f"Twitter data collection failed: {str(e)}")
-
-            try:
-                # Attempt to get Reddit data
-                reddit_data = await self.sentiment_analyzer.get_reddit_sentiment(self.symbol)
-                if reddit_data:
-                    sentiment_data['source'].append('reddit')
-                    sentiment_data['sentiment_score'] = (sentiment_data['sentiment_score'] + reddit_data['sentiment']) / 2
-            except Exception as e:
-                self.logger.warning(f"Reddit data collection failed: {str(e)}")
-
-            if not sentiment_data['source']:
-                self.logger.warning("No social data sources available, using default values")
-
-            return sentiment_data
-
-        except Exception as e:
-            self.logger.error(f"Error getting social data: {str(e)}")
-            return {
-                'sentiment_score': 0.5,
-                'volume_score': 0.5,
-                'trend_score': 0.5,
-                'error': str(e)
-            }

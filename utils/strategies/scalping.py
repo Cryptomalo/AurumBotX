@@ -2,6 +2,9 @@ import pandas as pd
 from typing import Dict, Any, List, Optional
 import numpy as np
 from utils.strategies.base_strategy import BaseStrategy
+import logging
+
+logger = logging.getLogger(__name__)
 
 class ScalpingStrategy(BaseStrategy):
     def __init__(self, config: Dict[str, Any]):
@@ -11,12 +14,16 @@ class ScalpingStrategy(BaseStrategy):
         self.profit_target = config.get('profit_target', 0.005)  # 0.5% profit target
         self.initial_stop_loss = config.get('initial_stop_loss', 0.003)  # 0.3% initial stop loss
         self.trailing_stop = config.get('trailing_stop', 0.002)  # 0.2% trailing stop
+        self.logger = logger
 
     async def analyze_market(self, market_data: pd.DataFrame, sentiment_data: Optional[Dict] = None) -> List[Dict]:
         """
         Analyzes the market for scalping opportunities
         """
         try:
+            if market_data is None or market_data.empty:
+                return []
+
             # Calculate volume metrics
             volume_sma = market_data['Volume'].rolling(window=24).mean()
             volume_ratio = market_data['Volume'].iloc[-1] / volume_sma.iloc[-1]
@@ -54,42 +61,53 @@ class ScalpingStrategy(BaseStrategy):
         """
         Generates trading signals for scalping
         """
-        signal = {
-            'action': 'hold',
-            'confidence': 0.0,
-            'target_price': None,
-            'stop_loss': None,
-            'size_factor': 0.0
-        }
+        try:
+            signal = {
+                'action': 'hold',
+                'confidence': 0.0,
+                'target_price': None,
+                'stop_loss': None,
+                'size_factor': 0.0
+            }
 
-        # Check conditions for scalping
-        if not analysis['high_volume'] or analysis['volatility'] < self.min_volatility:
+            # Check conditions for scalping
+            if not analysis.get('high_volume', False) or analysis.get('volatility', 0) < self.min_volatility:
+                return signal
+
+            # Calculate trend direction
+            trend_direction = 1 if analysis.get('momentum', 0) > 0 else -1
+
+            # Calculate signal strength
+            signal_strength = min(1.0, (
+                (analysis.get('volume_ratio', 1) - 1) * 0.3 +
+                (analysis.get('volatility', 0) / self.min_volatility) * 0.3 +
+                abs(analysis.get('momentum', 0)) * 0.4
+            ))
+
+            # Generate signals only if we have sufficient strength
+            if signal_strength > 0.7:
+                current_price = analysis.get('current_price', 0)
+
+                signal.update({
+                    'action': 'buy' if trend_direction > 0 else 'sell',
+                    'confidence': signal_strength,
+                    'target_price': current_price * (1 + trend_direction * self.profit_target),
+                    'stop_loss': current_price * (1 - trend_direction * self.initial_stop_loss),
+                    'trailing_stop': self.trailing_stop,
+                    'size_factor': signal_strength
+                })
+
             return signal
 
-        # Calculate trend direction
-        trend_direction = 1 if analysis['momentum'] > 0 else -1
-
-        # Calculate signal strength
-        signal_strength = min(1.0, (
-            (analysis['volume_ratio'] - 1) * 0.3 +
-            (analysis['volatility'] / self.min_volatility) * 0.3 +
-            abs(analysis['momentum']) * 0.4
-        ))
-
-        # Generate signals only if we have sufficient strength
-        if signal_strength > 0.7:
-            current_price = analysis['current_price']
-
-            signal.update({
-                'action': 'buy' if trend_direction > 0 else 'sell',
-                'confidence': signal_strength,
-                'target_price': current_price * (1 + trend_direction * self.profit_target),
-                'stop_loss': current_price * (1 - trend_direction * self.initial_stop_loss),
-                'trailing_stop': self.trailing_stop,
-                'size_factor': signal_strength
-            })
-
-        return signal
+        except Exception as e:
+            self.logger.error(f"Signal generation error: {str(e)}")
+            return {
+                'action': 'hold',
+                'confidence': 0.0,
+                'target_price': None,
+                'stop_loss': None,
+                'size_factor': 0.0
+            }
 
     async def validate_trade(self, signal: Dict[str, Any], portfolio: Dict[str, Any]) -> bool:
         """

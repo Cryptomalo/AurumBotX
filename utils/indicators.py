@@ -189,10 +189,10 @@ class TechnicalIndicators:
         try:
             # Use True Range based volatility
             if 'ATR_14' in df.columns:
-                return df['ATR_14'] / df['close']
+                return df['ATR_14'] / df['Close']
             else:
                 # Fallback to traditional volatility calculation
-                returns = df['close'].pct_change()
+                returns = df['Close'].pct_change()
                 return returns.ewm(span=20).std() * np.sqrt(252)
         except Exception as e:
             logger.error(f"Error calculating volatility: {e}")
@@ -202,9 +202,9 @@ class TechnicalIndicators:
         """Calculate dynamic support and resistance using fractals and pivot points"""
         try:
             # Pivot Points
-            high = df['high'].rolling(window=20, center=True).max()
-            low = df['low'].rolling(window=20, center=True).min()
-            close = df['close']
+            high = df['High'].rolling(window=20, center=True).max()
+            low = df['Low'].rolling(window=20, center=True).min()
+            close = df['Close']
 
             pivot = (high + low + close) / 3
             support1 = 2 * pivot - high
@@ -212,22 +212,22 @@ class TechnicalIndicators:
 
             # Fractals
             support_fractals = low.where(
-                (df['low'].shift(2) > df['low'].shift(1)) &
-                (df['low'].shift(1) > df['low']) &
-                (df['low'] < df['low'].shift(-1)) &
-                (df['low'].shift(-1) < df['low'].shift(-2))
+                (df['Low'].shift(2) > df['Low'].shift(1)) &
+                (df['Low'].shift(1) > df['Low']) &
+                (df['Low'] < df['Low'].shift(-1)) &
+                (df['Low'].shift(-1) < df['Low'].shift(-2))
             )
 
             resistance_fractals = high.where(
-                (df['high'].shift(2) < df['high'].shift(1)) &
-                (df['high'].shift(1) < df['high']) &
-                (df['high'] > df['high'].shift(-1)) &
-                (df['high'].shift(-1) > df['high'].shift(-2))
+                (df['High'].shift(2) < df['High'].shift(1)) &
+                (df['High'].shift(1) < df['High']) &
+                (df['High'] > df['High'].shift(-1)) &
+                (df['High'].shift(-1) > df['High'].shift(-2))
             )
 
             # Combine both methods
-            support = ((support_fractals + support1) / 2).fillna(method='ffill')
-            resistance = ((resistance_fractals + resistance1) / 2).fillna(method='ffill')
+            support = ((support_fractals + support1) / 2).ffill()
+            resistance = ((resistance_fractals + resistance1) / 2).ffill()
 
             return support, resistance
 
@@ -251,7 +251,7 @@ class TechnicalIndicators:
     def _determine_trend(self, df: pd.DataFrame) -> str:
         """Enhanced trend determination using multiple timeframes"""
         try:
-            current_price = df['close'].iloc[-1]
+            current_price = df['Close'].iloc[-1]
 
             # Check EMAs across multiple timeframes
             ema_trends = []
