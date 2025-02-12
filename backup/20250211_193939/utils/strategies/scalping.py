@@ -2,6 +2,9 @@ import pandas as pd
 from typing import Dict, Any
 import numpy as np
 from utils.strategies.base_strategy import BaseStrategy
+import logging
+
+logger = logging.getLogger(__name__)
 
 class ScalpingStrategy(BaseStrategy):
     def __init__(self, config: Dict[str, Any]):
@@ -11,6 +14,10 @@ class ScalpingStrategy(BaseStrategy):
         self.profit_target = config.get('profit_target', 0.005)  # 0.5% target di profitto
         self.initial_stop_loss = config.get('initial_stop_loss', 0.003)  # 0.3% stop loss iniziale
         self.trailing_stop = config.get('trailing_stop', 0.002)  # 0.2% trailing stop
+        self.risk_per_trade = config.get('risk_per_trade', 0.01) #risk per trade
+        self.momentum = 0 #add momentum variable
+        self.volatility = 0 #add volatility variable
+
 
     def analyze_market(self, df: pd.DataFrame) -> Dict[str, Any]:
         """
@@ -22,10 +29,12 @@ class ScalpingStrategy(BaseStrategy):
         
         # Calcola volatilità
         volatility = df['Close'].pct_change().rolling(window=12).std().iloc[-1]
-        
+        self.volatility = volatility #update volatility variable
+
         # Calcola momentum
         momentum = df['Close'].pct_change(periods=12).iloc[-1]
-        
+        self.momentum = momentum #update momentum variable
+
         # Identifica supporti e resistenze
         recent_highs = df['High'].rolling(window=24).max()
         recent_lows = df['Low'].rolling(window=24).min()
@@ -43,10 +52,36 @@ class ScalpingStrategy(BaseStrategy):
         }
         
         return analysis
+    
+    def _calculate_position_size(self, current_price: float, risk_score: float) -> float:
+        """
+        Calcola la dimensione della posizione con gestione rischio avanzata
+        """
+        try:
+            # Base position size
+            base_size = self.risk_per_trade * current_price
+
+            # Apply volatility adjustment
+            volatility_factor = min(1.0, self.volatility / (self.min_volatility * 2))
+            adjusted_size = base_size * volatility_factor
+
+            # Apply momentum-based adjustment
+            momentum_factor = 1.0 + (abs(self.momentum) * 0.2)  # Max 20% adjustment
+            momentum_adjusted_size = adjusted_size * momentum_factor
+
+            # Apply risk score
+            risk_adjusted_size = momentum_adjusted_size * (1 - risk_score)
+
+            # Apply maximum position limit
+            return min(risk_adjusted_size, self.config.get('max_position_size', float('inf')))
+
+        except Exception as e:
+            logger.error(f"Error calculating position size: {e}")
+            return 0.0
 
     def generate_signals(self, analysis: Dict[str, Any]) -> Dict[str, Any]:
         """
-        Genera segnali di trading per scalping
+        Genera segnali di trading per scalping con timing migliorato
         """
         signal = {
             'action': 'hold',
@@ -55,34 +90,51 @@ class ScalpingStrategy(BaseStrategy):
             'stop_loss': None,
             'size_factor': 0.0
         }
-        
-        # Verifica condizioni per scalping
+
+        # Verify base conditions
         if not analysis['high_volume'] or analysis['volatility'] < self.min_volatility:
             return signal
-            
-        # Calcola la direzione del trend
+
+        # Calculate trend direction and strength
         trend_direction = 1 if analysis['momentum'] > 0 else -1
-        
-        # Calcola la forza del segnale
-        signal_strength = min(1.0, (
-            (analysis['volume_ratio'] - 1) * 0.3 +
-            (analysis['volatility'] / self.min_volatility) * 0.3 +
-            abs(analysis['momentum']) * 0.4
-        ))
-        
-        # Genera segnali solo se abbiamo una forza sufficiente
-        if signal_strength > 0.7:
+
+        # Enhanced signal strength calculation
+        volume_score = min(1.0, (analysis['volume_ratio'] - 1) * 0.3)
+        volatility_score = min(1.0, (analysis['volatility'] / self.min_volatility) * 0.3)
+        momentum_score = min(1.0, abs(analysis['momentum']) * 0.4)
+
+        # Add price action confirmation
+        price_action_valid = (
+            trend_direction > 0 and 
+            analysis['current_price'] > analysis['nearest_support'] * 1.002 or
+            trend_direction < 0 and 
+            analysis['current_price'] < analysis['nearest_resistance'] * 0.998
+        )
+
+        # Calculate final signal strength
+        signal_strength = (
+            volume_score * 0.3 +
+            volatility_score * 0.3 +
+            momentum_score * 0.4
+        ) * (1.2 if price_action_valid else 0.8)  # Boost/reduce based on price action
+
+        # Generate signals only with sufficient strength and confirmation
+        if signal_strength > 0.7 and price_action_valid:
             current_price = analysis['current_price']
-            
+
+            # Dynamic target calculation based on volatility
+            profit_target = self.profit_target * (1 + analysis['volatility'] / self.min_volatility)
+            stop_loss_level = self.initial_stop_loss * (1 + analysis['volatility'] / self.min_volatility)
+
             signal.update({
                 'action': 'buy' if trend_direction > 0 else 'sell',
                 'confidence': signal_strength,
-                'target_price': current_price * (1 + trend_direction * self.profit_target),
-                'stop_loss': current_price * (1 - trend_direction * self.initial_stop_loss),
-                'trailing_stop': self.trailing_stop,
+                'target_price': current_price * (1 + trend_direction * profit_target),
+                'stop_loss': current_price * (1 - trend_direction * stop_loss_level),
+                'trailing_stop': self.trailing_stop * (1 + analysis['volatility'] / self.min_volatility),
                 'size_factor': signal_strength
             })
-            
+
         return signal
 
     def validate_trade(self, signal: Dict[str, Any], current_portfolio: Dict[str, Any]) -> bool:

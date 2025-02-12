@@ -14,7 +14,7 @@ from sqlalchemy.orm import Session
 logger = logging.getLogger(__name__)
 
 class CryptoDataLoader:
-    def __init__(self):
+    def __init__(self, use_live_data=True):
         """Initialize the data loader with supported coins and advanced caching"""
         self.supported_coins = {
             'BTC-USDT': 'Bitcoin',
@@ -39,24 +39,42 @@ class CryptoDataLoader:
             '1d': 86400
         }
 
+        self.use_live_data = use_live_data
         self._setup_exchange()
         self._setup_database()
 
+        # Add real-time price tracking
+        self.last_prices = {}
+        self.price_updates = {}
+
     def _setup_exchange(self):
-        """Setup ccxt exchange connection with testnet support"""
+        """Setup ccxt exchange connection with separate instances for data and trading"""
         try:
-            self.exchange = ccxt.binance({
+            # Exchange for live market data
+            self.market_exchange = ccxt.binance({
                 'enableRateLimit': True,
                 'options': {
                     'defaultType': 'future',
                     'adjustForTimeDifference': True,
-                    'test': True  # Enable testnet
+                    'test': False  # Use real market data
                 }
             })
-            logger.info("Exchange connection established in testnet mode")
+
+            # Exchange for testnet trading
+            self.trading_exchange = ccxt.binance({
+                'enableRateLimit': True,
+                'options': {
+                    'defaultType': 'future',
+                    'adjustForTimeDifference': True,
+                    'test': True  # Keep testnet for trading
+                }
+            })
+
+            logger.info("Exchange connections established: market(live) and trading(testnet)")
         except Exception as e:
-            logger.warning(f"Exchange setup failed, using simulated data: {e}")
-            self.exchange = None
+            logger.error(f"Exchange setup failed: {e}")
+            self.market_exchange = None
+            self.trading_exchange = None
 
     def _setup_database(self):
         """Setup database connection for persistent storage"""
@@ -78,17 +96,97 @@ class CryptoDataLoader:
         period: str = '1d',
         interval: str = '1m'
     ) -> Optional[pd.DataFrame]:
-        """Fetch historical data with fallback to simulation"""
+        """Fetch historical data with real market data support"""
         try:
             symbol = self._normalize_symbol(symbol)
             logger.info(f"Getting historical data for {symbol}")
 
-            # Always use simulated data for initial testing
-            return self._get_simulated_data(symbol, period, interval)
+            if not self.use_live_data or not self.market_exchange:
+                return self._get_simulated_data(symbol, period, interval)
+
+            # Try to get from cache first
+            cached_data = self._get_from_cache(f"{symbol}_{period}_{interval}")
+            if cached_data is not None:
+                return cached_data
+
+            # Fetch live market data
+            try:
+                timeframes = {
+                    '1m': '1m',
+                    '5m': '5m',
+                    '15m': '15m',
+                    '1h': '1h',
+                    '4h': '4h',
+                    '1d': '1d'
+                }
+
+                ohlcv = self.market_exchange.fetch_ohlcv(
+                    symbol,
+                    timeframe=timeframes.get(interval, '1m'),
+                    limit=500  # Adjust based on period
+                )
+
+                df = pd.DataFrame(
+                    ohlcv,
+                    columns=['timestamp', 'Open', 'High', 'Low', 'Close', 'Volume']
+                )
+                df['timestamp'] = pd.to_datetime(df['timestamp'], unit='ms')
+                df.set_index('timestamp', inplace=True)
+
+                # Add technical indicators
+                df = self._add_technical_indicators(df)
+
+                # Cache the data
+                self._add_to_cache(f"{symbol}_{period}_{interval}", df)
+
+                # Save to database for historical analysis
+                self._save_to_database(symbol, df)
+
+                return df
+
+            except Exception as e:
+                logger.error(f"Error fetching live data for {symbol}: {e}")
+                logger.info("Falling back to simulated data")
+                return self._get_simulated_data(symbol, period, interval)
 
         except Exception as e:
             logger.error(f"Error fetching data for {symbol}: {e}")
             return self._get_simulated_data(symbol, period, interval)
+
+    def get_current_price(self, symbol: str) -> Optional[float]:
+        """Get current price from live market when possible"""
+        try:
+            symbol = self._normalize_symbol(symbol)
+
+            if not self.use_live_data or not self.market_exchange:
+                return self._get_simulated_current_price(symbol)
+
+            try:
+                ticker = self.market_exchange.fetch_ticker(symbol)
+                price = float(ticker['last'])
+
+                # Update price tracking
+                self.last_prices[symbol] = price
+                self.price_updates[symbol] = datetime.now()
+
+                return price
+
+            except Exception as e:
+                logger.error(f"Error getting live price for {symbol}: {e}")
+                return self._get_simulated_current_price(symbol)
+
+        except Exception as e:
+            logger.error(f"Error getting price for {symbol}: {e}")
+            return None
+
+    def _get_simulated_current_price(self, symbol: str) -> Optional[float]:
+        """Get current price from simulation as fallback"""
+        try:
+            df = self._get_simulated_data(symbol, '1d', '1m')
+            return float(df['Close'].iloc[-1])
+        except Exception as e:
+            logger.error(f"Error getting simulated price for {symbol}: {e}")
+            return None
 
     def _normalize_symbol(self, symbol: str) -> str:
         """Normalize symbol format for exchange"""
@@ -204,7 +302,6 @@ class CryptoDataLoader:
             df = df.fillna(method='bfill').fillna(method='ffill').fillna(0)
 
             return df
-
         except Exception as e:
             logger.error(f"Error calculating indicators: {e}", exc_info=True)
             return df
@@ -225,16 +322,6 @@ class CryptoDataLoader:
             logger.debug(f"Saved {len(df)} rows to database for {symbol}")
         except Exception as e:
             logger.error(f"Database error for {symbol}: {e}", exc_info=True)
-
-    def get_current_price(self, symbol: str) -> Optional[float]:
-        """Get current price from simulation"""
-        try:
-            symbol = self._normalize_symbol(symbol)
-            df = self._get_simulated_data(symbol, '1d', '1m')
-            return float(df['Close'].iloc[-1])
-        except Exception as e:
-            logger.error(f"Error getting price for {symbol}: {e}")
-            return None
 
     def get_available_coins(self) -> Dict[str, str]:
         """Return dictionary of supported cryptocurrencies"""
