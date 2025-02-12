@@ -15,11 +15,13 @@ def run_test():
     try:
         logger.info("Starting minimal test")
 
-        # Initialize bot with BTC-USD pair
+        # Initialize bot with BTC-USDT pair on testnet
         bot = AutoTrader(
-            symbol="BTC-USD",
+            symbol="BTCUSDT",
             initial_balance=1000,
-            risk_per_trade=0.02
+            risk_per_trade=0.02,
+            testnet=True,
+            learning_mode=True  # Abilita modalità apprendimento
         )
 
         # Get and analyze market data
