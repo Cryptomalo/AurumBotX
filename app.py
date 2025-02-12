@@ -6,7 +6,6 @@ from streamlit_option_menu import option_menu
 from utils.data_loader import CryptoDataLoader
 from utils.auto_trader import AutoTrader
 from utils.wallet_manager import WalletManager
-from utils.sentiment_analyzer import SentimentAnalyzer
 import plotly.graph_objects as go
 from plotly.subplots import make_subplots
 
@@ -26,31 +25,41 @@ st.set_page_config(
     page_title="AurumBot",
     page_icon="🤖",
     layout="wide",
-    initial_sidebar_state="expanded"
+    initial_sidebar_state="collapsed"
 )
 
-# Custom CSS
+# Custom CSS for better UI
 st.markdown("""
 <style>
-    .main {
-        background-color: #0E1117;
-    }
     .stApp {
         background-color: #0E1117;
+    }
+    div[data-testid="stSidebarNav"] {
+        background-color: #1E1E1E;
+        padding-top: 2rem;
+        position: fixed;
+        top: 0;
+        left: 0;
+        height: 100%;
+        width: auto;
+    }
+    .main {
+        margin-left: 0;
     }
     .css-1d391kg {
         background-color: #1E1E1E;
     }
-    .stTabs [data-baseweb="tab-list"] {
-        gap: 1px;
-    }
-    .stTabs [data-baseweb="tab"] {
+    section[data-testid="stSidebar"] > div {
         background-color: #1E1E1E;
-        border-radius: 4px 4px 0px 0px;
+        padding: 1rem;
+    }
+    .stTabs [data-baseweb="tab-list"] button[data-baseweb="tab"] {
+        background-color: #1E1E1E;
+        border-radius: 4px 4px 0 0;
         padding: 10px 20px;
         color: white;
     }
-    .stTabs [aria-selected="true"] {
+    .stTabs [data-baseweb="tab-list"] button[data-baseweb="tab"][aria-selected="true"] {
         background-color: #2E2E2E;
     }
 </style>
@@ -58,193 +67,111 @@ st.markdown("""
 
 def initialize_session_state():
     """Initialize session state variables"""
-    if 'authenticated' not in st.session_state:
-        st.session_state.authenticated = False
-    if 'current_user' not in st.session_state:
-        st.session_state.current_user = None
-    if 'active_wallets' not in st.session_state:
-        st.session_state.active_wallets = []
+    if 'page' not in st.session_state:
+        st.session_state.page = "Dashboard"
     if 'bot_running' not in st.session_state:
         st.session_state.bot_running = False
 
 def render_sidebar():
-    """Render sidebar with navigation and settings"""
+    """Render collapsible sidebar with navigation"""
     with st.sidebar:
         st.title("🤖 AurumBot")
 
-        # User profile section
-        if st.session_state.authenticated:
-            st.subheader(f"Welcome, {st.session_state.current_user}")
-
-        # Navigation
         selected = option_menu(
-            "Main Menu",
-            ["Dashboard", "Trading", "Wallets", "Analysis", "Settings"],
-            icons=['house', 'graph-up', 'wallet2', 'bar-chart', 'gear'],
+            "",  # empty menu title for cleaner look
+            ["Dashboard", "Trading", "Wallet"],
+            icons=['house', 'graph-up', 'wallet2'],
             menu_icon="cast",
             default_index=0,
+            styles={
+                "container": {"padding": "0!important", "background-color": "#1E1E1E"},
+                "icon": {"color": "orange", "font-size": "25px"}, 
+                "nav-link": {"font-size": "16px", "text-align": "left", "margin":"0px"},
+                "nav-link-selected": {"background-color": "#2E2E2E"},
+            }
         )
 
-        # Trading settings if on trading page
-        if selected == "Trading":
-            st.subheader("Trading Settings")
-            initial_balance = st.number_input("Initial Balance ($)", min_value=100, value=1000)
-            risk_level = st.slider("Risk Level (%)", min_value=1, max_value=10, value=2)
-
-            if st.button("Start Trading", type="primary"):
-                st.session_state.bot_running = True
-                st.success("Bot started successfully!")
-
-            if st.button("Stop Trading", type="secondary"):
-                st.session_state.bot_running = False
-                st.error("Bot stopped")
-
+        st.session_state.page = selected
         return selected
 
-def render_dashboard(data_loader: CryptoDataLoader):
-    """Render main dashboard view"""
-    st.title("Market Overview")
+def render_trading_chart(data_loader: CryptoDataLoader):
+    """Render trading chart with key metrics"""
+    st.subheader("Market Analysis")
 
-    # Multi-coin price overview
-    cols = st.columns(4)
-    for idx, (symbol, name) in enumerate(list(data_loader.supported_coins.items())[:4]):
-        with cols[idx]:
-            price = data_loader.get_current_price(symbol)
-            if price:
-                st.metric(
-                    name,
-                    f"${price:,.2f}",
-                    delta=f"{data_loader.get_market_summary(symbol).get('price_change_24h', 0):.2f}%"
-                )
-
-    # Main chart
-    st.subheader("Price Action")
-    selected_coin = st.selectbox("Select Trading Pair", list(data_loader.supported_coins.keys()))
-    df = data_loader.get_historical_data(selected_coin)
-
-    if df is not None and not df.empty:
-        # Create figure with secondary y-axis
-        fig = make_subplots(specs=[[{"secondary_y": True}]])
-
-        # Add candlestick
-        fig.add_trace(
-            go.Candlestick(
-                x=df.index,
-                open=df['Open'],
-                high=df['High'],
-                low=df['Low'],
-                close=df['Close'],
-                name="OHLC"
-            ),
-            secondary_y=False,
-        )
-
-        # Add volume bars
-        fig.add_trace(
-            go.Bar(
-                x=df.index,
-                y=df['Volume'],
-                name="Volume",
-                opacity=0.3
-            ),
-            secondary_y=True,
-        )
-
-        # Update layout
-        fig.update_layout(
-            template="plotly_dark",
-            xaxis_rangeslider_visible=False,
-            height=600
-        )
-
-        st.plotly_chart(fig, use_container_width=True)
-
-        # Market metrics
-        col1, col2, col3 = st.columns(3)
-        market_data = data_loader.get_market_summary(selected_coin)
-
-        with col1:
-            st.metric("24h Volume", f"${market_data.get('volume_24h', 0):,.0f}")
-        with col2:
-            st.metric("RSI", f"{market_data.get('rsi', 0):.2f}")
-        with col3:
-            st.metric("Volatility", f"{market_data.get('volatility', 0):.2f}%")
-
-def render_trading_view(data_loader: CryptoDataLoader):
-    """Render trading interface"""
-    st.title("Trading Interface")
-
-    col1, col2 = st.columns([2, 1])
+    col1, col2 = st.columns([3, 1])
 
     with col1:
-        selected_coin = st.selectbox("Trading Pair", list(data_loader.supported_coins.keys()))
+        selected_coin = st.selectbox("Select Trading Pair", ["BTC-USD", "ETH-USD", "SOL-USD", "DOGE-USD"])
+        timeframe = st.select_slider("Timeframe", options=["1H", "4H", "1D", "1W"], value="1D")
 
-        if st.session_state.bot_running:
-            st.success("Bot is actively trading")
+        df = data_loader.get_historical_data(selected_coin, timeframe)
 
-            # Show active trading signals
-            bot = AutoTrader(
-                symbol=selected_coin,
-                initial_balance=1000,  # Get from settings
-                risk_per_trade=0.02    # Get from settings
+        if df is not None and not df.empty:
+            fig = make_subplots(rows=2, cols=1, shared_xaxes=True, 
+                                  vertical_spacing=0.03, row_heights=[0.7, 0.3])
+
+            # Candlestick chart
+            fig.add_trace(go.Candlestick(
+                x=df.index, open=df['Open'], high=df['High'],
+                low=df['Low'], close=df['Close'], name="OHLC"
+            ), row=1, col=1)
+
+            # Volume bars
+            fig.add_trace(go.Bar(
+                x=df.index, y=df['Volume'], name="Volume",
+                marker_color='rgba(128,128,128,0.5)'
+            ), row=2, col=1)
+
+            fig.update_layout(
+                height=600,
+                template='plotly_dark',
+                xaxis_rangeslider_visible=False,
+                margin=dict(l=0, r=0, t=30, b=0)
             )
 
-            signals = bot.get_trading_signals()
-            if signals:
-                st.subheader("Active Signals")
-                for signal in signals:
-                    with st.container():
-                        st.info(
-                            f"Signal: {signal['action']} "
-                            f"Price: ${signal['price']:.2f} "
-                            f"Confidence: {signal['confidence']:.2f}%"
-                        )
+            st.plotly_chart(fig, use_container_width=True)
 
     with col2:
-        st.subheader("Performance")
-        metrics = {
-            "Daily PnL": "+$234.56",
-            "Win Rate": "67%",
-            "Active Trades": "3"
-        }
+        current_price = df['Close'].iloc[-1] if df is not None and not df.empty else 0
+        price_change = ((current_price - df['Open'].iloc[-1])/df['Open'].iloc[-1] * 100
+                       if df is not None and not df.empty else 0)
 
-        for label, value in metrics.items():
-            st.metric(label, value)
+        st.metric("Current Price", f"${current_price:,.2f}", f"{price_change:+.2f}%")
 
-def render_wallet_view():
-    """Render wallet management interface"""
-    st.title("Wallet Management")
+        # Trading controls
+        st.subheader("Trading Controls")
+        if st.button("Start Bot" if not st.session_state.bot_running else "Stop Bot"):
+            st.session_state.bot_running = not st.session_state.bot_running
 
-    # Add wallet
-    with st.expander("Add New Wallet"):
-        col1, col2 = st.columns(2)
-        with col1:
-            wallet_name = st.text_input("Wallet Name")
-            wallet_type = st.selectbox("Wallet Type", ["Hot Wallet", "Cold Storage", "Exchange"])
-        with col2:
-            wallet_address = st.text_input("Wallet Address")
-            wallet_chain = st.selectbox("Blockchain", ["Ethereum", "Bitcoin", "Solana", "Binance Smart Chain"])
+        st.metric("24h PnL", "+$234.56", "+2.3%")
+        st.metric("Open Positions", "3")
 
-        if st.button("Add Wallet"):
-            st.success(f"Wallet {wallet_name} added successfully!")
+def render_wallet_section(wallet_manager: WalletManager):
+    """Render wallet information and balances"""
+    st.subheader("Wallet Overview")
 
-    # Display wallets
-    st.subheader("Your Wallets")
+    col1, col2, col3 = st.columns(3)
 
-    # Example wallets
-    example_wallets = [
-        {"name": "Trading Wallet", "type": "Hot Wallet", "balance": "$5,432.10", "chain": "Ethereum"},
-        {"name": "Cold Storage", "type": "Cold Storage", "balance": "$15,678.90", "chain": "Bitcoin"},
-        {"name": "DEX Wallet", "type": "Hot Wallet", "balance": "$2,345.67", "chain": "Solana"}
-    ]
+    with col1:
+        st.metric("Total Balance", "$10,432.21", "+5.2%")
+    with col2:
+        st.metric("Available Balance", "$8,654.32")
+    with col3:
+        st.metric("Locked in Orders", "$1,777.89")
 
-    for wallet in example_wallets:
-        with st.container():
-            col1, col2, col3, col4 = st.columns([2, 1, 1, 1])
-            col1.write(f"**{wallet['name']}**")
-            col2.write(wallet['type'])
-            col3.write(wallet['chain'])
-            col4.write(wallet['balance'])
+    # Asset distribution
+    st.subheader("Asset Distribution")
+    assets = {
+        "BTC": 0.25,
+        "ETH": 2.5,
+        "SOL": 45.0,
+        "USDT": 5000.0
+    }
+
+    # Create two columns for assets
+    cols = st.columns(len(assets))
+    for col, (asset, amount) in zip(cols, assets.items()):
+        col.metric(asset, f"{amount:g}")
 
 def main():
     try:
@@ -252,18 +179,24 @@ def main():
 
         # Initialize components
         data_loader = CryptoDataLoader()
+        wallet_manager = WalletManager(user_id="default")  # Using default user ID for now
 
         # Render sidebar and get selected page
         selected_page = render_sidebar()
 
-        # Render selected page
+        # Main content area
         if selected_page == "Dashboard":
-            render_dashboard(data_loader)
+            st.title("Trading Dashboard")
+            render_trading_chart(data_loader)
+            render_wallet_section(wallet_manager)
+
         elif selected_page == "Trading":
-            render_trading_view(data_loader)
-        elif selected_page == "Wallets":
-            render_wallet_view()
-        # Add other pages as needed
+            st.title("Advanced Trading")
+            render_trading_chart(data_loader)
+
+        elif selected_page == "Wallet":
+            st.title("Wallet Management")
+            render_wallet_section(wallet_manager)
 
     except Exception as e:
         logger.error(f"Application error: {str(e)}", exc_info=True)
