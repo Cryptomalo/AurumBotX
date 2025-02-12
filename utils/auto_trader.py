@@ -42,7 +42,7 @@ class AutoTrader:
         self.indicators = TechnicalIndicators()
         self.notifier = TradingNotifier()
         self.wallet_manager = WalletManager(user_id=1)
-        self.sentiment_analyzer = None #Adding this line.  Assuming sentiment_analyzer is defined elsewhere and injected.
+        self.sentiment_analyzer = None
 
         # Initialize strategies with testnet configuration
         self.strategies = {
@@ -88,29 +88,21 @@ class AutoTrader:
         )
         self.logger = logging.getLogger(__name__)
 
-    async def analyze_market(self):
+    def analyze_market(self):
         """Analyze market data and generate trading signals"""
         try:
             if self.testnet:
                 self.logger.info("Running in testnet mode")
 
-            # Multi-timeframe analysis
-            df_short = await self.data_loader.get_historical_data(self.symbol, period='1d')
-            df_medium = await self.data_loader.get_historical_data(self.symbol, period='7d')
-            df_long = await self.data_loader.get_historical_data(self.symbol, period='30d')
-
-            # Auto-adapt strategies based on volatility
-            market_volatility = self.calculate_market_volatility(df_medium)
-            await self.adjust_strategies_parameters(market_volatility)
-
-            df = self.merge_timeframes(df_short, df_medium, df_long)
+            # Get market data
+            df = self.data_loader.get_historical_data(self.symbol, period='1d')
             if df is None or df.empty:
                 self.logger.error("Unable to get market data")
                 return None
 
             # Add technical indicators with error handling
             try:
-                df = await self.indicators.add_all_indicators(df)
+                df = self.indicators.add_all_indicators(df)
             except Exception as e:
                 self.logger.error(f"Error adding technical indicators: {str(e)}")
                 return None
@@ -118,19 +110,14 @@ class AutoTrader:
             best_signal = None
             best_confidence = 0
 
-            # Get sentiment data with fallback for testnet
-            sentiment_data = await self._get_social_data()
-
             for strategy_name, strategy in self.strategies.items():
                 if not strategy.is_strategy_active():
                     continue
 
                 try:
-                    analysis = await strategy.analyze_market(df, sentiment_data)
-                    if not analysis:
+                    signal = strategy.generate_signals(df)
+                    if not signal:
                         continue
-
-                    signal = strategy.generate_signals(analysis[0])  # Use first analysis result
 
                     portfolio_status = {
                         'available_capital': self.balance,
@@ -141,7 +128,7 @@ class AutoTrader:
 
                     if (signal['action'] != 'hold' and 
                         signal['confidence'] > best_confidence and
-                        await strategy.validate_trade(signal, portfolio_status)):
+                        strategy.validate_trade(signal, portfolio_status)):
                         best_signal = signal
                         best_confidence = signal['confidence']
                         self.active_strategy = strategy_name
@@ -159,7 +146,7 @@ class AutoTrader:
             self.logger.error(f"Market analysis error: {str(e)}")
             return None
 
-    async def execute_trade(self, signal: Optional[Dict[str, Any]]) -> bool:
+    def execute_trade(self, signal: Optional[Dict[str, Any]]) -> bool:
         """Execute a trade based on the generated signal"""
         if not signal:
             return False
@@ -194,7 +181,6 @@ class AutoTrader:
                     'stop_loss': signal['stop_loss']
                 }
                 self.last_action_time = current_time
-                await self.notifier.send_trade_notification('BUY', self.symbol, price, position_size)
                 return True
 
             elif self.is_in_position and self.current_position:
@@ -213,10 +199,6 @@ class AutoTrader:
                         f"Balance={self.balance:.2f}"
                     )
 
-                    await self.notifier.send_trade_notification(
-                        'SELL', self.symbol, price, position_size, profit_loss
-                    )
-
                     self.is_in_position = False
                     self.current_position = None
                     self.last_action_time = current_time
@@ -226,26 +208,24 @@ class AutoTrader:
 
         except Exception as e:
             self.logger.error(f"Trade execution error: {str(e)}")
-            await self.notifier.send_error_notification(self.symbol, str(e))
             return False
 
-    async def run(self, interval: int = 3600):
+    def run(self, interval: int = 3600):
         """Main trading loop"""
         self.logger.info(f"Starting trading bot for {self.symbol}")
         self.logger.info(f"Initial balance: {self.initial_balance}")
 
         try:
             while True:
-                signal = await self.analyze_market()
+                signal = self.analyze_market()
                 if signal:
-                    await self.execute_trade(signal)
-                await asyncio.sleep(interval)
+                    self.execute_trade(signal)
+                time.sleep(interval)
 
         except KeyboardInterrupt:
             self.logger.info("Trading bot stopped manually")
         except Exception as e:
             self.logger.error(f"Critical error in trading bot: {str(e)}")
-            await self.notifier.send_error_notification(self.symbol, str(e))
         finally:
             self.logger.info(f"Bot stopped. Final balance: {self.balance}")
 
@@ -260,14 +240,14 @@ class AutoTrader:
             self.logger.error(f"Error calculating volatility: {str(e)}")
             return None
 
-    async def adjust_strategies_parameters(self, volatility: Optional[float]):
+    def adjust_strategies_parameters(self, volatility: Optional[float]):
         """Adjust strategy parameters based on market volatility"""
         if volatility is None:
             return
 
         try:
             for strategy in self.strategies.values():
-                await strategy.optimize_parameters({'volatility': volatility})
+                strategy.optimize_parameters({'volatility': volatility})
             self.logger.info("Strategy parameters updated based on volatility")
         except Exception as e:
             self.logger.error(f"Error adjusting parameters: {str(e)}")
