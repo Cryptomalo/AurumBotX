@@ -8,7 +8,7 @@ deploymentTarget = "autoscale"
 run = ["sh", "-c", "python3 test_bot.py"]
 
 [workflows]
-runButton = "Project"
+runButton = "Learning Tests"
 
 [[workflows.workflow]]
 name = "Test Bot"
@@ -148,6 +148,22 @@ task = "packager.installForAll"
 task = "shell.exec"
 args = "python main.py"
 waitForPort = 8000
+
+[[workflows.workflow]]
+name = "Full Test Suite"
+author = 39294082
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "python -m pytest utils/test_*.py -v"
+
+[[workflows.workflow]]
+name = "Learning Tests"
+author = 39294082
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "python -m pytest utils/test_suite.py -v"
 
 [[ports]]
 localPort = 5000
