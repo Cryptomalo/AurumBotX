@@ -26,25 +26,34 @@ class WebSocketHandler:
         self.reconnect_attempts = 0
         self.max_reconnect_attempts = 10
 
-        # Setup Binance client
-        self.client = Client(self.api_key, self.api_secret, testnet=self.testnet)
-        self._init_websocket_manager()
+        # Setup Binance client with proper error handling
+        try:
+            self.client = Client(self.api_key, self.api_secret, testnet=self.testnet)
+            self._init_websocket_manager()
+        except BinanceAPIException as e:
+            logger.error(f"Failed to initialize Binance client: {e}")
+            raise
 
     def _init_websocket_manager(self):
-        """Initialize a new WebSocket manager"""
-        self.twm = ThreadedWebsocketManager(
-            api_key=self.api_key,
-            api_secret=self.api_secret,
-            testnet=self.testnet
-        )
+        """Initialize a new WebSocket manager with proper error handling"""
+        try:
+            self.twm = ThreadedWebsocketManager(
+                api_key=self.api_key,
+                api_secret=self.api_secret,
+                testnet=self.testnet
+            )
+            logger.info("WebSocket manager initialized successfully")
+        except Exception as e:
+            logger.error(f"Failed to initialize WebSocket manager: {e}")
+            raise
 
     def setup_socket(self):
-        """Setup WebSocket with proper error handling and authentication"""
+        """Setup WebSocket with enhanced error handling and authentication"""
         try:
             logger.info("Setting up WebSocket connection...")
 
             if not self.api_key or not self.api_secret:
-                logger.warning("No API credentials provided, some features may be limited")
+                logger.warning("No API credentials provided, running in public mode")
 
             # Start threaded websocket manager
             self.twm.start()
@@ -52,15 +61,18 @@ class WebSocketHandler:
                 logger.error("Failed to start ThreadedWebsocketManager")
                 return False
 
-            # Start socket with callback
-            self.twm.start_multiplex_socket(
-                callback=self._message_handler,
-                streams=['btcusdt@trade', 'btcusdt@depth']
-            )
-
-            self.connected = True
-            logger.info("WebSocket connection established successfully")
-            return True
+            # Start socket with callback and proper error handling
+            try:
+                self.twm.start_multiplex_socket(
+                    callback=self._message_handler,
+                    streams=['btcusdt@trade', 'btcusdt@depth']
+                )
+                self.connected = True
+                logger.info("WebSocket connection established successfully")
+                return True
+            except BinanceAPIException as e:
+                logger.error(f"Failed to start multiplex socket: {e}")
+                return False
 
         except BinanceAPIException as e:
             logger.error(f"Binance API error: {str(e)}")
@@ -73,12 +85,13 @@ class WebSocketHandler:
             return False
 
     def _message_handler(self, msg: Dict):
-        """Handle incoming messages with comprehensive error recovery"""
+        """Handle incoming messages with improved error handling and logging"""
         try:
-            if isinstance(msg, dict) and msg.get('e') == 'error':
-                logger.error(f"WebSocket error message: {msg.get('m')}")
-                self._handle_error(msg)
-                return
+            if isinstance(msg, dict):
+                if msg.get('e') == 'error':
+                    logger.error(f"WebSocket error message: {msg.get('m')}")
+                    self._handle_error(msg)
+                    return
 
             stream = msg.get('stream', '')
             if stream in self.handlers:
@@ -93,7 +106,7 @@ class WebSocketHandler:
             logger.error(f"Message handling error: {str(e)}")
 
     def _handle_error(self, error_msg: Any):
-        """Enhanced error handling with specific error codes"""
+        """Enhanced error handling with specific error codes and recovery actions"""
         try:
             if isinstance(error_msg, dict):
                 error_code = error_msg.get('code', 0)
@@ -118,7 +131,7 @@ class WebSocketHandler:
             logger.error(f"Error handling error: {str(e)}")
 
     def reconnect(self):
-        """Advanced reconnection logic with exponential backoff"""
+        """Advanced reconnection logic with exponential backoff and jitter"""
         if not self.keep_running:
             logger.info("Reconnection stopped - service is shutting down")
             return False
@@ -137,7 +150,7 @@ class WebSocketHandler:
             logger.info(f"Attempting to reconnect... (attempt {self.reconnect_attempts + 1}/{self.max_reconnect_attempts})")
 
             # Stop existing connection
-            if self.twm:
+            if hasattr(self, 'twm') and self.twm:
                 try:
                     self.twm.stop()
                 except Exception as e:
@@ -156,7 +169,7 @@ class WebSocketHandler:
                 logger.info("Reconnection successful")
                 self.last_reconnect = now
                 self.reconnect_delay = 1  # Reset delay on success
-                self.reconnect_attempts += 1  # Increment only on success
+                self.reconnect_attempts += 1
                 return True
 
             # Update state on failure
@@ -181,18 +194,18 @@ class WebSocketHandler:
         logger.info(f"Handler registered for stream: {stream}")
 
     def start(self):
-        """Start WebSocket connection with verification"""
+        """Start WebSocket connection with improved error handling"""
         if self.setup_socket():
             logger.info("WebSocket started successfully")
             return True
         return False
 
     def stop(self):
-        """Clean shutdown of WebSocket connection"""
+        """Clean shutdown of WebSocket connection with proper cleanup"""
         try:
             logger.info("Initiating WebSocket shutdown...")
             self.keep_running = False
-            if self.twm:
+            if hasattr(self, 'twm') and self.twm:
                 self.twm.stop()
             self.connected = False
             logger.info("WebSocket connection closed cleanly")
@@ -200,8 +213,8 @@ class WebSocketHandler:
             logger.error(f"Error during WebSocket shutdown: {str(e)}")
 
     def is_connected(self) -> bool:
-        """Check if WebSocket is connected"""
-        return self.connected and self.twm and self.twm.is_alive()
+        """Check if WebSocket is connected with proper state validation"""
+        return self.connected and hasattr(self, 'twm') and self.twm and self.twm.is_alive()
 
     async def send_message(self, message: Dict[str, Any]) -> bool:
         """Send message with improved error handling and retry logic"""

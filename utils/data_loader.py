@@ -1,6 +1,7 @@
 import os
 import time
 import logging
+import asyncio
 from typing import Dict, Optional, List, Union
 from datetime import datetime, timedelta
 import concurrent.futures
@@ -47,7 +48,7 @@ class CryptoDataLoader:
         self._setup_database()
 
     def _setup_client(self):
-        """Setup Binance client connection"""
+        """Setup Binance client connection synchronously"""
         try:
             api_key = os.environ.get('BINANCE_API_KEY')
             api_secret = os.environ.get('BINANCE_API_SECRET')
@@ -63,7 +64,7 @@ class CryptoDataLoader:
             )
             logger.info("Binance client initialized successfully")
 
-            # Test connection
+            # Test connection synchronously
             self.client.ping()
             logger.info("Binance API connection test successful")
         except BinanceAPIException as e:
@@ -74,7 +75,7 @@ class CryptoDataLoader:
             raise
 
     def _setup_database(self):
-        """Setup database connection for persistent storage"""
+        """Setup database connection synchronously"""
         try:
             database_url = os.getenv('DATABASE_URL')
             if database_url:
@@ -86,6 +87,127 @@ class CryptoDataLoader:
         except Exception as e:
             logger.error(f"Database setup error: {e}", exc_info=True)
             self.engine = None
+
+    async def get_historical_data_async(
+        self,
+        symbol: str,
+        period: str = '1d',
+        interval: str = '1m'
+    ) -> Optional[pd.DataFrame]:
+        """Async wrapper for get_historical_data"""
+        loop = asyncio.get_event_loop()
+        return await loop.run_in_executor(
+            None, 
+            self.get_historical_data,
+            symbol,
+            period,
+            interval
+        )
+
+    def get_historical_data(
+        self,
+        symbol: str,
+        period: str = '1d',
+        interval: str = '1m'
+    ) -> Optional[pd.DataFrame]:
+        """Synchronous method to fetch historical data"""
+        try:
+            if not self.client and self.use_live_data:
+                raise ValueError("Client not initialized")
+
+            symbol = self._normalize_symbol(symbol)
+            if symbol not in self.supported_coins:
+                logger.warning(f"Unsupported symbol: {symbol}")
+                return None
+
+            cache_key = f"{symbol}_{period}_{interval}"
+            cached_data = self._get_from_cache(cache_key, interval)
+            if cached_data is not None:
+                return cached_data
+
+            logger.info(f"Fetching {symbol} data for period {period}")
+
+            if not self.use_live_data:
+                return self._get_mock_data(symbol, period, interval)
+
+            # Convert period to milliseconds
+            start_time = self._get_start_time(period)
+
+            # Implement retry logic
+            max_retries = 3
+            for attempt in range(max_retries):
+                try:
+                    klines = self.client.get_klines(
+                        symbol=symbol,
+                        interval=interval,
+                        startTime=start_time,
+                        limit=1000
+                    )
+
+                    if not klines:
+                        logger.warning(f"No data received for {symbol}")
+                        if attempt < max_retries - 1:
+                            continue
+                        return None
+
+                    df = self._process_klines_data(klines)
+                    df = self._add_technical_indicators(df)
+
+                    # Save to cache and database
+                    self._add_to_cache(cache_key, df)
+                    self._save_to_database(symbol, df)
+
+                    return df
+
+                except BinanceAPIException as e:
+                    if e.code == -1003:  # Too many requests
+                        logger.warning(f"Rate limit hit, waiting before retry: {e}")
+                        time.sleep(2 ** attempt)  # Exponential backoff
+                    else:
+                        raise
+                except Exception as e:
+                    if attempt < max_retries - 1:
+                        logger.warning(f"Retry {attempt + 1} for {symbol}: {e}")
+                        time.sleep(1)
+                    else:
+                        raise
+
+        except Exception as e:
+            logger.error(f"Error fetching data for {symbol}: {e}", exc_info=True)
+            return None
+
+    def _get_start_time(self, period: str) -> Optional[int]:
+        """Calculate start time based on period"""
+        period_map = {
+            '1d': timedelta(days=1),
+            '7d': timedelta(days=7),
+            '30d': timedelta(days=30)
+        }
+        delta = period_map.get(period)
+        if delta:
+            return int((datetime.now() - delta).timestamp() * 1000)
+        return None
+
+    def _process_klines_data(self, klines: List) -> pd.DataFrame:
+        """Process raw klines data into DataFrame"""
+        df = pd.DataFrame(
+            klines,
+            columns=[
+                'timestamp', 'Open', 'High', 'Low', 'Close', 'Volume',
+                'close_time', 'quote_av', 'trades', 'tb_base_av', 'tb_quote_av', 'ignore'
+            ]
+        )
+
+        # Convert string values to float
+        for col in ['Open', 'High', 'Low', 'Close', 'Volume']:
+            df[col] = pd.to_numeric(df[col], errors='coerce')
+
+        # Convert timestamp to datetime
+        df['timestamp'] = pd.to_datetime(df['timestamp'], unit='ms')
+        df.set_index('timestamp', inplace=True)
+
+        # Drop unnecessary columns
+        return df[['Open', 'High', 'Low', 'Close', 'Volume']]
 
     def _normalize_symbol(self, symbol: str) -> str:
         """Normalize symbol format for exchange"""
@@ -105,104 +227,6 @@ class CryptoDataLoader:
             return None
         except Exception as e:
             logger.error(f"Cache error for {key}: {e}", exc_info=True)
-            return None
-
-    def get_historical_data(
-        self,
-        symbol: str,
-        period: str = '1d',
-        interval: str = '1m'
-    ) -> Optional[pd.DataFrame]:
-        """Fetch historical data using Binance API"""
-        try:
-            if not self.client and self.use_live_data:
-                raise ValueError("Client not initialized")
-
-            symbol = self._normalize_symbol(symbol)
-            if symbol not in self.supported_coins:
-                logger.warning(f"Unsupported symbol: {symbol}")
-                return None
-
-            cache_key = f"{symbol}_{period}_{interval}"
-            cached_data = self._get_from_cache(cache_key, interval)
-            if cached_data is not None:
-                return cached_data
-
-            logger.info(f"Fetching {symbol} data for period {period}")
-
-            if not self.use_live_data:
-                # Return mock data for testing
-                return self._get_mock_data(symbol, period, interval)
-
-            # Convert period to milliseconds
-            start_time = None
-            if period == '1d':
-                start_time = int((datetime.now() - timedelta(days=1)).timestamp() * 1000)
-            elif period == '7d':
-                start_time = int((datetime.now() - timedelta(days=7)).timestamp() * 1000)
-            elif period == '30d':
-                start_time = int((datetime.now() - timedelta(days=30)).timestamp() * 1000)
-
-            # Implement retry logic
-            max_retries = 3
-            for attempt in range(max_retries):
-                try:
-                    klines = self.client.get_klines(
-                        symbol=symbol,
-                        interval=interval,
-                        startTime=start_time,
-                        limit=1000
-                    )
-
-                    if not klines:
-                        logger.warning(f"No data received for {symbol}")
-                        if attempt < max_retries - 1:
-                            continue
-                        return None
-
-                    df = pd.DataFrame(
-                        klines,
-                        columns=[
-                            'timestamp', 'Open', 'High', 'Low', 'Close', 'Volume',
-                            'close_time', 'quote_av', 'trades', 'tb_base_av', 'tb_quote_av', 'ignore'
-                        ]
-                    )
-
-                    # Convert string values to float
-                    for col in ['Open', 'High', 'Low', 'Close', 'Volume']:
-                        df[col] = pd.to_numeric(df[col], errors='coerce')
-
-                    # Convert timestamp to datetime
-                    df['timestamp'] = pd.to_datetime(df['timestamp'], unit='ms')
-                    df.set_index('timestamp', inplace=True)
-
-                    # Drop unnecessary columns
-                    df = df[['Open', 'High', 'Low', 'Close', 'Volume']]
-
-                    # Add technical indicators
-                    df = self._add_technical_indicators(df)
-
-                    # Save to cache and database
-                    self._add_to_cache(cache_key, df)
-                    self._save_to_database(symbol, df)
-
-                    return df
-
-                except BinanceAPIException as e:
-                    if e.code == -1003:  # Too many requests
-                        logger.warning(f"Rate limit hit, waiting before retry: {e}")
-                        time.sleep(2 ** attempt)  # Exponential backoff
-                    else:
-                        raise
-                except Exception as e:
-                    if attempt < max_retries - 1:
-                        logger.warning(f"Retry {attempt + 1} for {symbol}: {e}")
-                        time.sleep(1)  # Wait before retry
-                    else:
-                        raise
-
-        except Exception as e:
-            logger.error(f"Error fetching data for {symbol}: {e}", exc_info=True)
             return None
 
     def _add_to_cache(self, key: str, data: pd.DataFrame):

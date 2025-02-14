@@ -1,4 +1,5 @@
 import logging
+import asyncio
 from datetime import datetime
 from utils.auto_trader import AutoTrader
 from utils.data_loader import CryptoDataLoader
@@ -11,7 +12,7 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-def run_test():
+async def run_test():
     try:
         logger.info("Starting minimal test")
 
@@ -20,16 +21,16 @@ def run_test():
             symbol="BTCUSDT",
             initial_balance=1000,
             risk_per_trade=0.02,
-            testnet=True,
-            learning_mode=True  # Abilita modalità apprendimento
+            testnet=True
         )
 
-        # Get and analyze market data
+        # Get and analyze market data (using sync methods)
         signal = bot.analyze_market()
         if signal:
             logger.info(f"Signal received: {signal}")
             # Execute trade based on signal
             bot.execute_trade(signal)
+            await asyncio.sleep(1)  # Small delay after trade execution
         else:
             logger.info("No trading signal generated")
 
@@ -39,4 +40,4 @@ def run_test():
         logger.error(f"Test error: {str(e)}")
 
 if __name__ == "__main__":
-    run_test()
+    asyncio.run(run_test())

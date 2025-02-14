@@ -146,7 +146,7 @@ class AutoTrader:
             if self.testnet:
                 self.logger.info("Running in testnet mode")
 
-            # Get market data
+            # Get market data synchronously
             df_short = self.data_loader.get_historical_data(self.symbol, period='1d', interval='1m')
             df_medium = self.data_loader.get_historical_data(self.symbol, period='7d', interval='15m')
             df_long = self.data_loader.get_historical_data(self.symbol, period='30d', interval='1h')
@@ -164,7 +164,7 @@ class AutoTrader:
                 self.logger.error(f"Error analyzing market conditions: {str(e)}")
                 return None
 
-            # Get AI predictions
+            # Get AI predictions synchronously
             try:
                 ai_signal = self.prediction_model.analyze_market_with_ai(
                     df_short, 

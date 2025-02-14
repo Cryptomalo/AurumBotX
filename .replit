@@ -72,7 +72,6 @@ task = "packager.installForAll"
 [[workflows.workflow.tasks]]
 task = "shell.exec"
 args = "python test_strategies.py"
-waitForPort = 5000
 
 [[workflows.workflow]]
 name = "Test Suite"
