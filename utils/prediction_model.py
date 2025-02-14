@@ -9,6 +9,7 @@ from datetime import datetime
 import logging
 import os
 import json
+import asyncio
 from openai import OpenAI
 from typing import Dict, Any, List, Optional
 import pandas_ta as ta
@@ -49,21 +50,27 @@ class PredictionModel:
                 df[f'sma_{ma_period}'] = df['Close'].rolling(window=ma_period).mean()
                 df[f'ema_{ma_period}'] = df['Close'].ewm(span=ma_period, adjust=False).mean()
 
-            # RSI
-            for period in [7, 14, 21]:
-                df[f'RSI_{period}'] = ta.rsi(df['Close'], length=period)
+            # RSI with error handling
+            try:
+                for period in [7, 14, 21]:
+                    rsi = ta.rsi(df['Close'], length=period)
+                    df[f'RSI_{period}'] = rsi
+            except Exception as e:
+                self.logger.error(f"Error calculating RSI: {str(e)}")
 
-            # MACD
-            macd = ta.macd(df['Close'])
-            df = pd.concat([df, macd], axis=1)
+            # MACD with error handling
+            try:
+                macd = ta.macd(df['Close'])
+                df = pd.concat([df, macd], axis=1)
+            except Exception as e:
+                self.logger.error(f"Error calculating MACD: {str(e)}")
 
-            # Bollinger Bands
-            bb = ta.bbands(df['Close'])
-            df = pd.concat([df, bb], axis=1)
-
-            # Additional indicators
-            df['ADX'] = ta.adx(df['High'], df['Low'], df['Close'])
-            df['OBV'] = ta.obv(df['Close'], df['Volume'])
+            # Bollinger Bands with error handling
+            try:
+                bb = ta.bbands(df['Close'])
+                df = pd.concat([df, bb], axis=1)
+            except Exception as e:
+                self.logger.error(f"Error calculating Bollinger Bands: {str(e)}")
 
             df = df.dropna()
             return df
@@ -72,20 +79,22 @@ class PredictionModel:
             self.logger.error(f"Error creating features: {str(e)}")
             return df
 
-    def analyze_market_with_ai(self, market_data: pd.DataFrame, social_data: Dict) -> Optional[Dict]:
+    async def analyze_market_with_ai(self, market_data: pd.DataFrame, social_data: Dict[str, Any]) -> Optional[Dict[str, Any]]:
         """Market analysis using AI and multiple data sources"""
         try:
             # Prepare market data features
             market_features = self.create_features(market_data)
+            if market_features is None:
+                return None
 
-            # Get technical predictions
+            # Get technical predictions synchronously
             technical_prediction = self.predict(market_features)
             if technical_prediction is None:
                 return None
 
-            # Get AI analysis from OpenAI
+            # Get AI analysis from OpenAI asynchronously
             market_context = self._prepare_market_context(market_features)
-            ai_analysis = self._get_openai_analysis(market_context)
+            ai_analysis = await self._get_openai_analysis(market_context)
 
             # Combine signals
             confidence = self._calculate_confidence(technical_prediction, ai_analysis)
@@ -96,9 +105,9 @@ class PredictionModel:
                 'confidence': confidence,
                 'suggested_position_size': self._calculate_position_size(confidence),
                 'indicators': {
-                    'rsi': market_features['RSI_14'].iloc[-1],
-                    'macd': market_features['MACD_12_26_9'].iloc[-1],
-                    'adx': market_features['ADX_14'].iloc[-1]
+                    'rsi': market_features.get('RSI_14', pd.Series([])).iloc[-1] if 'RSI_14' in market_features else None,
+                    'macd': market_features.get('MACD_12_26_9', pd.Series([])).iloc[-1] if 'MACD_12_26_9' in market_features else None,
+                    'adx': market_features.get('ADX_14', pd.Series([])).iloc[-1] if 'ADX_14' in market_features else None
                 }
             }
 
@@ -111,18 +120,20 @@ class PredictionModel:
         latest_data = market_data.iloc[-1]
         return (
             f"Current market data:\n"
-            f"Price: {latest_data['Close']:.2f}\n"
-            f"Volume: {latest_data['Volume']:.2f}\n"
+            f"Price: {latest_data.get('Close', 0):.2f}\n"
+            f"Volume: {latest_data.get('Volume', 0):.2f}\n"
             f"RSI: {latest_data.get('RSI_14', 0):.2f}\n"
             f"MACD: {latest_data.get('MACD_12_26_9', 0):.4f}\n"
             f"ADX: {latest_data.get('ADX_14', 0):.2f}\n"
             f"Recent volatility: {latest_data.get('volatility_20', 0):.4f}"
         )
 
-    def _get_openai_analysis(self, market_context: str) -> Dict:
-        """Get market analysis from OpenAI"""
+    async def _get_openai_analysis(self, market_context: str) -> Dict[str, Any]:
+        """Get market analysis from OpenAI asynchronously"""
         try:
-            response = self.openai_client.chat.completions.create(
+            # Run OpenAI API call in a thread pool to avoid blocking
+            response = await asyncio.to_thread(
+                self.openai_client.chat.completions.create,
                 model="gpt-4o",  # Using the latest model as of May 13, 2024
                 messages=[
                     {
@@ -151,17 +162,16 @@ class PredictionModel:
                 'reasoning': 'Analysis failed, defaulting to neutral position'
             }
 
-    def _calculate_confidence(self, technical_pred: Dict, ai_analysis: Dict) -> float:
+    def _calculate_confidence(self, technical_pred: Dict[str, Any], ai_analysis: Dict[str, Any]) -> float:
         """Calculate overall confidence score"""
         technical_conf = technical_pred.get('confidence', 0.5)
         ai_conf = ai_analysis.get('confidence', 0.5)
 
-        # Weighted average of confidence scores with technical analysis having more weight
+        # Weighted average with technical analysis having more weight
         return 0.7 * technical_conf + 0.3 * ai_conf
 
     def _calculate_position_size(self, confidence: float) -> float:
         """Calculate suggested position size based on confidence"""
-        # Base position size on confidence level with conservative scaling
         return min(1.0, max(0.1, confidence * 0.8))
 
     def train(self, df, target_column='Close', prediction_horizon=5):

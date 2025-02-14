@@ -102,8 +102,9 @@ class SwingTradingStrategy(BaseStrategy):
             if not self.has_sentiment:
                 return 0.5
 
-            response = self.client.chat.completions.create(
-                model="gpt-4",  # Latest stable model
+            response = await asyncio.to_thread(
+                self.client.chat.completions.create,
+                model="gpt-4o",  # Latest stable model
                 messages=[{
                     "role": "system",
                     "content": "Analyze the current market sentiment for long-term crypto trading and provide a sentiment score between 0 and 1."

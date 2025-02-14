@@ -162,18 +162,20 @@ class AutoTrader:
 
             # Get AI predictions asynchronously
             try:
-                ai_signal = await self.prediction_model.analyze_market_with_ai(
-                    market_data, 
-                    sentiment_data
-                )
-                if ai_signal and ai_signal['confidence'] > 0.75:
-                    return {
-                        'action': 'buy' if ai_signal['technical_score'] > 0.5 else 'sell',
-                        'confidence': ai_signal['confidence'],
-                        'size_factor': ai_signal['suggested_position_size'],
-                        'target_price': await self._calculate_target_price_async(market_data, ai_signal),
-                        'stop_loss': await self._calculate_stop_loss_async(market_data, ai_signal)
-                    }
+                if sentiment_data:
+                    ai_signal = await self.prediction_model.analyze_market_with_ai(
+                        market_data, 
+                        sentiment_data
+                    )
+                    if ai_signal and ai_signal.get('confidence', 0) > 0.75:
+                        return {
+                            'action': 'buy' if ai_signal['technical_score'] > 0.5 else 'sell',
+                            'confidence': ai_signal['confidence'],
+                            'size_factor': ai_signal['suggested_position_size'],
+                            'target_price': await self._calculate_target_price_async(market_data, ai_signal),
+                            'stop_loss': await self._calculate_stop_loss_async(market_data, ai_signal),
+                            'price': market_data['Close'].iloc[-1]
+                        }
             except Exception as e:
                 self.logger.warning(f"AI analysis error (non-critical): {str(e)}")
 
@@ -186,8 +188,12 @@ class AutoTrader:
                     continue
 
                 try:
-                    signal = await strategy.analyze_market(market_data, sentiment_data)
-                    if not signal:
+                    analysis = await strategy.analyze_market(market_data, sentiment_data)
+                    if not analysis or len(analysis) == 0:
+                        continue
+
+                    signal = analysis[0] if isinstance(analysis, list) else analysis
+                    if signal['action'] == 'hold':
                         continue
 
                     portfolio_status = {
@@ -197,8 +203,7 @@ class AutoTrader:
                         'market_trend': 1 if market_data['Close'].iloc[-1] > market_data['SMA_20'].iloc[-1] else -1
                     }
 
-                    if (signal['action'] != 'hold' and 
-                        signal['confidence'] > best_confidence and
+                    if (signal.get('confidence', 0) > best_confidence and 
                         await strategy.validate_trade(signal, portfolio_status)):
                         best_signal = signal
                         best_confidence = signal['confidence']
@@ -307,13 +312,15 @@ class AutoTrader:
                     self.last_action_time = current_time
                     return {'success': True, 'action': 'sell', 'price': price, 'profit_loss': profit_loss}
 
-        return {'success': False, 'reason': 'No trade conditions met'}
+            return {'success': False, 'reason': 'No trade conditions met'}
 
         except Exception as e:
             self.logger.error(f"Trade execution error: {str(e)}")
             if self.notifier:
                 await self.notifier.send_error_notification(self.symbol, str(e))
             return {'success': False, 'error': str(e)}
+        finally:
+            self.logger.info("Trade execution complete (with or without errors)")
 
     async def run(self, interval: int = 3600):
         """Main trading loop"""
