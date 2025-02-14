@@ -8,6 +8,7 @@ import plotly.graph_objects as go
 from utils.auto_trader import AutoTrader
 from utils.data_loader import CryptoDataLoader
 from utils.backup_manager import BackupManager
+from utils.auth_manager import UserAuth, login_required
 import json
 from pathlib import Path
 
@@ -22,8 +23,10 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-# Inizializzazione stato sessione
 def init_session_state():
+    """Inizializza lo stato della sessione"""
+    if 'auth' not in st.session_state:
+        st.session_state.auth = UserAuth()
     if 'bot' not in st.session_state:
         st.session_state.bot = None
     if 'data_loader' not in st.session_state:
@@ -34,6 +37,140 @@ def init_session_state():
         st.session_state.error_count = 0
     if 'market_data' not in st.session_state:
         st.session_state.market_data = None
+
+def show_login_page():
+    """Mostra la pagina di login"""
+    st.title("🔐 Login")
+
+    with st.form("login_form"):
+        username = st.text_input("Username")
+        password = st.text_input("Password", type="password")
+        submitted = st.form_submit_button("Login")
+
+        if submitted:
+            if st.session_state.auth.login(username, password):
+                st.success("Login effettuato con successo!")
+                st.rerun()
+            else:
+                st.error("Login fallito. Verifica le credenziali.")
+
+def show_main_app():
+    """Mostra l'applicazione principale"""
+    st.title("🌟 AurumBot Trading Platform")
+    st.markdown("""
+    Piattaforma avanzata di trading crypto con automazione intelligente e backtesting sofisticato.
+    """)
+
+    # Sidebar con controlli trading
+    with st.sidebar:
+        # Mostra info utente
+        user = st.session_state.auth.get_current_user()
+        if user:
+            st.info(f"👤 Logged in as: {user['username']}")
+            if st.button("📤 Logout"):
+                st.session_state.auth.logout()
+                st.rerun()
+
+        st.title("Controlli Trading")
+
+        # Selezione coppia trading
+        trading_pair = st.selectbox(
+            "Seleziona Coppia Trading",
+            ["BTC/USDT", "ETH/USDT", "SOL/USDT", "DOGE/USDT", "SHIB/USDT"],
+            index=0
+        )
+
+        # Selezione strategia
+        strategy = st.selectbox(
+            "Strategia Trading",
+            ["scalping", "swing", "meme_coin"],
+            index=0
+        )
+
+        # Parametri trading
+        initial_balance = st.number_input(
+            "Bilancio Iniziale (USDT)",
+            min_value=10.0,
+            value=1000.0,
+            step=10.0
+        )
+
+        risk_per_trade = st.slider(
+            "Rischio per Trade (%)",
+            min_value=0.1,
+            max_value=5.0,
+            value=2.0,
+            step=0.1
+        )
+
+        # Pulsanti Start/Stop
+        col1, col2 = st.columns(2)
+        with col1:
+            if st.button("▶️ Avvia"):
+                try:
+                    st.session_state.bot = AutoTrader(
+                        symbol=trading_pair,
+                        initial_balance=initial_balance,
+                        risk_per_trade=risk_per_trade/100,
+                        testnet=True
+                    )
+                    st.session_state.data_loader = CryptoDataLoader(testnet=True)
+                    st.session_state.bot.backup_manager = BackupManager() # Assuming this is how BackupManager is initialized
+                    st.success(f"Bot inizializzato per {trading_pair}")
+                except Exception as e:
+                    st.error(f"Errore avvio: {str(e)}")
+                    st.session_state.error_count += 1
+                    logger.error(f"Errore inizializzazione bot: {str(e)}")
+
+        with col2:
+            if st.button("⏹️ Ferma"):
+                st.session_state.bot = None
+                st.session_state.data_loader = None
+                st.info("Trading fermato")
+
+    # Main content tabs
+    if st.session_state.auth.check_subscription():
+        tab1, tab2, tab3, tab4 = st.tabs([
+            "📊 Analisi Mercato",
+            "🤖 Auto Trading",
+            "💼 Portfolio",
+            "⚙️ Settings"
+        ])
+
+        # Tab contenuti
+        with tab1:
+            if st.session_state.bot and st.session_state.data_loader:
+                df = load_market_data(st.session_state.bot.symbol)
+
+                if df is not None:
+                    chart = create_candlestick_chart(df)
+                    if chart:
+                        st.plotly_chart(chart, use_container_width=True)
+                    render_market_metrics(df)
+                else:
+                    st.warning("Dati di mercato non disponibili")
+            else:
+                st.info("Avvia il trading per vedere l'analisi di mercato")
+
+        with tab2:
+            if st.session_state.bot:
+                render_portfolio_status()
+            else:
+                st.info("Avvia il trading per accedere al trading automatico")
+
+        with tab3:
+            if st.session_state.bot:
+                render_portfolio_status()
+            else:
+                st.info("Avvia il trading per vedere il portfolio")
+
+        with tab4:
+            render_backup_controls()
+    else:
+        st.warning("È richiesto un abbonamento attivo per accedere a queste funzionalità.")
+        if st.button("💎 Attiva Abbonamento"):
+            st.info("Reindirizzamento alla pagina di attivazione...")
+
 
 def create_candlestick_chart(df):
     """Crea un grafico candlestick interattivo"""
@@ -208,99 +345,11 @@ def main():
         # Inizializzazione stato
         init_session_state()
 
-        # Titolo e descrizione
-        st.title("🤖 AurumBot Trading Platform")
-        st.markdown("""
-        Piattaforma avanzata di trading crypto con automazione intelligente e backtesting sofisticato.
-        """)
-
-        # Sidebar
-        with st.sidebar:
-            st.title("Controlli Trading")
-
-            # Selezione coppia trading
-            trading_pair = st.selectbox(
-                "Seleziona Coppia Trading",
-                ["BTC/USDT", "ETH/USDT", "SOL/USDT", "DOGE/USDT", "SHIB/USDT"],
-                index=0
-            )
-
-            # Selezione strategia
-            strategy = st.selectbox(
-                "Strategia Trading",
-                ["scalping", "swing", "meme_coin"],
-                index=0
-            )
-
-            # Parametri trading
-            initial_balance = st.number_input(
-                "Bilancio Iniziale (USDT)",
-                min_value=10.0,
-                value=1000.0,
-                step=10.0
-            )
-
-            risk_per_trade = st.slider(
-                "Rischio per Trade (%)",
-                min_value=0.1,
-                max_value=5.0,
-                value=2.0,
-                step=0.1
-            )
-
-            # Pulsanti Start/Stop
-            col1, col2 = st.columns(2)
-            with col1:
-                if st.button("▶️ Avvia"):
-                    try:
-                        st.session_state.bot = AutoTrader(
-                            symbol=trading_pair,
-                            initial_balance=initial_balance,
-                            risk_per_trade=risk_per_trade/100,
-                            testnet=True
-                        )
-                        st.session_state.data_loader = CryptoDataLoader(testnet=True)
-                        st.session_state.bot.backup_manager = BackupManager() # Assuming this is how BackupManager is initialized
-                        st.success(f"Bot inizializzato per {trading_pair}")
-                    except Exception as e:
-                        st.error(f"Errore avvio: {str(e)}")
-                        st.session_state.error_count += 1
-                        logger.error(f"Errore inizializzazione bot: {str(e)}")
-
-            with col2:
-                if st.button("⏹️ Ferma"):
-                    st.session_state.bot = None
-                    st.session_state.data_loader = None
-                    st.info("Trading fermato")
-
-        # Tab contenuto principale
-        tab1, tab2, tab3 = st.tabs(["Analisi Mercato", "Performance", "Backup"])
-
-        # Tab Analisi Mercato
-        with tab1:
-            if st.session_state.bot and st.session_state.data_loader:
-                df = load_market_data(st.session_state.bot.symbol)
-
-                if df is not None:
-                    chart = create_candlestick_chart(df)
-                    if chart:
-                        st.plotly_chart(chart, use_container_width=True)
-                    render_market_metrics(df)
-                else:
-                    st.warning("Dati di mercato non disponibili")
-            else:
-                st.info("Avvia il trading per vedere l'analisi di mercato")
-
-        # Tab Performance
-        with tab2:
-            if st.session_state.bot:
-                render_portfolio_status()
-            else:
-                st.info("Avvia il trading per vedere le metriche di performance")
-
-        # Backup Tab
-        with tab3:
-            render_backup_controls()
+        # Mostra login o app principale
+        if not st.session_state.auth.is_authenticated():
+            show_login_page()
+        else:
+            show_main_app()
 
     except Exception as e:
         st.error("Si è verificato un errore imprevisto. Ricarica la pagina.")
