@@ -146,36 +146,40 @@ class TestBot:
             while self.should_run and datetime.now() - self.start_time < self.test_duration:
                 for pair in test_pairs:
                     try:
-                        # Get real market data
-                        market_data = await self.data_loader.get_historical_data(pair)
-                        if market_data is None:
+                        # Get market data synchronously
+                        market_data = self.data_loader.get_historical_data(pair)
+                        if market_data is None or market_data.empty:
                             logger.warning(f"No market data available for {pair}")
                             continue
 
-                        # Get sentiment data
+                        logger.info(f"Retrieved market data for {pair}")
+
+                        # Get sentiment data asynchronously
                         sentiment = await self.sentiment_analyzer.analyze_social_sentiment(pair.split('/')[0])
 
-                        # Run strategy analysis
-                        signals = await self.strategy_manager.analyze_all_strategies(
-                            market_data,
-                            sentiment,
-                            {'available_balance': 10000}  # Test with 10k USDT
-                        )
+                        # Run strategy analysis asynchronously
+                        signals = []
+                        if self.strategy_manager:
+                            signals = await self.strategy_manager.analyze_all_strategies(
+                                market_data,
+                                sentiment,
+                                {'available_balance': 10000}  # Test with 10k USDT
+                            )
 
                         # Log analysis results
                         logger.info(f"Analysis results for {pair}:")
-                        logger.info(f"Market price: {market_data['Close'].iloc[-1]}")
+                        logger.info(f"Market price: {market_data['close'].iloc[-1]}")
                         logger.info(f"Sentiment score: {sentiment.get('score', 0)}")
                         logger.info(f"Generated signals: {len(signals)}")
 
                         # Execute valid signals on testnet
                         for signal in signals:
-                            if signal.get('action') != 'hold':
+                            if signal and signal.get('action') != 'hold':
                                 result = await self.execute_test_trade(signal)
                                 logger.info(f"Trade execution result: {result}")
 
                     except Exception as e:
-                        logger.error(f"Error processing {pair}: {str(e)}")
+                        logger.error(f"Error processing {pair}: {str(e)}", exc_info=True)
 
                 # Wait before next iteration
                 await asyncio.sleep(60)  # 1-minute interval
@@ -184,7 +188,7 @@ class TestBot:
             return True
 
         except Exception as e:
-            logger.error(f"Error during extended test: {str(e)}")
+            logger.error(f"Error during extended test: {str(e)}", exc_info=True)
             return False
         finally:
             await self.cleanup()

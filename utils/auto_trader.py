@@ -121,6 +121,7 @@ class AutoTrader:
     def calculate_market_volatility(self, df: pd.DataFrame) -> Optional[float]:
         """Calculate market volatility using standard deviation"""
         try:
+            # Updated to use correct column name 'Close'
             returns = df['Close'].pct_change().dropna()
             volatility = returns.std()
             self.logger.info(f"Calculated volatility: {volatility}")
@@ -153,6 +154,8 @@ class AutoTrader:
 
             # Add technical indicators synchronously
             try:
+                # Convert column names to lowercase for consistency
+                market_data.columns = market_data.columns.str.lower()
                 market_data = self.indicators.add_all_indicators(market_data)
                 market_volatility = self.calculate_market_volatility(market_data)
                 self.adjust_strategies_parameters(market_volatility)
@@ -200,7 +203,7 @@ class AutoTrader:
                         'available_capital': self.balance,
                         'total_capital': self.initial_balance,
                         'current_spread': 0.001,
-                        'market_trend': 1 if market_data['Close'].iloc[-1] > market_data['SMA_20'].iloc[-1] else -1
+                        'market_trend': 1 if market_data['Close'].iloc[-1] > market_data['sma_20'].iloc[-1] else -1
                     }
 
                     if (signal.get('confidence', 0) > best_confidence and 

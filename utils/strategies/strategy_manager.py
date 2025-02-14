@@ -81,7 +81,7 @@ class StrategyManager:
             if not self.is_live_testing:
                 logger.warning("StrategyManager not in live testing mode, nothing to cleanup")
                 return True
-                
+
             logger.info("Starting StrategyManager cleanup...")
 
             # Disattiva la modalità live testing
@@ -244,6 +244,44 @@ class StrategyManager:
         except Exception as e:
             logger.error(f"Errore nell'esecuzione delle strategie: {e}")
             return []
+
+    async def analyze_all_strategies(self, market_data: pd.DataFrame, sentiment_data: Dict, portfolio: Dict) -> List[Dict]:
+        """Analizza il mercato usando tutte le strategie attive"""
+        all_signals = []
+        try:
+            # Calcola il risk score globale
+            risk_score = self._calculate_risk_score(market_data, sentiment_data)
+
+            # Analizza con ogni strategia attiva
+            for strategy_name, strategy in self.active_strategies.items():
+                try:
+                    logger.info(f"Analyzing market with {strategy_name}")
+                    signals = await strategy.analyze_market(
+                        market_data=market_data,
+                        sentiment_data=sentiment_data,
+                        risk_score=risk_score
+                    )
+
+                    if signals:
+                        # Filtra e valida i segnali
+                        filtered_signals = self._filter_signals_by_risk(signals, strategy_name)
+
+                        # Aggiorna statistiche
+                        self._update_performance(strategy_name, filtered_signals)
+
+                        # Aggiungi i segnali filtrati
+                        all_signals.extend(filtered_signals)
+
+                except Exception as e:
+                    logger.error(f"Error analyzing market with {strategy_name}: {e}", exc_info=True)
+                    continue
+
+            return all_signals
+
+        except Exception as e:
+            logger.error(f"Error in analyze_all_strategies: {e}", exc_info=True)
+            return []
+
 
     def _calculate_risk_score(self, market_data: pd.DataFrame, sentiment_data: Dict) -> float:
         """Calcola un risk score composito basato su multipli fattori"""

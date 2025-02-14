@@ -12,11 +12,17 @@ runButton = "Project"
 
 [[workflows.workflow]]
 name = "Test Bot"
-author = 39294082
+author = "agent"
+
+[workflows.workflow.metadata]
+agentRequireRestartOnSave = false
+
+[[workflows.workflow.tasks]]
+task = "packager.installForAll"
 
 [[workflows.workflow.tasks]]
 task = "shell.exec"
-args = "python minimal_test.py"
+args = "python test_bot.py"
 
 [[workflows.workflow]]
 name = "Test Strategies"
@@ -62,6 +68,10 @@ args = "AurumBot"
 [[workflows.workflow.tasks]]
 task = "workflow.run"
 args = "Testnet Trading Bot"
+
+[[workflows.workflow.tasks]]
+task = "workflow.run"
+args = "Test Bot"
 
 [[workflows.workflow]]
 name = "Trading Bot Tests"
