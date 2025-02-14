@@ -8,7 +8,7 @@ import plotly.graph_objects as go
 from utils.auto_trader import AutoTrader
 from utils.data_loader import CryptoDataLoader
 from utils.backup_manager import BackupManager
-from utils.auth_manager import UserAuth, login_required
+from components.login import render_login_page
 import json
 from pathlib import Path
 
@@ -25,8 +25,6 @@ logger = logging.getLogger(__name__)
 
 def init_session_state():
     """Inizializza lo stato della sessione"""
-    if 'auth' not in st.session_state:
-        st.session_state.auth = UserAuth()
     if 'bot' not in st.session_state:
         st.session_state.bot = None
     if 'data_loader' not in st.session_state:
@@ -38,77 +36,6 @@ def init_session_state():
     if 'market_data' not in st.session_state:
         st.session_state.market_data = None
 
-def show_login_page():
-    """Mostra la pagina di login"""
-    st.title("🔐 Login")
-
-    with st.form("login_form"):
-        username = st.text_input("Username")
-        password = st.text_input("Password", type="password")
-        submitted = st.form_submit_button("Login")
-
-        if submitted:
-            if st.session_state.auth.login(username, password):
-                st.success("Login effettuato con successo!")
-                st.rerun()
-            else:
-                st.error("Login fallito. Verifica le credenziali.")
-
-def render_backup_controls_sidebar():
-    """Visualizza i controlli per la gestione dei backup nella sidebar"""
-    try:
-        if not st.session_state.bot:
-            st.sidebar.info("Avvia il trading bot per gestire i backup")
-            return
-
-        st.sidebar.markdown("---")
-        st.sidebar.subheader("🔄 Gestione Backup")
-
-        # Lista dei backup disponibili
-        try:
-            backups = st.session_state.bot.backup_manager.list_backups()
-        except Exception as e:
-            st.sidebar.error(f"Errore nel caricamento dei backup: {str(e)}")
-            return
-
-        if backups:
-            # Mostra i backup disponibili
-            selected_backup = st.sidebar.selectbox(
-                "Backup Disponibili",
-                options=[b['timestamp'] for b in backups],
-                format_func=lambda x: f"Backup del {datetime.strptime(x, '%Y%m%d_%H%M%S').strftime('%d/%m/%Y %H:%M:%S')}"
-            )
-
-            # Pulsante di ripristino
-            if st.sidebar.button("🔄 Ripristina"):
-                with st.sidebar.spinner("Ripristino configurazione in corso..."):
-                    if st.session_state.bot.restore_config(selected_backup):
-                        st.sidebar.success("Configurazione ripristinata!")
-                    else:
-                        st.sidebar.error("Errore durante il ripristino")
-
-            # Pulizia backup
-            st.sidebar.markdown("---")
-            max_backups = st.sidebar.slider(
-                "Max backup da mantenere",
-                min_value=1,
-                max_value=50,
-                value=10
-            )
-            if st.sidebar.button("🧹 Pulisci Backup"):
-                with st.sidebar.spinner("Pulizia backup in corso..."):
-                    try:
-                        st.session_state.bot.backup_manager.cleanup_old_backups(max_backups)
-                        st.sidebar.success(f"Mantenuti ultimi {max_backups} backup")
-                    except Exception as e:
-                        st.sidebar.error(f"Errore pulizia backup: {str(e)}")
-        else:
-            st.sidebar.info("Nessun backup disponibile")
-
-    except Exception as e:
-        st.sidebar.error(f"Errore gestione backup: {str(e)}")
-        logger.error(f"Errore backup: {str(e)}")
-
 def show_main_app():
     """Mostra l'applicazione principale"""
     st.title("🌟 AurumBot Trading Platform")
@@ -118,14 +45,6 @@ def show_main_app():
 
     # Sidebar con controlli trading
     with st.sidebar:
-        # Mostra info utente
-        user = st.session_state.auth.get_current_user()
-        if user:
-            st.info(f"👤 Logged in as: {user['username']}")
-            if st.button("📤 Logout"):
-                st.session_state.auth.logout()
-                st.rerun()
-
         st.title("Controlli Trading")
 
         # Selezione coppia trading
@@ -183,47 +102,42 @@ def show_main_app():
                 st.session_state.data_loader = None
                 st.info("Trading fermato")
 
-        # Aggiungi controlli backup nella sidebar
-        render_backup_controls_sidebar()
-
     # Main content tabs
-    if st.session_state.auth.check_subscription():
-        tab1, tab2, tab3 = st.tabs([
-            "📊 Analisi Mercato",
-            "🤖 Auto Trading",
-            "💼 Portfolio"
-        ])
+    tab1, tab2, tab3, tab4 = st.tabs([
+        "📊 Analisi Mercato",
+        "🤖 Auto Trading", 
+        "💼 Portfolio",
+        "🔗 Social Connections"
+    ])
 
-        # Tab contenuti
-        with tab1:
-            if st.session_state.bot and st.session_state.data_loader:
-                df = load_market_data(st.session_state.bot.symbol)
-                if df is not None:
-                    chart = create_candlestick_chart(df)
-                    if chart:
-                        st.plotly_chart(chart, use_container_width=True)
-                    render_market_metrics(df)
-                else:
-                    st.warning("Dati di mercato non disponibili")
+    # Tab contenuti
+    with tab1:
+        if st.session_state.bot and st.session_state.data_loader:
+            df = load_market_data(st.session_state.bot.symbol)
+            if df is not None:
+                chart = create_candlestick_chart(df)
+                if chart:
+                    st.plotly_chart(chart, use_container_width=True)
+                render_market_metrics(df)
             else:
-                st.info("Avvia il trading per vedere l'analisi di mercato")
+                st.warning("Dati di mercato non disponibili")
+        else:
+            st.info("Avvia il trading per vedere l'analisi di mercato")
 
-        with tab2:
-            if st.session_state.bot:
-                render_portfolio_status()
-            else:
-                st.info("Avvia il trading per accedere al trading automatico")
+    with tab2:
+        if st.session_state.bot:
+            render_portfolio_status()
+        else:
+            st.info("Avvia il trading per accedere al trading automatico")
 
-        with tab3:
-            if st.session_state.bot:
-                render_portfolio_status()
-            else:
-                st.info("Avvia il trading per vedere il portfolio")
+    with tab3:
+        if st.session_state.bot:
+            render_portfolio_status()
+        else:
+            st.info("Avvia il trading per vedere il portfolio")
 
-    else:
-        st.warning("È richiesto un abbonamento attivo per accedere a queste funzionalità.")
-        if st.button("💎 Attiva Abbonamento"):
-            st.info("Reindirizzamento alla pagina di attivazione...")
+    with tab4:
+        render_login_page()
 
 def create_candlestick_chart(df):
     """Crea un grafico candlestick interattivo"""
@@ -321,7 +235,6 @@ def render_portfolio_status():
         logger.error(f"Errore visualizzazione portfolio: {str(e)}")
         st.error("Errore nell'aggiornamento del portfolio")
 
-
 def main():
     try:
         # Configurazione pagina
@@ -334,11 +247,8 @@ def main():
         # Inizializzazione stato
         init_session_state()
 
-        # Mostra login o app principale
-        if not st.session_state.auth.is_authenticated():
-            show_login_page()
-        else:
-            show_main_app()
+        # Mostra direttamente l'app principale
+        show_main_app()
 
     except Exception as e:
         st.error("Si è verificato un errore imprevisto. Ricarica la pagina.")
