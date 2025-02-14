@@ -13,8 +13,8 @@ class AurumBotTester:
         self.data_loader = CryptoDataLoader()
         self.sentiment_analyzer = SentimentAnalyzer()
 
-    def test_stability(self, duration_minutes=30):
-        """Test di stabilità del sistema"""
+    def test_stability(self, duration_minutes=15):
+        """Test di stabilità del sistema ottimizzato"""
         try:
             start_time = datetime.now()
             end_time = start_time + timedelta(minutes=duration_minutes)
@@ -22,16 +22,23 @@ class AurumBotTester:
             bot = AutoTrader("BTC/USD", initial_balance=10000)
             errors = []
             iterations = 0
+            max_consecutive_errors = 3
+            consecutive_errors = 0
 
             while datetime.now() < end_time:
                 try:
                     signal = bot.analyze_market()
                     bot.execute_trade(signal)
                     iterations += 1
+                    consecutive_errors = 0 #Reset consecutive errors on success
                     time.sleep(2)  # Intervallo ridotto tra le iterazioni
                 except Exception as e:
                     errors.append(str(e))
                     self.logger.error(f"Errore durante il test: {str(e)}")
+                    consecutive_errors += 1
+                    if consecutive_errors >= max_consecutive_errors:
+                        self.logger.error(f"Test stopped due to {max_consecutive_errors} consecutive errors.")
+                        break
 
             results = {
                 "duration": duration_minutes,

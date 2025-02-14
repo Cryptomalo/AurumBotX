@@ -11,33 +11,35 @@ logger = logging.getLogger(__name__)
 
 class Database:
     def __init__(self, connection_string, max_retries=5):
-        self.connection_string = connection_string
+        self.db_url = connection_string #Renamed for clarity and consistency
         self.max_retries = max_retries
         self.engine = None
         self.Session = None
         self.connect()
 
     def connect(self):
-        retry_count = 0
-        retry_delay = 1
-        self.last_connection_attempt = time.time()
-        
-        if hasattr(self, 'engine') and self.engine:
-            return True
-
-        while retry_count < self.max_retries:
+        """Inizializza la connessione al database con retry"""
+        max_retries = 3
+        retry_delay = 5
+        for attempt in range(max_retries):
             try:
-                self.engine = create_engine(self.connection_string)
+                self.engine = create_engine(
+                    self.db_url,
+                    pool_size=5,
+                    max_overflow=10,
+                    pool_timeout=30,
+                    pool_recycle=1800
+                )
                 self.Session = sessionmaker(bind=self.engine)
                 logger.info("Database connection established")
                 return True
-            except SQLAlchemyError as e:
-                logger.error(f"Database connection attempt {retry_count + 1} failed: {e}")
-                retry_count += 1
-                time.sleep(retry_delay)
-                retry_delay *= 2
-
-        raise Exception("Failed to connect to database after multiple attempts")
+            except Exception as e:
+                logger.error(f"Database connection attempt {attempt + 1} failed: {e}")
+                if attempt < max_retries - 1:
+                    time.sleep(retry_delay)
+                    retry_delay *= 2
+        logger.error("Failed to connect to database after multiple attempts")
+        return False
 
 # Improved database connection handling
 def get_db():
@@ -47,6 +49,9 @@ def get_db():
         raise ValueError("DATABASE_URL environment variable not set")
 
     db = Database(db_url)
+    if not db.connect():
+        raise Exception("Failed to connect to the database.")
+
     session = None
     try:
         session = db.Session()

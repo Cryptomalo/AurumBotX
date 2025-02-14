@@ -86,12 +86,18 @@ class WebSocketHandler:
             self.ws = await websockets.connect(
                 "wss://stream.binance.com:9443/ws/!ticker@arr",
                 ping_interval=20,
-                ping_timeout=10,
-                close_timeout=10,
-                max_size=2**23,  # 8MB max message size
+                ping_timeout=20,
+                close_timeout=15,
+                max_size=2**23,
                 compression=None,
-                max_queue=2**10  # Limit message queue
+                max_queue=2**10,
+                extra_headers={
+                    'User-Agent': 'Mozilla/5.0',
+                    'Origin': 'https://www.binance.com'
+                }
             )
+            await self._subscribe_channels()
+            return True
             self.connected = True
             self.last_heartbeat = time.time()
 
