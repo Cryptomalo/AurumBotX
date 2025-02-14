@@ -84,7 +84,7 @@ class WebSocketHandler:
                 await self.ws.close()
 
             self.ws = await websockets.connect(
-                "wss://stream.binance.com:9443/ws/!ticker@arr",
+                "wss://testnet.binance.vision/ws/!ticker@arr" if self.testnet else "wss://stream.binance.com:9443/ws/!ticker@arr",
                 ping_interval=20,
                 ping_timeout=20,
                 close_timeout=15,

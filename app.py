@@ -84,6 +84,8 @@ def show_main_app():
             value=2.0,
             step=0.1
         )
+        
+        testnet_mode = st.checkbox("Modalità Testnet", value=True)
 
         # Pulsanti Start/Stop
         col1, col2 = st.columns(2)
@@ -94,7 +96,7 @@ def show_main_app():
                         symbol=trading_pair,
                         initial_balance=initial_balance,
                         risk_per_trade=risk_per_trade/100,
-                        testnet=True
+                        testnet=testnet_mode
                     )
                     st.session_state.data_loader = CryptoDataLoader(testnet=True)
                     st.session_state.bot.backup_manager = BackupManager()
