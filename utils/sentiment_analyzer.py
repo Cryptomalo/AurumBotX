@@ -86,33 +86,37 @@ class SentimentAnalyzer:
                     self.openai_client.chat.completions.create,
                     model="gpt-4o",
                     messages=[{
-                    "role": "system",
-                    "content": """Sei un esperto analista di mercato crypto specializzato in:
-                    1. Analisi del sentiment sui social media
-                    2. Identificazione di pattern di mercato
-                    3. Valutazione del momentum e della forza del trend
+                        "role": "system",
+                        "content": """Sei un esperto analista di mercato crypto specializzato in:
+                        1. Analisi del sentiment sui social media
+                        2. Identificazione di pattern di mercato
+                        3. Valutazione del momentum e della forza del trend
 
-                    Analizza i dati forniti e produci insights dettagliati."""
-                }, {
-                    "role": "user",
-                    "content": prompt
-                }],
-                temperature=0.7,
-                response_format={"type": "json_object"}
-            )
+                        Analizza i dati forniti e produci insights dettagliati."""
+                    }, {
+                        "role": "user",
+                        "content": prompt
+                    }],
+                    temperature=0.7,
+                    response_format={"type": "json_object"}
+                )
 
-            if completion and completion.choices:
-                try:
-                    result = json.loads(completion.choices[0].message.content)
-                    # Valida la struttura della risposta
-                    required_fields = ["sentiment", "confidence", "key_points", "market_signals"]
-                    if all(field in result for field in required_fields):
-                        return result
-                except json.JSONDecodeError:
-                    logger.error("Failed to decode AI response as JSON")
-                    return None
+                if completion and completion.choices:
+                    try:
+                        result = json.loads(completion.choices[0].message.content)
+                        # Valida la struttura della risposta
+                        required_fields = ["sentiment", "confidence", "key_points", "market_signals"]
+                        if all(field in result for field in required_fields):
+                            return result
+                    except json.JSONDecodeError:
+                        logger.error("Failed to decode AI response as JSON")
+                        return None
 
-            return None
+                return None
+
+            except Exception as e:
+                logger.error(f"Error in OpenAI API call: {e}")
+                return None
 
         except Exception as e:
             logger.error(f"Error in AI analysis: {e}")
@@ -169,8 +173,8 @@ class SentimentAnalyzer:
             momentum_score = analysis.get("momentum_score", 0.5)
 
             # Calcola lo score finale
-            final_score = (base_score * 0.4 + 
-                         confidence * 0.3 + 
+            final_score = (base_score * 0.4 +
+                         confidence * 0.3 +
                          momentum_score * 0.3)
 
             return max(0.0, min(1.0, final_score))
