@@ -35,9 +35,17 @@ def init_session_state():
         st.session_state.error_count = 0
     if 'market_data' not in st.session_state:
         st.session_state.market_data = None
+    if 'user' not in st.session_state:
+        st.session_state.user = {'authenticated': False}
+
 
 def show_main_app():
     """Mostra l'applicazione principale"""
+    # Se l'utente non è autenticato con il wallet, mostra solo la pagina di login
+    if 'user' not in st.session_state or not st.session_state['user'].get('authenticated'):
+        render_login_page()
+        return
+
     st.title("🌟 AurumBot Trading Platform")
     st.markdown("""
     Piattaforma avanzata di trading crypto con automazione intelligente e backtesting sofisticato.
