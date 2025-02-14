@@ -1,13 +1,41 @@
 import streamlit as st
 import os
 from urllib.parse import urlencode
+from web3 import Web3
 
 from utils.social_auth_manager import SocialAuthManager
-from utils.auth_config import get_provider_config
+from utils.auth_config import get_provider_config, get_wallet_config
 
-def render_login_page():
-    st.title("Aurum Bot")
-    st.header("Connect your social media accounts")
+def render_wallet_login():
+    """Render the wallet connection interface"""
+    st.title("🌟 AurumBot")
+    st.header("Connect your Wallet")
+
+    # Initialize Web3
+    w3 = Web3()
+
+    # Get wallet configuration
+    eth_config = get_wallet_config("ETH")
+
+    if st.button("Connect Wallet"):
+        # Placeholder for wallet connection
+        # In production, this would use Web3 to handle actual wallet connection
+        mock_address = "0x742d35Cc6634C0532925a3b844Bc454e4438f44e"
+
+        if w3.is_address(mock_address):
+            st.session_state['user'] = {
+                'id': 1,  # Temporary user ID
+                'wallet_address': mock_address,
+                'authenticated': True
+            }
+            st.success(f"Wallet connected: {mock_address[:6]}...{mock_address[-4:]}")
+            st.rerun()
+        else:
+            st.error("Invalid wallet address")
+
+def render_social_connections():
+    """Render social media connection options after wallet authentication"""
+    st.header("Connect your social accounts")
 
     social_auth = SocialAuthManager()
 
@@ -55,17 +83,6 @@ def render_login_page():
         else:
             st.error("GitHub configuration not complete")
 
-    # Handle OAuth callbacks
-    params = st.experimental_get_query_params()
-    if 'code' in params:
-        code = params['code'][0]
-        state = params.get('state', [None])[0]
-
-        if state == 'reddit_auth':
-            handle_reddit_callback(code, social_auth)
-        elif state == 'github_auth':
-            handle_github_callback(code, social_auth)
-
     # Show connected accounts
     if 'user' in st.session_state:
         st.markdown("---")
@@ -81,22 +98,38 @@ def render_login_page():
                             st.success(f"{conn['provider']} disconnected")
                             st.rerun()
 
-def handle_reddit_callback(code, social_auth):
-    try:
-        token_data = social_auth.exchange_reddit_code(code)
-        if token_data and 'access_token' in token_data:
-            st.success("Successfully connected Reddit account!")
-            st.session_state.user = {'id': 1}  # Temporary user ID
-            st.rerun()
-    except Exception as e:
-        st.error(f"Failed to connect Reddit account: {str(e)}")
+def render_login_page():
+    """Main login page renderer"""
+    # If user is not authenticated, show wallet login
+    if 'user' not in st.session_state or not st.session_state['user'].get('authenticated'):
+        render_wallet_login()
+    else:
+        # If authenticated with wallet, show social connections
+        render_social_connections()
 
-def handle_github_callback(code, social_auth):
-    try:
-        token_data = social_auth.exchange_github_code(code)
-        if token_data and 'access_token' in token_data:
-            st.success("Successfully connected GitHub account!")
-            st.session_state.user = {'id': 1}  # Temporary user ID
-            st.rerun()
-    except Exception as e:
-        st.error(f"Failed to connect GitHub account: {str(e)}")
+def handle_oauth_callbacks():
+    """Handle OAuth callbacks from social platforms"""
+    params = st.experimental_get_query_params()
+    if 'code' in params:
+        code = params['code'][0]
+        state = params.get('state', [None])[0]
+
+        social_auth = SocialAuthManager()
+
+        if state == 'reddit_auth':
+            try:
+                token_data = social_auth.exchange_reddit_code(code)
+                if token_data and 'access_token' in token_data:
+                    st.success("Successfully connected Reddit account!")
+                    st.rerun()
+            except Exception as e:
+                st.error(f"Failed to connect Reddit account: {str(e)}")
+
+        elif state == 'github_auth':
+            try:
+                token_data = social_auth.exchange_github_code(code)
+                if token_data and 'access_token' in token_data:
+                    st.success("Successfully connected GitHub account!")
+                    st.rerun()
+            except Exception as e:
+                st.error(f"Failed to connect GitHub account: {str(e)}")
