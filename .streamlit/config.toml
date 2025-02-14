@@ -1,6 +1,6 @@
 [server]
 headless = true
-port = 5000
+port = 8503
 address = "0.0.0.0"
 enableCORS = false
 enableXsrfProtection = false
@@ -20,7 +20,7 @@ textColor = "#FAFAFA"
 font = "sans serif"
 
 [logger]
-level = "debug"
+level = "info"
 messageFormat = "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
 
 [client]
