@@ -1,8 +1,9 @@
 import logging
 import bcrypt
-from datetime import datetime, timedelta
+from datetime import datetime
 from typing import Optional, Dict, Any
 import streamlit as st
+from sqlalchemy import text
 from utils.database import get_db
 
 logger = logging.getLogger(__name__)
@@ -10,7 +11,7 @@ logger = logging.getLogger(__name__)
 class UserAuth:
     def __init__(self):
         self.db = next(get_db())
-    
+
     def verify_password(self, plain_password: str, hashed_password: str) -> bool:
         try:
             return bcrypt.checkpw(
@@ -20,60 +21,69 @@ class UserAuth:
         except Exception as e:
             logger.error(f"Error verifying password: {e}")
             return False
-    
+
     def hash_password(self, password: str) -> str:
         salt = bcrypt.gensalt()
         return bcrypt.hashpw(password.encode('utf-8'), salt).decode('utf-8')
-    
+
     def login(self, username: str, password: str) -> bool:
         try:
+            logger.info(f"Attempting login for user: {username}")
             result = self.db.execute(
-                "SELECT id, username, password_hash FROM users WHERE username = %s",
-                (username,)
+                text("SELECT id, username, password_hash FROM users WHERE username = :username"),
+                {"username": username}
             ).fetchone()
-            
-            if result and self.verify_password(password, result[2]):
-                # Aggiorna last_login
-                self.db.execute(
-                    "UPDATE users SET last_login = %s WHERE id = %s",
-                    (datetime.now(), result[0])
-                )
-                self.db.commit()
-                
-                # Imposta la sessione
-                st.session_state['user'] = {
-                    'id': result[0],
-                    'username': result[1],
-                    'authenticated': True,
-                    'login_time': datetime.now().isoformat()
-                }
-                return True
+
+            if result:
+                logger.info("User found in database")
+                if self.verify_password(password, result[2]):
+                    logger.info("Password verified successfully")
+                    # Update last_login
+                    self.db.execute(
+                        text("UPDATE users SET last_login = :login_time WHERE id = :user_id"),
+                        {"login_time": datetime.now(), "user_id": result[0]}
+                    )
+                    self.db.commit()
+
+                    # Set session
+                    st.session_state['user'] = {
+                        'id': result[0],
+                        'username': result[1],
+                        'authenticated': True,
+                        'login_time': datetime.now().isoformat()
+                    }
+                    return True
+                else:
+                    logger.warning("Invalid password provided")
+            else:
+                logger.warning(f"No user found with username: {username}")
             return False
         except Exception as e:
             logger.error(f"Login error: {e}")
             return False
-    
+
     def logout(self):
         if 'user' in st.session_state:
             del st.session_state['user']
-    
+            logger.info("User logged out successfully")
+
     def is_authenticated(self) -> bool:
         return 'user' in st.session_state and st.session_state['user'].get('authenticated', False)
-    
+
     def get_current_user(self) -> Optional[Dict[str, Any]]:
         return st.session_state.get('user', None)
-    
+
     def check_subscription(self) -> bool:
         if not self.is_authenticated():
             return False
-        
+
         try:
             user_id = st.session_state['user']['id']
             result = self.db.execute(
-                "SELECT subscription_expires_at FROM users WHERE id = %s",
-                (user_id,)
+                text("SELECT subscription_expires_at FROM users WHERE id = :user_id"),
+                {"user_id": user_id}
             ).fetchone()
-            
+
             if result and result[0]:
                 return datetime.now() < result[0]
             return False
