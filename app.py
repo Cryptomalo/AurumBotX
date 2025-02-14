@@ -54,6 +54,61 @@ def show_login_page():
             else:
                 st.error("Login fallito. Verifica le credenziali.")
 
+def render_backup_controls_sidebar():
+    """Visualizza i controlli per la gestione dei backup nella sidebar"""
+    try:
+        if not st.session_state.bot:
+            st.sidebar.info("Avvia il trading bot per gestire i backup")
+            return
+
+        st.sidebar.markdown("---")
+        st.sidebar.subheader("🔄 Gestione Backup")
+
+        # Lista dei backup disponibili
+        try:
+            backups = st.session_state.bot.backup_manager.list_backups()
+        except Exception as e:
+            st.sidebar.error(f"Errore nel caricamento dei backup: {str(e)}")
+            return
+
+        if backups:
+            # Mostra i backup disponibili
+            selected_backup = st.sidebar.selectbox(
+                "Backup Disponibili",
+                options=[b['timestamp'] for b in backups],
+                format_func=lambda x: f"Backup del {datetime.strptime(x, '%Y%m%d_%H%M%S').strftime('%d/%m/%Y %H:%M:%S')}"
+            )
+
+            # Pulsante di ripristino
+            if st.sidebar.button("🔄 Ripristina"):
+                with st.sidebar.spinner("Ripristino configurazione in corso..."):
+                    if st.session_state.bot.restore_config(selected_backup):
+                        st.sidebar.success("Configurazione ripristinata!")
+                    else:
+                        st.sidebar.error("Errore durante il ripristino")
+
+            # Pulizia backup
+            st.sidebar.markdown("---")
+            max_backups = st.sidebar.slider(
+                "Max backup da mantenere",
+                min_value=1,
+                max_value=50,
+                value=10
+            )
+            if st.sidebar.button("🧹 Pulisci Backup"):
+                with st.sidebar.spinner("Pulizia backup in corso..."):
+                    try:
+                        st.session_state.bot.backup_manager.cleanup_old_backups(max_backups)
+                        st.sidebar.success(f"Mantenuti ultimi {max_backups} backup")
+                    except Exception as e:
+                        st.sidebar.error(f"Errore pulizia backup: {str(e)}")
+        else:
+            st.sidebar.info("Nessun backup disponibile")
+
+    except Exception as e:
+        st.sidebar.error(f"Errore gestione backup: {str(e)}")
+        logger.error(f"Errore backup: {str(e)}")
+
 def show_main_app():
     """Mostra l'applicazione principale"""
     st.title("🌟 AurumBot Trading Platform")
@@ -115,7 +170,7 @@ def show_main_app():
                         testnet=True
                     )
                     st.session_state.data_loader = CryptoDataLoader(testnet=True)
-                    st.session_state.bot.backup_manager = BackupManager() # Assuming this is how BackupManager is initialized
+                    st.session_state.bot.backup_manager = BackupManager()
                     st.success(f"Bot inizializzato per {trading_pair}")
                 except Exception as e:
                     st.error(f"Errore avvio: {str(e)}")
@@ -128,20 +183,21 @@ def show_main_app():
                 st.session_state.data_loader = None
                 st.info("Trading fermato")
 
+        # Aggiungi controlli backup nella sidebar
+        render_backup_controls_sidebar()
+
     # Main content tabs
     if st.session_state.auth.check_subscription():
-        tab1, tab2, tab3, tab4 = st.tabs([
+        tab1, tab2, tab3 = st.tabs([
             "📊 Analisi Mercato",
             "🤖 Auto Trading",
-            "💼 Portfolio",
-            "⚙️ Settings"
+            "💼 Portfolio"
         ])
 
         # Tab contenuti
         with tab1:
             if st.session_state.bot and st.session_state.data_loader:
                 df = load_market_data(st.session_state.bot.symbol)
-
                 if df is not None:
                     chart = create_candlestick_chart(df)
                     if chart:
@@ -164,13 +220,10 @@ def show_main_app():
             else:
                 st.info("Avvia il trading per vedere il portfolio")
 
-        with tab4:
-            render_backup_controls()
     else:
         st.warning("È richiesto un abbonamento attivo per accedere a queste funzionalità.")
         if st.button("💎 Attiva Abbonamento"):
             st.info("Reindirizzamento alla pagina di attivazione...")
-
 
 def create_candlestick_chart(df):
     """Crea un grafico candlestick interattivo"""
@@ -268,70 +321,6 @@ def render_portfolio_status():
         logger.error(f"Errore visualizzazione portfolio: {str(e)}")
         st.error("Errore nell'aggiornamento del portfolio")
 
-def render_backup_controls():
-    """Visualizza i controlli per la gestione dei backup"""
-    try:
-        if not st.session_state.bot:
-            st.info("Avvia il trading bot per gestire i backup")
-            return
-
-        st.subheader("Gestione Backup")
-
-        # Lista dei backup disponibili
-        try:
-            backups = st.session_state.bot.backup_manager.list_backups()
-        except Exception as e:
-            st.error(f"Errore nel caricamento dei backup: {str(e)}")
-            return
-
-        if backups:
-            # Mostra i backup disponibili
-            selected_backup = st.selectbox(
-                "Backup Disponibili",
-                options=[b['timestamp'] for b in backups],
-                format_func=lambda x: f"Backup del {datetime.strptime(x, '%Y%m%d_%H%M%S').strftime('%d/%m/%Y %H:%M:%S')}"
-            )
-
-            # Mostra dettagli del backup selezionato
-            if selected_backup:
-                try:
-                    backup_path = Path("backup") / selected_backup
-                    log_file = backup_path / "BACKUP_LOG.md"
-                    if log_file.exists():
-                        with open(log_file, "r") as f:
-                            st.markdown(f.read())
-
-                    # Pulsante di ripristino
-                    if st.button("🔄 Ripristina Configurazione"):
-                        with st.spinner("Ripristino configurazione in corso..."):
-                            if st.session_state.bot.restore_config(selected_backup):
-                                st.success("Configurazione ripristinata con successo!")
-                            else:
-                                st.error("Errore durante il ripristino della configurazione")
-                except Exception as e:
-                    st.error(f"Errore nel caricamento dei dettagli del backup: {str(e)}")
-
-            # Pulizia backup
-            st.markdown("---")
-            max_backups = st.slider(
-                "Numero massimo di backup da mantenere",
-                min_value=1,
-                max_value=50,
-                value=10
-            )
-            if st.button("🧹 Pulisci Backup Vecchi"):
-                with st.spinner("Pulizia backup in corso..."):
-                    try:
-                        st.session_state.bot.backup_manager.cleanup_old_backups(max_backups)
-                        st.success(f"Mantenuti gli ultimi {max_backups} backup")
-                    except Exception as e:
-                        st.error(f"Errore durante la pulizia dei backup: {str(e)}")
-        else:
-            st.info("Nessun backup disponibile")
-
-    except Exception as e:
-        st.error(f"Errore nella gestione dei backup: {str(e)}")
-        logger.error(f"Errore backup: {str(e)}")
 
 def main():
     try:
