@@ -135,12 +135,17 @@ def render_backup_controls():
     """Visualizza i controlli per la gestione dei backup"""
     try:
         if not st.session_state.bot:
+            st.info("Avvia il trading bot per gestire i backup")
             return
 
         st.subheader("Gestione Backup")
 
         # Lista dei backup disponibili
-        backups = st.session_state.bot.backup_manager.list_backups()
+        try:
+            backups = st.session_state.bot.backup_manager.list_backups()
+        except Exception as e:
+            st.error(f"Errore nel caricamento dei backup: {str(e)}")
+            return
 
         if backups:
             # Mostra i backup disponibili
@@ -152,18 +157,22 @@ def render_backup_controls():
 
             # Mostra dettagli del backup selezionato
             if selected_backup:
-                backup_path = Path("backup") / selected_backup
-                log_file = backup_path / "BACKUP_LOG.md"
-                if log_file.exists():
-                    with open(log_file, "r") as f:
-                        st.markdown(f.read())
+                try:
+                    backup_path = Path("backup") / selected_backup
+                    log_file = backup_path / "BACKUP_LOG.md"
+                    if log_file.exists():
+                        with open(log_file, "r") as f:
+                            st.markdown(f.read())
 
-                # Pulsante di ripristino
-                if st.button("🔄 Ripristina Configurazione"):
-                    if st.session_state.bot.restore_config(selected_backup):
-                        st.success("Configurazione ripristinata con successo!")
-                    else:
-                        st.error("Errore durante il ripristino della configurazione")
+                    # Pulsante di ripristino
+                    if st.button("🔄 Ripristina Configurazione"):
+                        with st.spinner("Ripristino configurazione in corso..."):
+                            if st.session_state.bot.restore_config(selected_backup):
+                                st.success("Configurazione ripristinata con successo!")
+                            else:
+                                st.error("Errore durante il ripristino della configurazione")
+                except Exception as e:
+                    st.error(f"Errore nel caricamento dei dettagli del backup: {str(e)}")
 
             # Pulizia backup
             st.markdown("---")
@@ -174,8 +183,12 @@ def render_backup_controls():
                 value=10
             )
             if st.button("🧹 Pulisci Backup Vecchi"):
-                st.session_state.bot.backup_manager.cleanup_old_backups(max_backups)
-                st.success(f"Mantenuti gli ultimi {max_backups} backup")
+                with st.spinner("Pulizia backup in corso..."):
+                    try:
+                        st.session_state.bot.backup_manager.cleanup_old_backups(max_backups)
+                        st.success(f"Mantenuti gli ultimi {max_backups} backup")
+                    except Exception as e:
+                        st.error(f"Errore durante la pulizia dei backup: {str(e)}")
         else:
             st.info("Nessun backup disponibile")
 

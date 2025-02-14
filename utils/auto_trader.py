@@ -341,12 +341,12 @@ class AutoTrader:
 
         except KeyboardInterrupt:
             self.logger.info("Trading bot stopped manually")
-            self.stop() #Added to stop backup manager gracefully
+            self.stop() 
         except Exception as e:
             self.logger.error(f"Critical error in trading bot: {str(e)}")
             if self.notifier:
                 self.notifier.send_error_notification(self.symbol, str(e))
-            self.stop() #Added to stop backup manager gracefully
+            self.stop() 
         finally:
             self.logger.info(f"Bot stopped. Final balance: {self.balance}")
 
