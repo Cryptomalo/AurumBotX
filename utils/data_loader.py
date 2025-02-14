@@ -95,14 +95,16 @@ class CryptoDataLoader:
         interval: str = '1m'
     ) -> Optional[pd.DataFrame]:
         """Async wrapper for get_historical_data"""
-        loop = asyncio.get_event_loop()
-        return await loop.run_in_executor(
-            None, 
-            self.get_historical_data,
-            symbol,
-            period,
-            interval
-        )
+        try:
+            return await asyncio.to_thread(
+                self.get_historical_data,
+                symbol,
+                period,
+                interval
+            )
+        except Exception as e:
+            logger.error(f"Error in async historical data fetch: {e}")
+            return None
 
     def get_historical_data(
         self,
@@ -130,47 +132,25 @@ class CryptoDataLoader:
             if not self.use_live_data:
                 return self._get_mock_data(symbol, period, interval)
 
-            # Convert period to milliseconds
-            start_time = self._get_start_time(period)
+            klines = self.client.get_klines(
+                symbol=symbol,
+                interval=interval,
+                startTime=self._get_start_time(period),
+                limit=1000
+            )
 
-            # Implement retry logic
-            max_retries = 3
-            for attempt in range(max_retries):
-                try:
-                    klines = self.client.get_klines(
-                        symbol=symbol,
-                        interval=interval,
-                        startTime=start_time,
-                        limit=1000
-                    )
+            if not klines:
+                logger.warning(f"No data received for {symbol}")
+                return None
 
-                    if not klines:
-                        logger.warning(f"No data received for {symbol}")
-                        if attempt < max_retries - 1:
-                            continue
-                        return None
+            df = self._process_klines_data(klines)
+            df = self._add_technical_indicators(df)
 
-                    df = self._process_klines_data(klines)
-                    df = self._add_technical_indicators(df)
+            # Save to cache and database
+            self._add_to_cache(cache_key, df)
+            self._save_to_database(symbol, df)
 
-                    # Save to cache and database
-                    self._add_to_cache(cache_key, df)
-                    self._save_to_database(symbol, df)
-
-                    return df
-
-                except BinanceAPIException as e:
-                    if e.code == -1003:  # Too many requests
-                        logger.warning(f"Rate limit hit, waiting before retry: {e}")
-                        time.sleep(2 ** attempt)  # Exponential backoff
-                    else:
-                        raise
-                except Exception as e:
-                    if attempt < max_retries - 1:
-                        logger.warning(f"Retry {attempt + 1} for {symbol}: {e}")
-                        time.sleep(1)
-                    else:
-                        raise
+            return df
 
         except Exception as e:
             logger.error(f"Error fetching data for {symbol}: {e}", exc_info=True)

@@ -1,15 +1,10 @@
 import logging
-from typing import Dict, List, Optional, Union, Any
 import asyncio
-from datetime import datetime, timedelta
-import pandas as pd
-import numpy as np
-import openai
-from telethon import TelegramClient
-import tweepy
-import praw
+from typing import Dict, List, Optional, Union, Any
+from datetime import datetime
+import json
 import os
-from utils.database import get_db
+from openai import OpenAI
 
 logger = logging.getLogger(__name__)
 
@@ -17,66 +12,18 @@ class SentimentAnalyzer:
     def __init__(self):
         """Initialize sentiment analyzer with OpenAI assistant"""
         # the newest OpenAI model is "gpt-4o" which was released May 13, 2024
-        self.openai_client = openai.OpenAI(
+        self.openai_client = OpenAI(
             api_key=os.environ.get("OPENAI_API_KEY")
         )
-        self.assistant_id = "asst_E21NUMje1wAB3TjAOBX9V6iY"
         self.initialize_social_clients()
-        self._setup_assistant()
-
-    def _setup_assistant(self):
-        """Initialize OpenAI assistant for specialized trading analysis"""
-        try:
-            self.assistant = self.openai_client.beta.assistants.retrieve(
-                assistant_id=self.assistant_id
-            )
-            logger.info("OpenAI assistant initialized successfully")
-        except Exception as e:
-            logger.error(f"Failed to initialize OpenAI assistant: {e}")
-            self.assistant = None
-
-    def initialize_social_clients(self):
-        """Initialize social media clients with improved error handling"""
-        try:
-            # Reddit setup with better error handling
-            try:
-                self.reddit = praw.Reddit(
-                    client_id=os.getenv("REDDIT_CLIENT_ID"),
-                    client_secret=os.getenv("REDDIT_CLIENT_SECRET"),
-                    user_agent="AurumBot/1.0 Crypto Market Analyzer"
-                )
-                # Verify credentials
-                self.reddit.user.me()
-                logger.info("Reddit client initialized successfully")
-            except Exception as reddit_e:
-                logger.error(f"Reddit initialization failed: {reddit_e}")
-                self.reddit = None
-
-            # Twitter setup
-            try:
-                self.twitter = tweepy.Client(
-                    bearer_token=os.getenv("TWITTER_BEARER_TOKEN"),
-                    wait_on_rate_limit=True
-                )
-                logger.info("Twitter client initialized successfully")
-            except Exception as twitter_e:
-                logger.error(f"Twitter initialization failed: {twitter_e}")
-                self.twitter = None
-
-            # Telegram setup - temporarily disabled
-            self.telegram = None
-            logger.info("Telegram integration temporarily disabled")
-
-        except Exception as e:
-            logger.error(f"Error initializing social clients: {e}")
-            raise
 
     async def analyze_social_sentiment(self, symbol: str) -> Dict[str, Any]:
         """Analyze social media sentiment with comprehensive error handling"""
         try:
+            # Ottieni dati social in modo asincrono
             reddit_data = await self.get_reddit_sentiment(symbol) if self.reddit else []
             twitter_data = await self.get_twitter_sentiment(symbol) if self.twitter else []
-            telegram_data = []
+            telegram_data = []  # Temporaneamente disabilitato
 
             combined_data = {
                 "reddit": reddit_data,
@@ -93,25 +40,32 @@ class SentimentAnalyzer:
                     "score": 0.0
                 }
 
-            # Get both general sentiment and specialized trading analysis
-            analysis = await self.analyze_with_ai(combined_data)
-            trading_analysis = await self.analyze_with_assistant(combined_data, symbol)
+            try:
+                # Analisi asincrona con GPT-4o
+                analysis = await self.analyze_with_ai(combined_data)
 
-            if analysis is None:
+                if analysis:
+                    score = self.calculate_sentiment_score(analysis)
+                    return {
+                        "raw_data": combined_data,
+                        "analysis": analysis,
+                        "score": score
+                    }
+                else:
+                    logger.warning("AI analysis failed, using fallback")
+                    return {
+                        "error": "AI analysis failed",
+                        "raw_data": combined_data,
+                        "score": 0.5  # Neutral fallback
+                    }
+
+            except Exception as e:
+                logger.error(f"Error in AI analysis: {e}")
                 return {
-                    "error": "Failed to analyze sentiment",
+                    "error": str(e),
                     "raw_data": combined_data,
-                    "score": 0.0
+                    "score": 0.5  # Neutral fallback
                 }
-
-            # Combine both analyses
-            combined_analysis = self._combine_analyses(analysis, trading_analysis)
-
-            return {
-                "raw_data": combined_data,
-                "analysis": combined_analysis,
-                "score": self.calculate_sentiment_score(combined_analysis)
-            }
 
         except Exception as e:
             logger.error(f"Error in social sentiment analysis: {e}")
@@ -121,242 +75,126 @@ class SentimentAnalyzer:
                 "score": 0.0
             }
 
-    async def analyze_with_assistant(self, data: Dict[str, Any], symbol: str) -> Dict[str, Any]:
-        """Analyze data using the specialized trading assistant"""
-        try:
-            if not self.assistant:
-                logger.warning("Assistant not initialized, skipping specialized analysis")
-                return None
-
-            # Create a thread for this analysis
-            thread = self.openai_client.beta.threads.create()
-
-            # Add market data message
-            market_data_msg = f"""
-            Analyzing {symbol} market sentiment:
-
-            Social Media Activity:
-            - Reddit posts: {len(data['reddit'])}
-            - Twitter mentions: {len(data['twitter'])}
-
-            Key Metrics:
-            - Reddit engagement: {sum(post['score'] for post in data['reddit'])}
-            - Twitter engagement: {sum(tweet['metrics'].get('like_count', 0) for tweet in data['twitter'])}
-
-            Please analyze the trading implications and potential market signals.
-            """
-
-            self.openai_client.beta.threads.messages.create(
-                thread_id=thread.id,
-                role="user",
-                content=market_data_msg
-            )
-
-            # Run the assistant
-            run = self.openai_client.beta.threads.runs.create(
-                thread_id=thread.id,
-                assistant_id=self.assistant_id
-            )
-
-            # Wait for completion
-            while True:
-                run_status = self.openai_client.beta.threads.runs.retrieve(
-                    thread_id=thread.id,
-                    run_id=run.id
-                )
-                if run_status.status == 'completed':
-                    break
-                elif run_status.status in ['failed', 'cancelled', 'expired']:
-                    logger.error(f"Assistant analysis failed with status: {run_status.status}")
-                    return None
-                await asyncio.sleep(1)
-
-            # Get the assistant's response
-            messages = self.openai_client.beta.threads.messages.list(
-                thread_id=thread.id
-            )
-
-            # Parse the last assistant message
-            for message in messages.data:
-                if message.role == "assistant":
-                    return self._parse_assistant_response(message.content[0].text.value)
-
-            return None
-
-        except Exception as e:
-            logger.error(f"Error in assistant analysis: {e}")
-            return None
-
-    def _parse_assistant_response(self, response: str) -> Dict[str, Any]:
-        """Parse the assistant's response into structured data"""
-        try:
-            # Extract key trading signals and insights
-            lines = response.split('\n')
-            signals = []
-            confidence = 0.5
-            sentiment = "neutral"
-
-            for line in lines:
-                if "confidence:" in line.lower():
-                    try:
-                        confidence = float(line.split(':')[1].strip().rstrip('%')) / 100
-                    except:
-                        pass
-                elif "sentiment:" in line.lower():
-                    sentiment = line.split(':')[1].strip().lower()
-                elif line.strip():
-                    signals.append(line.strip())
-
-            return {
-                "trading_signals": signals,
-                "trading_confidence": confidence,
-                "market_sentiment": sentiment,
-                "raw_analysis": response
-            }
-
-        except Exception as e:
-            logger.error(f"Error parsing assistant response: {e}")
-            return None
-
-    def _combine_analyses(self, general_analysis: Dict[str, Any], trading_analysis: Optional[Dict[str, Any]]) -> Dict[str, Any]:
-        """Combine general sentiment analysis with specialized trading analysis"""
-        if not trading_analysis:
-            return general_analysis
-
-        combined = {
-            "sentiment": general_analysis.get("sentiment", "neutral"),
-            "confidence": general_analysis.get("confidence", 0.5),
-            "key_points": general_analysis.get("key_points", []),
-            "trading_signals": trading_analysis.get("trading_signals", []),
-            "trading_confidence": trading_analysis.get("trading_confidence", 0.5),
-            "market_sentiment": trading_analysis.get("market_sentiment", "neutral"),
-            "raw_analysis": f"General Analysis:\n{general_analysis.get('raw_analysis', '')}\n\nTrading Analysis:\n{trading_analysis.get('raw_analysis', '')}"
-        }
-
-        # Adjust overall confidence based on both analyses
-        combined["confidence"] = (combined["confidence"] + combined["trading_confidence"]) / 2
-
-        return combined
-
-    async def analyze_with_ai(self, data: Dict[str, Any]) -> Dict[str, Any]:
-        """Analizza i dati social con AI"""
+    async def analyze_with_ai(self, data: Dict[str, Any]) -> Optional[Dict[str, Any]]:
+        """Analizza i dati social con AI avanzata"""
         try:
             prompt = self._create_analysis_prompt(data)
-            response = await self.openai_client.chat.completions.create(
-                model="gpt-4",
+
+            # Utilizzo asincrono di GPT-4o con formato JSON
+            completion = await asyncio.to_thread(
+                self.openai_client.chat.completions.create,
+                model="gpt-4o",
                 messages=[{
                     "role": "system",
-                    "content": "You are a crypto market sentiment analyzer. Analyze the social media data and provide insights."
+                    "content": """Sei un esperto analista di mercato crypto specializzato in:
+                    1. Analisi del sentiment sui social media
+                    2. Identificazione di pattern di mercato
+                    3. Valutazione del momentum e della forza del trend
+
+                    Analizza i dati forniti e produci insights dettagliati."""
                 }, {
                     "role": "user",
                     "content": prompt
                 }],
-                temperature=0.7
+                temperature=0.7,
+                response_format={"type": "json_object"}
             )
 
-            result = self._parse_ai_response(response.choices[0].message.content)
-            if result is None:
-                return {
-                    "sentiment": "neutral",
-                    "confidence": 0.5,
-                    "key_points": [],
-                    "raw_analysis": "Analysis failed"
-                }
+            if completion and completion.choices:
+                try:
+                    result = json.loads(completion.choices[0].message.content)
+                    # Valida la struttura della risposta
+                    required_fields = ["sentiment", "confidence", "key_points", "market_signals"]
+                    if all(field in result for field in required_fields):
+                        return result
+                except json.JSONDecodeError:
+                    logger.error("Failed to decode AI response as JSON")
+                    return None
 
-            return result
+            return None
 
         except Exception as e:
             logger.error(f"Error in AI analysis: {e}")
-            return {
-                "sentiment": "neutral",
-                "confidence": 0.5,
-                "key_points": [],
-                "raw_analysis": f"Error: {str(e)}"
-            }
-
-    def _create_analysis_prompt(self, data: Dict[str, Any]) -> str:
-        """Crea il prompt per l'analisi AI"""
-        return f"""
-        Analyze the following social media data for crypto sentiment:
-
-        Reddit Posts: {len(data['reddit'])} posts
-        Twitter Mentions: {len(data['twitter'])} tweets
-
-        Key metrics:
-        - Reddit engagement: {sum(post['score'] for post in data['reddit'])}
-        - Twitter engagement: {sum(tweet['metrics'].get('like_count', 0) for tweet in data['twitter'])}
-
-        Please analyze the overall sentiment, identify key trends, and potential market signals.
-        Provide your response with clear confidence levels and actionable insights.
-        """
-
-    def _parse_ai_response(self, response: str) -> Dict[str, Any]:
-        """Parsa la risposta AI in un formato strutturato"""
-        try:
-            # Simple parsing logic based on content
-            sentiment = "positive" if "positive" in response.lower() else "negative"
-            confidence = 0.8  # Default confidence
-            key_points = [point.strip() for point in response.split("\n") if point.strip()]
-
-            return {
-                "sentiment": sentiment,
-                "confidence": confidence,
-                "key_points": key_points,
-                "raw_analysis": response
-            }
-        except Exception as e:
-            logger.error(f"Error parsing AI response: {e}")
             return None
 
+    def _create_analysis_prompt(self, data: Dict[str, Any]) -> str:
+        """Crea il prompt avanzato per l'analisi AI"""
+        return f"""
+        Analizza i seguenti dati di mercato e social media:
+
+        Metriche Social:
+        - Reddit Posts: {len(data['reddit'])} posts
+        - Twitter Mentions: {len(data['twitter'])} tweets
+        - Engagement Reddit: {sum(post['score'] for post in data['reddit'])}
+        - Engagement Twitter: {sum(tweet['metrics'].get('like_count', 0) for tweet in data['twitter'])}
+
+        Fornisci un'analisi dettagliata includendo:
+        1. Sentiment generale (positivo/negativo/neutro)
+        2. Livello di confidenza (0-1)
+        3. Punti chiave identificati
+        4. Segnali di trading potenziali
+        5. Metriche di momentum sociale
+        6. Correlazione con il prezzo di mercato
+
+        Rispondi in formato JSON con la seguente struttura:
+        {{
+            "sentiment": string,
+            "confidence": float,
+            "key_points": string[],
+            "market_signals": string[],
+            "momentum_score": float,
+            "price_correlation": float
+        }}
+        """
+
     def calculate_sentiment_score(self, analysis: Dict[str, Any]) -> float:
-        """Calcola uno score numerico del sentiment combinando analisi generale e trading"""
+        """Calcola uno score numerico del sentiment"""
         try:
             if not analysis:
-                return 0.0
+                return 0.5
 
-            # Base score from general sentiment
-            base_score = 1.0 if analysis.get("sentiment") == "positive" else -1.0
+            # Score base dal sentiment
+            sentiment_map = {
+                "positive": 1.0,
+                "neutral": 0.5,
+                "negative": 0.0
+            }
+            base_score = sentiment_map.get(analysis.get("sentiment", "neutral"), 0.5)
 
-            # Adjust based on market sentiment if available
-            if analysis.get("market_sentiment"):
-                market_score = 1.0 if analysis.get("market_sentiment") == "positive" else -1.0
-                base_score = (base_score + market_score) / 2
+            # Usa la confidenza dell'analisi
+            confidence = analysis.get("confidence", 0.5)
 
-            # Use combined confidence
-            confidence_modifier = analysis.get("confidence", 0.5)
+            # Incorpora il momentum score se disponibile
+            momentum_score = analysis.get("momentum_score", 0.5)
 
-            # Apply trading signals weight if available
-            if analysis.get("trading_signals"):
-                trading_confidence = analysis.get("trading_confidence", 0.5)
-                confidence_modifier = (confidence_modifier + trading_confidence) / 2
+            # Calcola lo score finale
+            final_score = (base_score * 0.4 + 
+                         confidence * 0.3 + 
+                         momentum_score * 0.3)
 
-            return base_score * confidence_modifier
+            return max(0.0, min(1.0, final_score))
 
         except Exception as e:
             logger.error(f"Error calculating sentiment score: {e}")
-            return 0.0
+            return 0.5
 
     async def get_reddit_sentiment(self, symbol: str) -> List[Dict[str, Any]]:
-        """Ottiene post e commenti da Reddit con retry logic"""
+        """Ottiene post e commenti da Reddit in modo asincrono"""
         try:
             if not self.reddit:
-                raise ValueError("Reddit client not initialized")
+                return []
 
-            subreddits = ['cryptocurrency', 'CryptoMarkets', symbol.lower()]
             posts = []
+            subreddits = ['cryptocurrency', 'CryptoMarkets', symbol.lower()]
 
             for subreddit in subreddits:
                 try:
-                    for post in self.reddit.subreddit(subreddit).hot(limit=10):
-                        posts.append({
-                            "title": post.title,
-                            "text": post.selftext,
-                            "score": post.score,
-                            "comments": post.num_comments,
-                            "created_utc": post.created_utc,
-                            "subreddit": subreddit
-                        })
-                        logger.debug(f"Retrieved post from r/{subreddit}: {post.title[:50]}...")
+                    # Esegui le operazioni Reddit in modo asincrono
+                    posts_data = await asyncio.to_thread(
+                        self._fetch_reddit_data,
+                        subreddit
+                    )
+                    posts.extend(posts_data)
                 except Exception as sub_e:
                     logger.warning(f"Error fetching from subreddit {subreddit}: {sub_e}")
                     continue
@@ -367,11 +205,36 @@ class SentimentAnalyzer:
             logger.error(f"Error getting Reddit sentiment: {e}")
             return []
 
-    async def get_twitter_sentiment(self, symbol: str) -> List[Dict[str, Any]]:
-        """Ottiene tweet rilevanti"""
+    def _fetch_reddit_data(self, subreddit: str) -> List[Dict[str, Any]]:
+        """Helper function for Reddit data fetching"""
+        posts = []
         try:
+            import praw
+            for post in self.reddit.subreddit(subreddit).hot(limit=10):
+                posts.append({
+                    "title": post.title,
+                    "text": post.selftext,
+                    "score": post.score,
+                    "comments": post.num_comments,
+                    "created_utc": post.created_utc,
+                    "subreddit": subreddit
+                })
+        except Exception as e:
+            logger.error(f"Error fetching Reddit data: {e}")
+        return posts
+
+
+    async def get_twitter_sentiment(self, symbol: str) -> List[Dict[str, Any]]:
+        """Ottiene tweet rilevanti in modo asincrono"""
+        try:
+            if not self.twitter:
+                return []
+
             query = f"#{symbol} OR {symbol} crypto -is:retweet"
-            tweets = self.twitter.search_recent_tweets(
+
+            # Esegui la ricerca Twitter in modo asincrono
+            tweets = await asyncio.to_thread(
+                self.twitter.search_recent_tweets,
                 query=query,
                 max_results=100,
                 tweet_fields=['created_at', 'public_metrics']
@@ -386,3 +249,49 @@ class SentimentAnalyzer:
         except Exception as e:
             logger.error(f"Error getting Twitter sentiment: {e}")
             return []
+
+    def initialize_social_clients(self):
+        """Initialize social media clients with improved error handling"""
+        try:
+            # Reddit setup with better error handling
+            try:
+                self.reddit = None  # Initialize as None first
+                if os.getenv("REDDIT_CLIENT_ID") and os.getenv("REDDIT_CLIENT_SECRET"):
+                    import praw
+                    self.reddit = praw.Reddit(
+                        client_id=os.getenv("REDDIT_CLIENT_ID"),
+                        client_secret=os.getenv("REDDIT_CLIENT_SECRET"),
+                        user_agent="AurumBot/1.0 Crypto Market Analyzer"
+                    )
+                    # Verify credentials
+                    self.reddit.user.me()
+                    logger.info("Reddit client initialized successfully")
+                else:
+                    logger.warning("Reddit credentials not found, Reddit integration disabled")
+            except Exception as reddit_e:
+                logger.error(f"Reddit initialization failed: {reddit_e}")
+                self.reddit = None
+
+            # Twitter setup
+            try:
+                self.twitter = None  # Initialize as None first
+                if os.getenv("TWITTER_BEARER_TOKEN"):
+                    import tweepy
+                    self.twitter = tweepy.Client(
+                        bearer_token=os.getenv("TWITTER_BEARER_TOKEN"),
+                        wait_on_rate_limit=True
+                    )
+                    logger.info("Twitter client initialized successfully")
+                else:
+                    logger.warning("Twitter credentials not found, Twitter integration disabled")
+            except Exception as twitter_e:
+                logger.error(f"Twitter initialization failed: {twitter_e}")
+                self.twitter = None
+
+            # Telegram setup - temporarily disabled
+            self.telegram = None
+            logger.info("Telegram integration temporarily disabled")
+
+        except Exception as e:
+            logger.error(f"Error initializing social clients: {e}")
+            raise

@@ -1,6 +1,7 @@
 import logging
 from datetime import datetime, timedelta
 import time
+import asyncio
 from typing import Dict, Any, Optional
 import pandas as pd
 from utils.data_loader import CryptoDataLoader
@@ -140,43 +141,38 @@ class AutoTrader:
         except Exception as e:
             self.logger.error(f"Error adjusting parameters: {str(e)}")
 
-    def analyze_market(self):
-        """Analyze market data and generate trading signals"""
+    async def analyze_market_async(self, market_data: pd.DataFrame, sentiment_data: Optional[Dict] = None) -> Optional[Dict[str, Any]]:
+        """Asynchronous version of market analysis"""
         try:
             if self.testnet:
-                self.logger.info("Running in testnet mode")
+                self.logger.info("Running analysis in testnet mode")
 
-            # Get market data synchronously
-            df_short = self.data_loader.get_historical_data(self.symbol, period='1d', interval='1m')
-            df_medium = self.data_loader.get_historical_data(self.symbol, period='7d', interval='15m')
-            df_long = self.data_loader.get_historical_data(self.symbol, period='30d', interval='1h')
-
-            if df_short is None or df_short.empty:
+            if market_data is None or market_data.empty:
                 self.logger.error("Unable to get market data")
                 return None
 
-            # Add technical indicators and analyze volatility
+            # Add technical indicators synchronously
             try:
-                df_short = self.indicators.add_all_indicators(df_short)
-                market_volatility = self.calculate_market_volatility(df_medium)
+                market_data = self.indicators.add_all_indicators(market_data)
+                market_volatility = self.calculate_market_volatility(market_data)
                 self.adjust_strategies_parameters(market_volatility)
             except Exception as e:
                 self.logger.error(f"Error analyzing market conditions: {str(e)}")
                 return None
 
-            # Get AI predictions synchronously
+            # Get AI predictions asynchronously
             try:
-                ai_signal = self.prediction_model.analyze_market_with_ai(
-                    df_short, 
-                    self._get_social_data()
+                ai_signal = await self.prediction_model.analyze_market_with_ai(
+                    market_data, 
+                    sentiment_data
                 )
                 if ai_signal and ai_signal['confidence'] > 0.75:
                     return {
                         'action': 'buy' if ai_signal['technical_score'] > 0.5 else 'sell',
                         'confidence': ai_signal['confidence'],
                         'size_factor': ai_signal['suggested_position_size'],
-                        'target_price': self._calculate_target_price(df_short, ai_signal),
-                        'stop_loss': self._calculate_stop_loss(df_short, ai_signal)
+                        'target_price': await self._calculate_target_price_async(market_data, ai_signal),
+                        'stop_loss': await self._calculate_stop_loss_async(market_data, ai_signal)
                     }
             except Exception as e:
                 self.logger.warning(f"AI analysis error (non-critical): {str(e)}")
@@ -184,13 +180,13 @@ class AutoTrader:
             best_signal = None
             best_confidence = 0
 
-            # Try each strategy
+            # Try each strategy asynchronously
             for strategy_name, strategy in self.strategies.items():
                 if not hasattr(strategy, 'is_strategy_active') or not strategy.is_strategy_active():
                     continue
 
                 try:
-                    signal = strategy.generate_signals(df_short)
+                    signal = await strategy.analyze_market(market_data, sentiment_data)
                     if not signal:
                         continue
 
@@ -198,12 +194,12 @@ class AutoTrader:
                         'available_capital': self.balance,
                         'total_capital': self.initial_balance,
                         'current_spread': 0.001,
-                        'market_trend': 1 if df_short['Close'].iloc[-1] > df_short['SMA_20'].iloc[-1] else -1
+                        'market_trend': 1 if market_data['Close'].iloc[-1] > market_data['SMA_20'].iloc[-1] else -1
                     }
 
                     if (signal['action'] != 'hold' and 
                         signal['confidence'] > best_confidence and
-                        strategy.validate_trade(signal, portfolio_status)):
+                        await strategy.validate_trade(signal, portfolio_status)):
                         best_signal = signal
                         best_confidence = signal['confidence']
                         self.active_strategy = strategy_name
@@ -212,7 +208,7 @@ class AutoTrader:
                     continue
 
             if best_signal:
-                best_signal['price'] = df_short['Close'].iloc[-1]
+                best_signal['price'] = market_data['Close'].iloc[-1]
                 return best_signal
 
             return None
@@ -221,16 +217,8 @@ class AutoTrader:
             self.logger.error(f"Market analysis error: {str(e)}")
             return None
 
-    def _get_social_data(self):
-        """Get social media data for sentiment analysis"""
-        return {
-            'sentiment_score': 0.5,
-            'volume_score': 0.5,
-            'trend_score': 0.5
-        }
-
-    def _calculate_target_price(self, df: pd.DataFrame, ai_signal: Dict[str, Any]) -> float:
-        """Calculate target price based on AI signals"""
+    async def _calculate_target_price_async(self, df: pd.DataFrame, ai_signal: Dict[str, Any]) -> float:
+        """Calculate target price based on AI signals asynchronously"""
         try:
             current_price = df['Close'].iloc[-1]
             volatility = self.calculate_market_volatility(df)
@@ -242,8 +230,8 @@ class AutoTrader:
             self.logger.error(f"Error calculating target price: {str(e)}")
             return df['Close'].iloc[-1] * 1.02
 
-    def _calculate_stop_loss(self, df: pd.DataFrame, ai_signal: Dict[str, Any]) -> float:
-        """Calculate stop loss based on AI signals"""
+    async def _calculate_stop_loss_async(self, df: pd.DataFrame, ai_signal: Dict[str, Any]) -> float:
+        """Calculate stop loss based on AI signals asynchronously"""
         try:
             current_price = df['Close'].iloc[-1]
             volatility = self.calculate_market_volatility(df)
@@ -255,15 +243,15 @@ class AutoTrader:
             self.logger.error(f"Error calculating stop loss: {str(e)}")
             return df['Close'].iloc[-1] * 0.98
 
-    def execute_trade(self, signal: Optional[Dict[str, Any]]) -> bool:
-        """Execute a trade based on the generated signal"""
+    async def execute_trade_async(self, signal: Optional[Dict[str, Any]]) -> Dict[str, Any]:
+        """Execute a trade based on the generated signal asynchronously"""
         if not signal:
-            return False
+            return {'success': False, 'reason': 'No signal provided'}
 
         try:
             current_time = datetime.now()
             if self.last_action_time and (current_time - self.last_action_time).seconds < 300:
-                return False
+                return {'success': False, 'reason': 'Trade cooldown active'}
 
             if signal.get('confidence', 0) > 0.9:
                 self.last_action_time = current_time - timedelta(seconds=290)
@@ -290,8 +278,8 @@ class AutoTrader:
                 }
                 self.last_action_time = current_time
                 if self.notifier:
-                    self.notifier.send_trade_notification('BUY', self.symbol, price, position_size)
-                return True
+                    await self.notifier.send_trade_notification('BUY', self.symbol, price, position_size)
+                return {'success': True, 'action': 'buy', 'price': price, 'size': position_size}
 
             elif self.is_in_position and self.current_position:
                 if (action == 'sell' or 
@@ -310,34 +298,38 @@ class AutoTrader:
                     )
 
                     if self.notifier:
-                        self.notifier.send_trade_notification(
+                        await self.notifier.send_trade_notification(
                             'SELL', self.symbol, price, position_size, profit_loss
                         )
 
                     self.is_in_position = False
                     self.current_position = None
                     self.last_action_time = current_time
-                    return True
+                    return {'success': True, 'action': 'sell', 'price': price, 'profit_loss': profit_loss}
 
-            return False
+        return {'success': False, 'reason': 'No trade conditions met'}
 
         except Exception as e:
             self.logger.error(f"Trade execution error: {str(e)}")
             if self.notifier:
-                self.notifier.send_error_notification(self.symbol, str(e))
-            return False
+                await self.notifier.send_error_notification(self.symbol, str(e))
+            return {'success': False, 'error': str(e)}
 
-    def run(self, interval: int = 3600):
+    async def run(self, interval: int = 3600):
         """Main trading loop"""
         self.logger.info(f"Starting trading bot for {self.symbol}")
         self.logger.info(f"Initial balance: {self.initial_balance}")
 
         try:
             while True:
-                signal = self.analyze_market()
+                market_data = self.data_loader.get_historical_data(self.symbol, period='1d', interval='1m')
+                sentiment_data = self._get_social_data()
+                signal = await self.analyze_market_async(market_data, sentiment_data)
                 if signal:
-                    self.execute_trade(signal)
-                time.sleep(interval)
+                    result = await self.execute_trade_async(signal)
+                    self.logger.info(f"Trade execution result: {result}")
+
+                await asyncio.sleep(interval)
 
         except KeyboardInterrupt:
             self.logger.info("Trading bot stopped manually")
@@ -345,7 +337,7 @@ class AutoTrader:
         except Exception as e:
             self.logger.error(f"Critical error in trading bot: {str(e)}")
             if self.notifier:
-                self.notifier.send_error_notification(self.symbol, str(e))
+                await self.notifier.send_error_notification(self.symbol, str(e))
             self.stop() 
         finally:
             self.logger.info(f"Bot stopped. Final balance: {self.balance}")
@@ -368,6 +360,14 @@ class AutoTrader:
         except Exception as e:
             self.logger.error(f"Error merging timeframes: {str(e)}")
             return None
+
+    def _get_social_data(self):
+        """Get social media data for sentiment analysis"""
+        return {
+            'sentiment_score': 0.5,
+            'volume_score': 0.5,
+            'trend_score': 0.5
+        }
 
     def _start_config_backup(self):
         """Start automatic backup of trading configuration"""
