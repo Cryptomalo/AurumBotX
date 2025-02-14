@@ -257,7 +257,7 @@ class CryptoDataLoader:
             df['RSI'] = 100 - (100 / (1 + rs))
 
             # Clean up NaN values
-            df = df.fillna(method='bfill').fillna(method='ffill').fillna(0)
+            df = df.fillna(method='ffill').fillna(method='bfill').fillna(0)
 
             return df
 
