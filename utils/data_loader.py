@@ -173,13 +173,13 @@ class CryptoDataLoader:
         df = pd.DataFrame(
             klines,
             columns=[
-                'timestamp', 'Open', 'High', 'Low', 'Close', 'Volume',
+                'timestamp', 'open', 'high', 'low', 'close', 'volume',
                 'close_time', 'quote_av', 'trades', 'tb_base_av', 'tb_quote_av', 'ignore'
             ]
         )
 
         # Convert string values to float
-        for col in ['Open', 'High', 'Low', 'Close', 'Volume']:
+        for col in ['open', 'high', 'low', 'close', 'volume']:
             df[col] = pd.to_numeric(df[col], errors='coerce')
 
         # Convert timestamp to datetime
@@ -187,7 +187,7 @@ class CryptoDataLoader:
         df.set_index('timestamp', inplace=True)
 
         # Drop unnecessary columns
-        return df[['Open', 'High', 'Low', 'Close', 'Volume']]
+        return df[['open', 'high', 'low', 'close', 'volume']]
 
     def _normalize_symbol(self, symbol: str) -> str:
         """Normalize symbol format for exchange"""
@@ -244,17 +244,17 @@ class CryptoDataLoader:
             df = df.copy()
 
             # Basic metrics
-            df['Returns'] = df['Close'].pct_change()
+            df['Returns'] = df['close'].pct_change()
             df['Volatility'] = df['Returns'].rolling(window=20).std()
-            df['Volume_MA'] = df['Volume'].rolling(window=20).mean()
-            df['Volume_Ratio'] = df['Volume'] / df['Volume_MA']
+            df['Volume_MA'] = df['volume'].rolling(window=20).mean()
+            df['Volume_Ratio'] = df['volume'] / df['Volume_MA']
 
             # Moving averages
-            df['SMA_20'] = df['Close'].rolling(window=20).mean()
-            df['EMA_20'] = df['Close'].ewm(span=20, adjust=False).mean()
+            df['SMA_20'] = df['close'].rolling(window=20).mean()
+            df['EMA_20'] = df['close'].ewm(span=20, adjust=False).mean()
 
             # RSI
-            delta = df['Close'].diff()
+            delta = df['close'].diff()
             gain = (delta.where(delta > 0, 0)).rolling(window=14).mean()
             loss = (-delta.where(delta < 0, 0)).rolling(window=14).mean()
             rs = gain / loss
@@ -284,11 +284,11 @@ class CryptoDataLoader:
         close_price = 100 * (1 + np.random.randn(n_periods).cumsum() * 0.02)
 
         df = pd.DataFrame({
-            'Open': close_price * (1 + np.random.randn(n_periods) * 0.001),
-            'High': close_price * (1 + abs(np.random.randn(n_periods) * 0.002)),
-            'Low': close_price * (1 - abs(np.random.randn(n_periods) * 0.002)),
-            'Close': close_price,
-            'Volume': np.random.randint(1000, 100000, n_periods)
+            'open': close_price * (1 + np.random.randn(n_periods) * 0.001),
+            'high': close_price * (1 + abs(np.random.randn(n_periods) * 0.002)),
+            'low': close_price * (1 - abs(np.random.randn(n_periods) * 0.002)),
+            'close': close_price,
+            'volume': np.random.randint(1000, 100000, n_periods)
         }, index=timestamps)
 
         return self._add_technical_indicators(df)
@@ -301,16 +301,16 @@ class CryptoDataLoader:
             if df is None or df.empty:
                 return {}
 
-            current_price = df['Close'].iloc[-1]
-            previous_close = df['Close'].iloc[-2]
+            current_price = df['close'].iloc[-1]
+            previous_close = df['close'].iloc[-2]
             price_change = ((current_price - previous_close) / previous_close) * 100
 
             return {
                 'current_price': current_price,
                 'price_change_24h': price_change,
-                'volume_24h': df['Volume'].sum(),
-                'high_24h': df['High'].max(),
-                'low_24h': df['Low'].min(),
+                'volume_24h': df['volume'].sum(),
+                'high_24h': df['high'].max(),
+                'low_24h': df['low'].min(),
                 'volatility': df['Returns'].std() * 100,
                 'rsi': df['RSI'].iloc[-1],
                 'trend': 'Bullish' if current_price > df['SMA_20'].iloc[-1] else 'Bearish'

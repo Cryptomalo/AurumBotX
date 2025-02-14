@@ -147,7 +147,7 @@ class TestBot:
                 for pair in test_pairs:
                     try:
                         # Get market data synchronously
-                        market_data = self.data_loader.get_historical_data(pair)
+                        market_data = await self.data_loader.get_historical_data_async(pair)
                         if market_data is None or market_data.empty:
                             logger.warning(f"No market data available for {pair}")
                             continue

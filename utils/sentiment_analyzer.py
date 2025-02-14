@@ -81,10 +81,11 @@ class SentimentAnalyzer:
             prompt = self._create_analysis_prompt(data)
 
             # Utilizzo asincrono di GPT-4o con formato JSON
-            completion = await asyncio.to_thread(
-                self.openai_client.chat.completions.create,
-                model="gpt-4o",
-                messages=[{
+            try:
+                completion = await asyncio.to_thread(
+                    self.openai_client.chat.completions.create,
+                    model="gpt-4o",
+                    messages=[{
                     "role": "system",
                     "content": """Sei un esperto analista di mercato crypto specializzato in:
                     1. Analisi del sentiment sui social media
