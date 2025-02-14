@@ -33,6 +33,10 @@ class StrategyManager:
     async def configure_for_live_testing(self):
         """Configura il manager e le strategie per il testing con dati reali"""
         try:
+            if self.is_live_testing:
+                logger.warning("StrategyManager already in live testing mode")
+                return True
+
             logger.info("Configuring StrategyManager for live testing...")
             self.is_live_testing = True
             self.test_start_time = datetime.now()
@@ -74,9 +78,13 @@ class StrategyManager:
     async def cleanup(self):
         """Pulisce le risorse e chiude le connessioni"""
         try:
+            if not self.is_live_testing:
+                logger.warning("StrategyManager not in live testing mode, nothing to cleanup")
+                return True
+                
             logger.info("Starting StrategyManager cleanup...")
 
-            # Disattiva il modalità live testing
+            # Disattiva la modalità live testing
             self.is_live_testing = False
 
             # Cleanup per ogni strategia attiva
