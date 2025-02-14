@@ -99,3 +99,26 @@ class BaseStrategy(ABC):
     def deactivate(self):
         self.is_active = False
         logger.info(f"Strategia {self.name} disattivata")
+
+    def get_config(self) -> Dict[str, Any]:
+        """Restituisce la configurazione corrente della strategia"""
+        return {
+            'name': self.name,
+            'config': self.config,
+            'is_active': self.is_active,
+            'performance_metrics': self.performance_metrics,
+            'timestamp': datetime.now().isoformat()
+        }
+
+    def set_config(self, config: Dict[str, Any]):
+        """Imposta la configurazione della strategia"""
+        try:
+            self.name = config.get('name', self.name)
+            self.config.update(config.get('config', {}))
+            self.is_active = config.get('is_active', self.is_active)
+            if 'performance_metrics' in config:
+                self.performance_metrics.update(config['performance_metrics'])
+            logger.info(f"Configurazione aggiornata per strategia {self.name}")
+        except Exception as e:
+            logger.error(f"Errore nell'aggiornamento della configurazione: {str(e)}")
+            raise
