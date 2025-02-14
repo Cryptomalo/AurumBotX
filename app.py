@@ -7,28 +7,33 @@ import pandas as pd
 import plotly.graph_objects as go
 from utils.auto_trader import AutoTrader
 from utils.data_loader import CryptoDataLoader
-from utils.test_suite import AurumBotTester
 
-# Basic logging setup
+# Configurazione logging
 logging.basicConfig(
     level=logging.INFO,
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
-    handlers=[logging.StreamHandler(sys.stdout)]
+    handlers=[
+        logging.FileHandler('streamlit_app.log'),
+        logging.StreamHandler(sys.stdout)
+    ]
 )
 logger = logging.getLogger(__name__)
 
-# Initialize session state
-if 'bot' not in st.session_state:
-    st.session_state.bot = None
-if 'data_loader' not in st.session_state:
-    st.session_state.data_loader = None
-if 'start_time' not in st.session_state:
-    st.session_state.start_time = datetime.now()
-if 'error_count' not in st.session_state:
-    st.session_state.error_count = 0
+# Inizializzazione stato sessione
+def init_session_state():
+    if 'bot' not in st.session_state:
+        st.session_state.bot = None
+    if 'data_loader' not in st.session_state:
+        st.session_state.data_loader = None
+    if 'last_update' not in st.session_state:
+        st.session_state.last_update = datetime.now()
+    if 'error_count' not in st.session_state:
+        st.session_state.error_count = 0
+    if 'market_data' not in st.session_state:
+        st.session_state.market_data = None
 
 def create_candlestick_chart(df):
-    """Create an interactive candlestick chart"""
+    """Crea un grafico candlestick interattivo"""
     try:
         if df is None or df.empty:
             return None
@@ -45,141 +50,188 @@ def create_candlestick_chart(df):
             title='Price Chart',
             yaxis_title='Price',
             template='plotly_dark',
-            xaxis_rangeslider_visible=False
+            xaxis_rangeslider_visible=False,
+            height=600
         )
 
         return fig
     except Exception as e:
-        logger.error(f"Chart creation error: {str(e)}")
+        logger.error(f"Errore creazione grafico: {str(e)}")
         return None
 
+def load_market_data(symbol, period='1d'):
+    """Carica i dati di mercato in modo sicuro"""
+    try:
+        if not st.session_state.data_loader:
+            return None
+
+        df = st.session_state.data_loader.get_historical_data(symbol, period)
+        if df is not None and not df.empty:
+            st.session_state.market_data = df
+            return df
+        return None
+    except Exception as e:
+        logger.error(f"Errore caricamento dati: {str(e)}")
+        return None
+
+def render_market_metrics(df):
+    """Visualizza le metriche di mercato"""
+    try:
+        if df is None or df.empty:
+            st.warning("Dati di mercato non disponibili")
+            return
+
+        col1, col2, col3 = st.columns(3)
+        with col1:
+            current_price = df['Close'].iloc[-1]
+            st.metric("Prezzo Attuale", f"${current_price:.2f}")
+
+        with col2:
+            price_change = ((df['Close'].iloc[-1] - df['Close'].iloc[0]) / df['Close'].iloc[0]) * 100
+            st.metric("Variazione 24h", f"{price_change:.2f}%")
+
+        with col3:
+            volume = df['Volume'].sum()
+            st.metric("Volume 24h", f"${volume:,.0f}")
+
+    except Exception as e:
+        logger.error(f"Errore visualizzazione metriche: {str(e)}")
+        st.error("Errore nel calcolo delle metriche")
+
+def render_portfolio_status():
+    """Visualizza lo stato del portfolio"""
+    try:
+        if not st.session_state.bot:
+            return
+
+        st.subheader("Stato Portfolio")
+        col1, col2 = st.columns(2)
+
+        with col1:
+            st.metric("Bilancio Attuale", f"${st.session_state.bot.balance:.2f}")
+            profit_loss = st.session_state.bot.balance - st.session_state.bot.initial_balance
+            st.metric("P/L Totale", f"${profit_loss:.2f}")
+
+        with col2:
+            if st.session_state.bot.is_in_position:
+                st.info("Trade Attivo")
+                if st.session_state.bot.current_position:
+                    position = st.session_state.bot.current_position
+                    st.json({
+                        "Prezzo Entrata": f"${position['entry_price']:.2f}",
+                        "Dimensione": f"{position['size']:.6f}",
+                        "Strategia": position['strategy'],
+                        "Target": f"${position['target_price']:.2f}",
+                        "Stop Loss": f"${position['stop_loss']:.2f}"
+                    })
+    except Exception as e:
+        logger.error(f"Errore visualizzazione portfolio: {str(e)}")
+        st.error("Errore nell'aggiornamento del portfolio")
+
 def main():
-    # Page config
-    st.set_page_config(
-        page_title="AurumBot Trading Platform",
-        page_icon="🤖",
-        layout="wide"
-    )
-
-    # Title and description
-    st.title("🤖 AurumBot Trading Platform")
-    st.markdown("""
-    Advanced crypto trading platform with intelligent automation and sophisticated backtesting capabilities.
-    """)
-
-    # Sidebar
-    with st.sidebar:
-        st.title("Trading Controls")
-
-        # Trading pair selection
-        trading_pair = st.selectbox(
-            "Select Trading Pair",
-            ["BTC/USDT", "ETH/USDT", "SOL/USDT", "DOGE/USDT", "SHIB/USDT"],
-            index=0
+    try:
+        # Configurazione pagina
+        st.set_page_config(
+            page_title="AurumBot Trading Platform",
+            page_icon="🤖",
+            layout="wide"
         )
 
-        # Strategy selection
-        strategy = st.selectbox(
-            "Trading Strategy",
-            ["scalping", "swing", "meme_coin"],
-            index=0
-        )
+        # Inizializzazione stato
+        init_session_state()
 
-        # Trading parameters
-        initial_balance = st.number_input(
-            "Initial Balance (USDT)",
-            min_value=10.0,
-            value=1000.0,
-            step=10.0
-        )
+        # Titolo e descrizione
+        st.title("🤖 AurumBot Trading Platform")
+        st.markdown("""
+        Piattaforma avanzata di trading crypto con automazione intelligente e backtesting sofisticato.
+        """)
 
-        risk_per_trade = st.slider(
-            "Risk Per Trade (%)",
-            min_value=0.1,
-            max_value=5.0,
-            value=2.0,
-            step=0.1
-        )
+        # Sidebar
+        with st.sidebar:
+            st.title("Controlli Trading")
 
-        # Start/Stop buttons
-        if st.button("Start Trading"):
-            try:
-                st.session_state.bot = AutoTrader(
-                    symbol=trading_pair,
-                    initial_balance=initial_balance,
-                    risk_per_trade=risk_per_trade/100,
-                    testnet=True
-                )
-                st.session_state.data_loader = CryptoDataLoader(testnet=True)
-                st.success(f"Bot initialized for {trading_pair}")
-            except Exception as e:
-                st.error(f"Failed to start trading: {str(e)}")
-                st.session_state.error_count += 1
-                logger.error(f"Bot initialization error: {str(e)}")
+            # Selezione coppia trading
+            trading_pair = st.selectbox(
+                "Seleziona Coppia Trading",
+                ["BTC/USDT", "ETH/USDT", "SOL/USDT", "DOGE/USDT", "SHIB/USDT"],
+                index=0
+            )
 
-        if st.button("Stop Trading") and st.session_state.bot:
-            st.session_state.bot = None
-            st.session_state.data_loader = None
-            st.info("Trading stopped")
+            # Selezione strategia
+            strategy = st.selectbox(
+                "Strategia Trading",
+                ["scalping", "swing", "meme_coin"],
+                index=0
+            )
 
-    # Main content tabs
-    tab1, tab2 = st.tabs(["Market Analysis", "Performance"])
+            # Parametri trading
+            initial_balance = st.number_input(
+                "Bilancio Iniziale (USDT)",
+                min_value=10.0,
+                value=1000.0,
+                step=10.0
+            )
 
-    # Market Analysis Tab
-    with tab1:
-        if st.session_state.bot and st.session_state.data_loader:
-            try:
-                df = st.session_state.data_loader.get_historical_data(
-                    st.session_state.bot.symbol,
-                    period='1d'
-                )
+            risk_per_trade = st.slider(
+                "Rischio per Trade (%)",
+                min_value=0.1,
+                max_value=5.0,
+                value=2.0,
+                step=0.1
+            )
 
-                if df is not None and not df.empty:
-                    # Price chart
+            # Pulsanti Start/Stop
+            col1, col2 = st.columns(2)
+            with col1:
+                if st.button("▶️ Avvia"):
+                    try:
+                        st.session_state.bot = AutoTrader(
+                            symbol=trading_pair,
+                            initial_balance=initial_balance,
+                            risk_per_trade=risk_per_trade/100,
+                            testnet=True
+                        )
+                        st.session_state.data_loader = CryptoDataLoader(testnet=True)
+                        st.success(f"Bot inizializzato per {trading_pair}")
+                    except Exception as e:
+                        st.error(f"Errore avvio: {str(e)}")
+                        st.session_state.error_count += 1
+                        logger.error(f"Errore inizializzazione bot: {str(e)}")
+
+            with col2:
+                if st.button("⏹️ Ferma"):
+                    st.session_state.bot = None
+                    st.session_state.data_loader = None
+                    st.info("Trading fermato")
+
+        # Tab contenuto principale
+        tab1, tab2 = st.tabs(["Analisi Mercato", "Performance"])
+
+        # Tab Analisi Mercato
+        with tab1:
+            if st.session_state.bot and st.session_state.data_loader:
+                df = load_market_data(st.session_state.bot.symbol)
+
+                if df is not None:
                     chart = create_candlestick_chart(df)
                     if chart:
                         st.plotly_chart(chart, use_container_width=True)
-
-                    # Market metrics
-                    col1, col2, col3 = st.columns(3)
-                    with col1:
-                        st.metric("Current Price", f"${df['Close'].iloc[-1]:.2f}")
-                    with col2:
-                        price_change = ((df['Close'].iloc[-1] - df['Close'].iloc[0]) / df['Close'].iloc[0]) * 100
-                        st.metric("24h Change", f"{price_change:.2f}%")
-                    with col3:
-                        st.metric("24h Volume", f"${df['Volume'].sum():,.0f}")
+                    render_market_metrics(df)
                 else:
-                    st.warning("No market data available")
-            except Exception as e:
-                st.error("Failed to load market data")
-                logger.error(f"Market data error: {str(e)}")
-        else:
-            st.info("Start trading to see market analysis")
+                    st.warning("Dati di mercato non disponibili")
+            else:
+                st.info("Avvia il trading per vedere l'analisi di mercato")
 
-    # Performance Tab
-    with tab2:
-        if st.session_state.bot:
-            # Portfolio status
-            st.subheader("Portfolio Status")
-            col1, col2 = st.columns(2)
+        # Tab Performance
+        with tab2:
+            if st.session_state.bot:
+                render_portfolio_status()
+            else:
+                st.info("Avvia il trading per vedere le metriche di performance")
 
-            with col1:
-                st.metric("Current Balance", f"${st.session_state.bot.balance:.2f}")
-                profit_loss = st.session_state.bot.balance - st.session_state.bot.initial_balance
-                st.metric("Total P/L", f"${profit_loss:.2f}")
-
-            with col2:
-                if st.session_state.bot.is_in_position:
-                    st.info("Active Trade in Progress")
-                    if st.session_state.bot.current_position:
-                        st.json(st.session_state.bot.current_position)
-        else:
-            st.info("Start trading to see performance metrics")
+    except Exception as e:
+        st.error("Si è verificato un errore imprevisto. Ricarica la pagina.")
+        logger.error(f"Errore applicazione: {str(e)}")
 
 if __name__ == "__main__":
-    try:
-        main()
-    except Exception as e:
-        st.error("An unexpected error occurred. Please try refreshing the page.")
-        logger.error(f"Application error: {str(e)}")
+    main()

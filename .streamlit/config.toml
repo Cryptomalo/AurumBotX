@@ -1,16 +1,7 @@
 [server]
 headless = true
-port = 8503
 address = "0.0.0.0"
-enableCORS = false
-enableXsrfProtection = false
-maxUploadSize = 200
-maxMessageSize = 200
-
-[browser]
-gatherUsageStats = false
-serverPort = 8503
-serverAddress = "0.0.0.0"
+port = 5000
 
 [theme]
 primaryColor = "#F63366"
@@ -24,5 +15,5 @@ level = "info"
 messageFormat = "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
 
 [client]
+toolbarMode = "minimal"
 showErrorDetails = true
-toolbarMode = "auto"
