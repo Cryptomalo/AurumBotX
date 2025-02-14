@@ -28,7 +28,7 @@ class AurumBotTester:
                     signal = bot.analyze_market()
                     bot.execute_trade(signal)
                     iterations += 1
-                    time.sleep(10)  # Intervallo tra le iterazioni
+                    time.sleep(2)  # Intervallo ridotto tra le iterazioni
                 except Exception as e:
                     errors.append(str(e))
                     self.logger.error(f"Errore durante il test: {str(e)}")

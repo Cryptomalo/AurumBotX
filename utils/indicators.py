@@ -42,9 +42,14 @@ class TechnicalIndicators:
         self.volume_indicators = ['OBV', 'ADL', 'CMF']
 
     def add_all_indicators(self, df: pd.DataFrame) -> pd.DataFrame:
-        """Add all technical indicators with optimization"""
+        """Add all technical indicators with enhanced optimization"""
         try:
-            df = df.copy()
+            # Use existing DataFrame to avoid copy
+            df = df.copy(deep=False)
+            # Pre-calculate common values
+            closes = df['close'].values
+            highs = df['high'].values
+            lows = df['low'].values
 
             # Verify required columns exist (case-insensitive)
             required_columns = ['close', 'high', 'low', 'open', 'volume']

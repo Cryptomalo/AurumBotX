@@ -212,13 +212,13 @@ class WebSocketHandler:
             self.logger.error(f"{error_context}\nAI Suggestion: {fix_suggestion}")
 
     async def _process_message_batch(self, messages: List[Dict]) -> None:
-        """Process messages in batches with error handling"""
+        """Process messages in batches with optimized handling"""
         try:
+            # Process messages in parallel
             processed_data = []
-            for msg in messages:
-                processed_msg = await self._preprocess_message(msg)
-                if processed_msg:
-                    processed_data.append(processed_msg)
+            tasks = [self._preprocess_message(msg) for msg in messages]
+            processed_msgs = await asyncio.gather(*tasks, return_exceptions=True)
+            processed_data = [msg for msg in processed_msgs if msg and not isinstance(msg, Exception)]
 
             if processed_data:
                 df = pd.DataFrame(processed_data)
