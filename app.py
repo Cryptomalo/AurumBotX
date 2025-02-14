@@ -7,6 +7,9 @@ import pandas as pd
 import plotly.graph_objects as go
 from utils.auto_trader import AutoTrader
 from utils.data_loader import CryptoDataLoader
+from utils.backup_manager import BackupManager
+import json
+from pathlib import Path
 
 # Configurazione logging
 logging.basicConfig(
@@ -128,6 +131,58 @@ def render_portfolio_status():
         logger.error(f"Errore visualizzazione portfolio: {str(e)}")
         st.error("Errore nell'aggiornamento del portfolio")
 
+def render_backup_controls():
+    """Visualizza i controlli per la gestione dei backup"""
+    try:
+        if not st.session_state.bot:
+            return
+
+        st.subheader("Gestione Backup")
+
+        # Lista dei backup disponibili
+        backups = st.session_state.bot.backup_manager.list_backups()
+
+        if backups:
+            # Mostra i backup disponibili
+            selected_backup = st.selectbox(
+                "Backup Disponibili",
+                options=[b['timestamp'] for b in backups],
+                format_func=lambda x: f"Backup del {datetime.strptime(x, '%Y%m%d_%H%M%S').strftime('%d/%m/%Y %H:%M:%S')}"
+            )
+
+            # Mostra dettagli del backup selezionato
+            if selected_backup:
+                backup_path = Path("backup") / selected_backup
+                log_file = backup_path / "BACKUP_LOG.md"
+                if log_file.exists():
+                    with open(log_file, "r") as f:
+                        st.markdown(f.read())
+
+                # Pulsante di ripristino
+                if st.button("🔄 Ripristina Configurazione"):
+                    if st.session_state.bot.restore_config(selected_backup):
+                        st.success("Configurazione ripristinata con successo!")
+                    else:
+                        st.error("Errore durante il ripristino della configurazione")
+
+            # Pulizia backup
+            st.markdown("---")
+            max_backups = st.slider(
+                "Numero massimo di backup da mantenere",
+                min_value=1,
+                max_value=50,
+                value=10
+            )
+            if st.button("🧹 Pulisci Backup Vecchi"):
+                st.session_state.bot.backup_manager.cleanup_old_backups(max_backups)
+                st.success(f"Mantenuti gli ultimi {max_backups} backup")
+        else:
+            st.info("Nessun backup disponibile")
+
+    except Exception as e:
+        st.error(f"Errore nella gestione dei backup: {str(e)}")
+        logger.error(f"Errore backup: {str(e)}")
+
 def main():
     try:
         # Configurazione pagina
@@ -192,6 +247,7 @@ def main():
                             testnet=True
                         )
                         st.session_state.data_loader = CryptoDataLoader(testnet=True)
+                        st.session_state.bot.backup_manager = BackupManager() # Assuming this is how BackupManager is initialized
                         st.success(f"Bot inizializzato per {trading_pair}")
                     except Exception as e:
                         st.error(f"Errore avvio: {str(e)}")
@@ -205,7 +261,7 @@ def main():
                     st.info("Trading fermato")
 
         # Tab contenuto principale
-        tab1, tab2 = st.tabs(["Analisi Mercato", "Performance"])
+        tab1, tab2, tab3 = st.tabs(["Analisi Mercato", "Performance", "Backup"])
 
         # Tab Analisi Mercato
         with tab1:
@@ -228,6 +284,10 @@ def main():
                 render_portfolio_status()
             else:
                 st.info("Avvia il trading per vedere le metriche di performance")
+
+        # Backup Tab
+        with tab3:
+            render_backup_controls()
 
     except Exception as e:
         st.error("Si è verificato un errore imprevisto. Ricarica la pagina.")

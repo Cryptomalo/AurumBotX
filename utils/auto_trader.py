@@ -14,6 +14,7 @@ from utils.database import get_db, TradingStrategy, SimulationResult
 from utils.notifications import TradingNotifier
 from utils.wallet_manager import WalletManager
 from utils.prediction_model import PredictionModel
+from utils.backup_manager import BackupManager
 
 class AutoTrader:
     def __init__(self, symbol: str, initial_balance: float = 10000, risk_per_trade: float = 0.02, testnet: bool = True):
@@ -23,6 +24,10 @@ class AutoTrader:
         self.risk_per_trade = risk_per_trade
         self.testnet = testnet
         self.logger.info(f"Initializing bot in {'testnet' if testnet else 'mainnet'} mode")
+
+        # Initialize backup manager
+        self.backup_manager = BackupManager()
+
         self.balance = initial_balance
         self.portfolio = {
             'total_value': initial_balance,
@@ -94,6 +99,9 @@ class AutoTrader:
         self.current_position = None
         self.last_action_time = None
         self.active_strategy = None
+
+        # Start automatic backup
+        self._start_config_backup()
 
     def _format_symbol(self, symbol: str) -> str:
         """Convert symbol to Binance format"""
@@ -333,10 +341,12 @@ class AutoTrader:
 
         except KeyboardInterrupt:
             self.logger.info("Trading bot stopped manually")
+            self.stop() #Added to stop backup manager gracefully
         except Exception as e:
             self.logger.error(f"Critical error in trading bot: {str(e)}")
             if self.notifier:
                 self.notifier.send_error_notification(self.symbol, str(e))
+            self.stop() #Added to stop backup manager gracefully
         finally:
             self.logger.info(f"Bot stopped. Final balance: {self.balance}")
 
@@ -358,3 +368,58 @@ class AutoTrader:
         except Exception as e:
             self.logger.error(f"Error merging timeframes: {str(e)}")
             return None
+
+    def _start_config_backup(self):
+        """Start automatic backup of trading configuration"""
+        config = {
+            'version': '1.0',
+            'timestamp': datetime.now().isoformat(),
+            'trading_pair': self.symbol,
+            'initial_balance': self.initial_balance,
+            'risk_per_trade': self.risk_per_trade,
+            'testnet': self.testnet,
+            'strategies': {
+                name: strategy.get_config()
+                for name, strategy in self.strategies.items()
+            },
+            'portfolio': self.portfolio
+        }
+
+        try:
+            self.backup_manager.start_auto_backup(config, self.symbol)
+            self.logger.info("Automatic configuration backup started")
+        except Exception as e:
+            self.logger.error(f"Failed to start automatic backup: {str(e)}")
+
+    def stop(self):
+        """Stop the trading bot and its components"""
+        try:
+            # Stop automatic backup
+            if hasattr(self, 'backup_manager'):
+                self.backup_manager.stop_auto_backup()
+
+            # Additional cleanup code can be added here
+
+            self.logger.info("Trading bot stopped")
+        except Exception as e:
+            self.logger.error(f"Error stopping trading bot: {str(e)}")
+
+    def restore_config(self, backup_timestamp: str):
+        """Restore trading configuration from a backup"""
+        try:
+            config = self.backup_manager.load_trading_config(backup_timestamp, self.symbol)
+
+            # Update bot configuration
+            self.risk_per_trade = config.get('risk_per_trade', self.risk_per_trade)
+            self.initial_balance = config.get('initial_balance', self.initial_balance)
+
+            # Restore strategy configurations
+            for strategy_name, strategy_config in config.get('strategies', {}).items():
+                if strategy_name in self.strategies:
+                    self.strategies[strategy_name].set_config(strategy_config)
+
+            self.logger.info(f"Configuration restored from backup: {backup_timestamp}")
+            return True
+        except Exception as e:
+            self.logger.error(f"Failed to restore configuration: {str(e)}")
+            return False
