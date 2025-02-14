@@ -8,7 +8,7 @@ deploymentTarget = "autoscale"
 run = ["sh", "-c", "python3 test_bot.py"]
 
 [workflows]
-runButton = "AurumBot"
+runButton = "Project"
 
 [[workflows.workflow]]
 name = "Test Bot"
@@ -180,8 +180,8 @@ task = "packager.installForAll"
 
 [[workflows.workflow.tasks]]
 task = "shell.exec"
-args = "python -m streamlit run app.py --server.port=8502 --server.address=0.0.0.0 --server.headless=true --logger.level=debug"
-waitForPort = 8502
+args = "python -m streamlit run app.py --server.port=8503 --server.address=0.0.0.0 --server.headless=true"
+waitForPort = 8503
 
 [[ports]]
 localPort = 5000
