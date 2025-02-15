@@ -54,17 +54,26 @@ class TestBot:
         try:
             logger.info("Initializing components...")
 
-            # Initialize database
+            # Initialize database with proper error handling
             db_url = os.environ.get('DATABASE_URL')
             if not db_url:
                 logger.error("DATABASE_URL not set")
                 raise ValueError("DATABASE_URL not set")
 
             logger.info("Initializing database connection...")
-            self.db = Database(db_url)
+            try:
+                self.db = Database(db_url)
+                logger.info("Database instance created successfully")
+            except Exception as e:
+                logger.error(f"Failed to create database instance: {e}")
+                return False
+
             if not await self.db_health_check():
                 logger.error("Database health check failed")
-                raise ValueError("Database health check failed")
+                return False
+
+            # Initialize remaining components...
+            logger.info("Database connection verified, proceeding with other components...")
 
             # Initialize DataLoader with real market data
             logger.info("Initializing DataLoader with real market data...")
@@ -90,7 +99,7 @@ class TestBot:
             return False
 
     async def db_health_check(self) -> bool:
-        """Verify database health with sync session"""
+        """Verify database health with proper session handling"""
         if not self.db:
             logger.error("Database not initialized during health check")
             raise ValueError("Database not initialized")
@@ -101,12 +110,8 @@ class TestBot:
         for attempt in range(max_attempts):
             try:
                 logger.info(f"Database health check attempt {attempt + 1}")
-                if not self.db.connect():
-                    logger.error("Database connection failed")
-                    raise Exception("Database connection failed")
-
-                # Test simple query using sync session
-                session = self.db.Session()
+                # Get a new session using the improved session handling
+                session = self.db.get_session()
                 try:
                     logger.debug("Executing test query...")
                     session.execute(text("SELECT 1"))
@@ -128,8 +133,7 @@ class TestBot:
                     retry_delay *= 2
 
         logger.error("Database health check failed after all attempts")
-        raise Exception("Database health check failed after all attempts")
-
+        return False
 
     async def run_extended_test(self) -> bool:
         """Run extended test with real market data and testnet trading"""

@@ -11,18 +11,34 @@ logger = logging.getLogger(__name__)
 
 class Database:
     def __init__(self, connection_string, max_retries=5):
-        self.db_url = connection_string #Renamed for clarity and consistency
+        logger.info("Initializing Database with max_retries=%d", max_retries)
+        self.db_url = connection_string
         self.max_retries = max_retries
         self.engine = None
         self.Session = None
-        self.connect()
+        if not self._connect():  # Initialize connection on instantiation
+            raise SQLAlchemyError("Failed to establish initial database connection")
 
-    def connect(self):
-        """Inizializza la connessione al database con retry"""
-        max_retries = 3
+    def _connect(self) -> bool:
+        """Initialize database connection with retry mechanism and detailed logging"""
+        logger.info("Attempting database connection...")
         retry_delay = 5
-        for attempt in range(max_retries):
+
+        if self.engine:
+            logger.debug("Connection already exists, testing it...")
             try:
+                with self.engine.connect() as conn:
+                    conn.execute(text('SELECT 1'))
+                    logger.debug("Existing connection is valid")
+                    return True
+            except Exception:
+                logger.warning("Existing connection failed, attempting reconnection...")
+                self.engine = None
+                self.Session = None
+
+        for attempt in range(self.max_retries):
+            try:
+                logger.info("Connection attempt %d/%d", attempt + 1, self.max_retries)
                 self.engine = create_engine(
                     self.db_url,
                     pool_size=5,
@@ -30,31 +46,58 @@ class Database:
                     pool_timeout=30,
                     pool_recycle=1800
                 )
+
+                # Test connection
+                with self.engine.connect() as conn:
+                    conn.execute(text('SELECT 1'))
+                    logger.debug("Connection test successful")
+
+                # Only create Session maker after successful connection
                 self.Session = sessionmaker(bind=self.engine)
-                logger.info("Database connection established")
+                logger.info("Database connection established successfully")
                 return True
-            except Exception as e:
-                logger.error(f"Database connection attempt {attempt + 1} failed: {e}")
-                if attempt < max_retries - 1:
+
+            except SQLAlchemyError as e:
+                logger.error("Database connection attempt %d/%d failed: %s",
+                           attempt + 1, self.max_retries, str(e))
+                if attempt < self.max_retries - 1:
+                    logger.info("Waiting %d seconds before next attempt...", retry_delay)
                     time.sleep(retry_delay)
                     retry_delay *= 2
-        logger.error("Failed to connect to database after multiple attempts")
+                else:
+                    logger.error("All connection attempts failed")
+                    raise
+
+        logger.error("Failed to connect to database after %d attempts", self.max_retries)
         return False
 
-# Improved database connection handling
+    def get_session(self) -> Session:
+        """Get a new database session, reconnecting if necessary"""
+        logger.debug("Requesting new database session")
+        if not self.Session:
+            logger.info("No session maker available, attempting to reconnect...")
+            if not self._connect():
+                raise SQLAlchemyError("Could not establish database connection for new session")
+
+        try:
+            session = self.Session()
+            logger.debug("New database session created successfully")
+            return session
+        except Exception as e:
+            logger.error("Failed to create new session: %s", str(e))
+            raise SQLAlchemyError(f"Failed to create database session: {str(e)}")
+
+# Improved database session generator
 def get_db():
-    """Database session generator"""
+    """Database session generator with proper error handling"""
     db_url = os.getenv('DATABASE_URL')
     if not db_url:
         raise ValueError("DATABASE_URL environment variable not set")
 
     db = Database(db_url)
-    if not db.connect():
-        raise Exception("Failed to connect to the database.")
-
     session = None
     try:
-        session = db.Session()
+        session = db.get_session()
         yield session
     except Exception as e:
         logger.error(f"Database session error: {e}")

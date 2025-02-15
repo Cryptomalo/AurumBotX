@@ -326,127 +326,7 @@ class CryptoDataLoader:
             raise DatabaseError(f"Failed to create template table: {str(e)}")
 
     def _process_klines_data(self, klines: List) -> pd.DataFrame:
-        """Process klines data with standardized column names"""
-        try:
-            df = pd.DataFrame(
-                klines,
-                columns=[
-                    'timestamp', 'Open', 'High', 'Low', 'Close', 'Volume',
-                    'close_time', 'quote_volume', 'trades', 'taker_base', 
-                    'taker_quote', 'ignore'
-                ]
-            )
-
-            # Ensure numeric types
-            numeric_columns = ['Open', 'High', 'Low', 'Close', 'Volume']
-            for col in numeric_columns:
-                df[col] = pd.to_numeric(df[col], errors='coerce')
-
-            # Convert timestamp
-            df['timestamp'] = pd.to_datetime(df['timestamp'], unit='ms')
-            df.set_index('timestamp', inplace=True)
-
-            return df[numeric_columns]
-
-        except Exception as e:
-            error_msg = f"Error processing klines data: {str(e)}"
-            logger.error(error_msg, exc_info=True)
-            raise DataLoadError(error_msg)
-
-    async def get_historical_data_async(
-        self,
-        symbol: str,
-        period: str = '1d',
-        interval: str = '1m'
-    ) -> Optional[pd.DataFrame]:
-        """Async wrapper for get_historical_data with error handling"""
-        try:
-            return await asyncio.to_thread(
-                self.get_historical_data,
-                symbol,
-                period,
-                interval
-            )
-        except Exception as e:
-            error_msg = f"Error in async historical data fetch: {str(e)}"
-            logger.error(error_msg, exc_info=True)
-            raise DataLoadError(error_msg)
-
-    def get_historical_data(
-        self,
-        symbol: str,
-        period: str = '1d',
-        interval: str = '1m'
-    ) -> Optional[pd.DataFrame]:
-        """Get historical data with comprehensive error handling"""
-        try:
-            if not self.client and self.use_live_data:
-                raise ValueError("Client not initialized")
-
-            symbol = self._normalize_symbol(symbol)
-            if symbol not in self.supported_coins:
-                raise ValueError(f"Unsupported symbol: {symbol}")
-
-            # Check cache
-            cache_key = f"{symbol}_{period}_{interval}"
-            cached_data = self._get_from_cache(cache_key, interval)
-            if cached_data is not None:
-                return cached_data
-
-            logger.info(f"Fetching {symbol} data for period {period}")
-
-            if not self.use_live_data:
-                return self._get_mock_data(symbol, period, interval)
-
-            # Fetch data with retry
-            klines = None
-            for attempt in range(self.RETRY_ATTEMPTS):
-                try:
-                    klines = self.client.get_klines(
-                        symbol=symbol,
-                        interval=interval,
-                        startTime=self._get_start_time(period),
-                        limit=1000
-                    )
-                    break
-                except BinanceAPIException as e:
-                    if attempt == self.RETRY_ATTEMPTS - 1:
-                        raise DataLoadError(f"Failed to fetch klines data: {str(e)}")
-                    time.sleep(self.RETRY_DELAY)
-
-            if not klines:
-                raise DataLoadError(f"No data received for {symbol}")
-
-            df = self._process_klines_data(klines)
-
-            # Add technical indicators
-            df = self._add_technical_indicators(df)
-
-            # Cache and save
-            self._add_to_cache(cache_key, df)
-            self._save_to_database(symbol, df)
-
-            return df
-
-        except Exception as e:
-            error_msg = f"Error fetching data for {symbol}: {str(e)}"
-            logger.error(error_msg, exc_info=True)
-            raise DataLoadError(error_msg)
-
-    def _get_start_time(self, period: str) -> Optional[int]:
-        """Calculate start time based on period"""
-        period_map = {
-            '1d': timedelta(days=1),
-            '7d': timedelta(days=7),
-            '30d': timedelta(days=30)
-        }
-        delta = period_map.get(period)
-        if delta:
-            return int((datetime.now() - delta).timestamp() * 1000)
-        return None
-
-    def _process_klines_data(self, klines: List) -> pd.DataFrame:
-        """Process raw klines data into DataFrame with standardized column names"""
+        """Process raw klines data into DataFrame with standardized column names and types"""
         try:
             # Create DataFrame with standard column names
             df = pd.DataFrame(
@@ -470,8 +350,9 @@ class CryptoDataLoader:
             return df[numeric_columns]
 
         except Exception as e:
-            logger.error(f"Error processing klines data: {str(e)}")
-            raise
+            logger.error(f"Error processing klines data: {str(e)}", exc_info=True)
+            raise DataLoadError(f"Failed to process klines data: {str(e)}")
+
 
     def _normalize_symbol(self, symbol: str) -> str:
         """Normalize symbol format for exchange"""
@@ -674,3 +555,95 @@ class CryptoDataLoader:
         except SQLAlchemyError as e:
             logger.error(f"Error during backup process: {str(e)}")
             return False
+
+    async def get_historical_data_async(
+        self,
+        symbol: str,
+        period: str = '1d',
+        interval: str = '1m'
+    ) -> Optional[pd.DataFrame]:
+        """Async wrapper for get_historical_data with error handling"""
+        try:
+            return await asyncio.to_thread(
+                self.get_historical_data,
+                symbol,
+                period,
+                interval
+            )
+        except Exception as e:
+            error_msg = f"Error in async historical data fetch: {str(e)}"
+            logger.error(error_msg, exc_info=True)
+            raise DataLoadError(error_msg)
+
+    def get_historical_data(
+        self,
+        symbol: str,
+        period: str = '1d',
+        interval: str = '1m'
+    ) -> Optional[pd.DataFrame]:
+        """Get historical data with comprehensive error handling"""
+        try:
+            if not self.client and self.use_live_data:
+                raise ValueError("Client not initialized")
+
+            symbol = self._normalize_symbol(symbol)
+            if symbol not in self.supported_coins:
+                raise ValueError(f"Unsupported symbol: {symbol}")
+
+            # Check cache
+            cache_key = f"{symbol}_{period}_{interval}"
+            cached_data = self._get_from_cache(cache_key, interval)
+            if cached_data is not None:
+                return cached_data
+
+            logger.info(f"Fetching {symbol} data for period {period}")
+
+            if not self.use_live_data:
+                return self._get_mock_data(symbol, period, interval)
+
+            # Fetch data with retry
+            klines = None
+            for attempt in range(self.RETRY_ATTEMPTS):
+                try:
+                    klines = self.client.get_klines(
+                        symbol=symbol,
+                        interval=interval,
+                        startTime=self._get_start_time(period),
+                        limit=1000
+                    )
+                    break
+                except BinanceAPIException as e:
+                    if attempt == self.RETRY_ATTEMPTS - 1:
+                        raise DataLoadError(f"Failed to fetch klines data: {str(e)}")
+                    time.sleep(self.RETRY_DELAY)
+
+            if not klines:
+                raise DataLoadError(f"No data received for {symbol}")
+
+            df = self._process_klines_data(klines)
+
+            # Add technical indicators
+            df = self._add_technical_indicators(df)
+
+            # Cache and save
+            self._add_to_cache(cache_key, df)
+            self._save_to_database(symbol, df)
+
+            return df
+
+        except Exception as e:
+            error_msg = f"Error fetching data for {symbol}: {str(e)}"
+            logger.error(error_msg, exc_info=True)
+            raise DataLoadError(error_msg)
+
+    def _get_start_time(self, period: str) -> Optional[int]:
+        """Calculate start time based on period"""
+        period_map = {
+            '1d': timedelta(days=1),
+            '7d': timedelta(days=7),
+            '30d': timedelta(days=30)
+        }
+        delta = period_map.get(period)
+        if delta:
+            return int((datetime.now() - delta).timestamp() * 1000)
+        return None
