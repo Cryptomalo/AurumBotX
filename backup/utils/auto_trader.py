@@ -1,6 +1,5 @@
-
 import logging
-from datetime import datetime
+from datetime import datetime, timedelta
 import time
 from typing import Dict
 from utils.data_loader import CryptoDataLoader
@@ -11,6 +10,8 @@ from utils.strategies.scalping import ScalpingStrategy
 from utils.strategies.swing_trading import SwingTradingStrategy
 from utils.database import get_db, TradingStrategy, SimulationResult
 from utils.notifications import TradingNotifier
+from utils.wallet_manager import WalletManager # Assuming this import is needed
+
 
 class AutoTrader:
     def __init__(self, symbol, initial_balance=10000, risk_per_trade=0.02):
@@ -35,10 +36,10 @@ class AutoTrader:
         self.indicators = TechnicalIndicators()
         self.notifier = TradingNotifier()
         self.wallet_manager = WalletManager(user_id=1)  # user_id temporaneo
-        
+
         # Setup logging
         self.setup_logging()
-        
+
     def connect_wallet(self, wallet_address: str, chain_type: str = 'ETH'):
         """Collega un wallet specifico per il trading"""
         try:
@@ -96,23 +97,24 @@ class AutoTrader:
             df_short = self.data_loader.get_historical_data(self.symbol, period='1d')
             df_medium = self.data_loader.get_historical_data(self.symbol, period='7d')
             df_long = self.data_loader.get_historical_data(self.symbol, period='30d')
-            
+
             # Auto-adattamento delle strategie basato sulla volatilità
             market_volatility = self.calculate_market_volatility(df_medium)
             self.adjust_strategies_parameters(market_volatility)
-            
+
             df = self.merge_timeframes(df_short, df_medium, df_long)
             if df is None or df.empty:
                 self.logger.error("Unable to get market data")
                 return None
 
+            # Use standardized column names
             df = self.indicators.add_sma(df)
             df = self.indicators.add_rsi(df)
             df = self.indicators.add_macd(df)
 
             # Analisi AI
             ai_signal = self.prediction_model.analyze_market_with_ai(df, self._get_social_data())
-            
+
             if ai_signal and ai_signal['confidence'] > 0.75:
                 return {
                     'action': 'buy' if ai_signal['technical_score'] > 0.5 else 'sell',
@@ -121,7 +123,7 @@ class AutoTrader:
                     'target_price': self._calculate_target_price(df, ai_signal),
                     'stop_loss': self._calculate_stop_loss(df, ai_signal)
                 }
-                
+
             best_signal = None
             best_confidence = 0
 
@@ -139,7 +141,7 @@ class AutoTrader:
                     'market_trend': 1 if df['Close'].iloc[-1] > df['Close'].iloc[-20].mean() else -1
                 }
 
-                if (signal['action'] != 'hold' and 
+                if (signal['action'] != 'hold' and
                     signal['confidence'] > best_confidence and
                     strategy.validate_trade(signal, portfolio_status)):
                     best_signal = signal
@@ -165,7 +167,7 @@ class AutoTrader:
             # Reduced minimum time between trades for better opportunities
             if self.last_action_time and (current_time - self.last_action_time).seconds < 300:
                 return
-                
+
             # Add execution priority based on signal strength
             if signal.get('confidence', 0) > 0.9:
                 self.last_action_time = current_time - timedelta(seconds=290)
@@ -195,8 +197,8 @@ class AutoTrader:
                 self.notifier.send_trade_notification('BUY', self.symbol, price, position_size)
 
             elif self.is_in_position and self.current_position:
-                if (action == 'sell' or 
-                    price >= self.current_position['target_price'] or 
+                if (action == 'sell' or
+                    price >= self.current_position['target_price'] or
                     price <= self.current_position['stop_loss']):
 
                     entry_price = self.current_position['entry_price']

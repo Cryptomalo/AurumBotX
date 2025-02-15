@@ -256,15 +256,34 @@ class CryptoDataLoader:
             df['SMA_20'] = df['Close'].rolling(window=20).mean()
             df['EMA_20'] = df['Close'].ewm(span=20, adjust=False).mean()
 
+            # ATR calculation
+            high_low = df['High'] - df['Low']
+            high_close = (df['High'] - df['Close'].shift()).abs()
+            low_close = (df['Low'] - df['Close'].shift()).abs()
+            ranges = pd.concat([high_low, high_close, low_close], axis=1)
+            true_range = ranges.max(axis=1)
+            df['ATR'] = true_range.rolling(window=14).mean()
+
+            # Bollinger Bands
+            bb_period = 20
+            bb_std = 2
+            df['BB_Middle'] = df['Close'].rolling(window=bb_period).mean()
+            bb_std_dev = df['Close'].rolling(window=bb_period).std()
+            df['BB_Upper'] = df['BB_Middle'] + (bb_std * bb_std_dev)
+            df['BB_Lower'] = df['BB_Middle'] - (bb_std * bb_std_dev)
+            df['BB_Width'] = (df['BB_Upper'] - df['BB_Lower']) / df['BB_Middle']
+
             # RSI
             delta = df['Close'].diff()
-            gain = (delta.where(delta > 0, 0)).rolling(window=14).mean()
-            loss = (-delta.where(delta < 0, 0)).rolling(window=14).mean()
-            rs = gain / loss
+            gain = delta.where(delta > 0, 0)
+            loss = -delta.where(delta < 0, 0)
+            avg_gain = gain.rolling(window=14).mean()
+            avg_loss = loss.rolling(window=14).mean()
+            rs = avg_gain / avg_loss
             df['RSI'] = 100 - (100 / (1 + rs))
 
-            # Clean up NaN values
-            df = df.fillna(method='ffill').fillna(method='bfill').fillna(0)
+            # Clean up NaN values using recommended methods
+            df = df.ffill().bfill().fillna(0)
 
             return df
 

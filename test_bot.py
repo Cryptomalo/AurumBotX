@@ -168,7 +168,7 @@ class TestBot:
 
                         # Log analysis results
                         logger.info(f"Analysis results for {pair}:")
-                        logger.info(f"Market price: {market_data['close'].iloc[-1]}")
+                        logger.info(f"Market price: {market_data['Close'].iloc[-1]}")
                         logger.info(f"Sentiment score: {sentiment.get('score', 0)}")
                         logger.info(f"Generated signals: {len(signals)}")
 
