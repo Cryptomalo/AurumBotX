@@ -12,7 +12,11 @@ import json
 import asyncio
 from openai import OpenAI
 from typing import Dict, Any, List, Optional
+import numpy as np
 import pandas_ta as ta
+
+# Use np.nan instead of NaN
+NaN = np.nan
 
 logging.basicConfig(level=logging.INFO)
 

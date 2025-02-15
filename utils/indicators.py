@@ -40,6 +40,8 @@ class TechnicalIndicators:
                              if k in df.columns}, inplace=True)
 
             # Basic price and volume metrics
+            # Ensure standardized column names
+            df.columns = [col.title() for col in df.columns]
             df['Returns'] = df['Close'].pct_change()
             df['Volatility'] = self.calculate_volatility(df)
 
