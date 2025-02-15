@@ -1,11 +1,13 @@
+import logging
+import time
+from datetime import datetime
 from sqlalchemy import create_engine, Column, Integer, Float, String, DateTime, ForeignKey, text
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker, relationship, Session
 from sqlalchemy.exc import SQLAlchemyError
 import os
-from datetime import datetime
-import time
-import logging
+from utils.db_maintenance import setup_maintenance
+import threading
 
 logger = logging.getLogger(__name__)
 
@@ -16,7 +18,16 @@ class Database:
         self.max_retries = max_retries
         self.engine = None
         self.Session = None
-        if not self._connect():  # Initialize connection on instantiation
+        self.maintenance = setup_maintenance(connection_string)
+
+        # Start maintenance thread
+        self.maintenance_thread = threading.Thread(
+            target=self._maintenance_loop,
+            daemon=True
+        )
+        self.maintenance_thread.start()
+
+        if not self._connect():
             raise SQLAlchemyError("Failed to establish initial database connection")
 
     def _connect(self) -> bool:
@@ -87,26 +98,79 @@ class Database:
             logger.error("Failed to create new session: %s", str(e))
             raise SQLAlchemyError(f"Failed to create database session: {str(e)}")
 
-# Improved database session generator
-def get_db():
-    """Database session generator with proper error handling"""
-    db_url = os.getenv('DATABASE_URL')
-    if not db_url:
-        raise ValueError("DATABASE_URL environment variable not set")
+    def _maintenance_loop(self):
+        """Background thread for periodic maintenance"""
+        while True:
+            try:
+                self.maintenance.perform_maintenance()
+                # Sleep for 1 hour before next check
+                time.sleep(3600)
+            except Exception as e:
+                logger.error(f"Error in maintenance loop: {e}")
+                time.sleep(300)  # Wait 5 minutes on error
 
-    db = Database(db_url)
-    session = None
+def init_db():
+    """Initialize database tables with standardized schema"""
     try:
-        session = db.get_session()
-        yield session
+        db_url = os.getenv('DATABASE_URL')
+        if not db_url:
+            raise ValueError("DATABASE_URL environment variable not set")
+
+        engine = create_engine(db_url)
+
+        # Create standardized market data table template
+        with engine.begin() as conn:
+            conn.execute(text("""
+            CREATE TABLE IF NOT EXISTS market_data_template (
+                timestamp TIMESTAMP PRIMARY KEY,
+                "Open" DOUBLE PRECISION,
+                "High" DOUBLE PRECISION,
+                "Low" DOUBLE PRECISION,
+                "Close" DOUBLE PRECISION,
+                "Volume" DOUBLE PRECISION,
+                "Returns" DOUBLE PRECISION,
+                "Volatility" DOUBLE PRECISION,
+                "Volume_MA" DOUBLE PRECISION,
+                "Volume_Ratio" DOUBLE PRECISION,
+                "SMA_20" DOUBLE PRECISION,
+                "SMA_50" DOUBLE PRECISION,
+                "SMA_200" DOUBLE PRECISION,
+                "EMA_20" DOUBLE PRECISION,
+                "EMA_50" DOUBLE PRECISION,
+                "EMA_200" DOUBLE PRECISION,
+                "MACD" DOUBLE PRECISION,
+                "MACD_Signal" DOUBLE PRECISION,
+                "MACD_Hist" DOUBLE PRECISION,
+                "RSI" DOUBLE PRECISION,
+                "ATR" DOUBLE PRECISION,
+                "BB_Middle" DOUBLE PRECISION,
+                "BB_Upper" DOUBLE PRECISION,
+                "BB_Lower" DOUBLE PRECISION,
+                "BB_Width" DOUBLE PRECISION
+            ) PARTITION BY RANGE (timestamp);
+            """))
+
+            # Create partitioned indexes for performance
+            conn.execute(text("""
+            CREATE INDEX IF NOT EXISTS idx_market_data_template_timestamp 
+            ON market_data_template (timestamp);
+
+            CREATE INDEX IF NOT EXISTS idx_market_data_template_close_timestamp 
+            ON market_data_template ("Close", timestamp);
+            """))
+
+        Base.metadata.create_all(bind=engine)
+        logger.info("Database tables initialized successfully")
+
     except Exception as e:
-        logger.error(f"Database session error: {e}")
-        if session:
-            session.rollback()
+        logger.error(f"Database initialization error: {e}")
         raise
-    finally:
-        if session:
-            session.close()
+
+# Initialize database
+try:
+    init_db()
+except Exception as e:
+    logger.error(f"Failed to initialize database: {e}")
 
 Base = declarative_base()
 
@@ -138,108 +202,23 @@ class SimulationResult(Base):
 
     strategy = relationship("TradingStrategy", back_populates="simulations")
 
-def init_db():
-    """Initialize database tables with standardized schema"""
+# Improved database session generator
+def get_db():
+    """Database session generator with proper error handling"""
+    db_url = os.getenv('DATABASE_URL')
+    if not db_url:
+        raise ValueError("DATABASE_URL environment variable not set")
+
+    db = Database(db_url)
+    session = None
     try:
-        db_url = os.getenv('DATABASE_URL')
-        if not db_url:
-            raise ValueError("DATABASE_URL environment variable not set")
-
-        engine = create_engine(db_url)
-        
-        # Create standardized market data table template
-        with engine.begin() as conn:
-            conn.execute(text("""
-            CREATE TABLE IF NOT EXISTS market_data_template (
-                timestamp TIMESTAMP PRIMARY KEY,
-                "Open" DOUBLE PRECISION,
-                "High" DOUBLE PRECISION,
-                "Low" DOUBLE PRECISION,
-                "Close" DOUBLE PRECISION,
-                "Volume" DOUBLE PRECISION,
-                "Returns" DOUBLE PRECISION,
-                "Volatility" DOUBLE PRECISION,
-                "Volume_MA" DOUBLE PRECISION,
-                "Volume_Ratio" DOUBLE PRECISION,
-                "SMA_20" DOUBLE PRECISION,
-                "SMA_50" DOUBLE PRECISION,
-                "SMA_200" DOUBLE PRECISION,
-                "EMA_20" DOUBLE PRECISION,
-                "EMA_50" DOUBLE PRECISION,
-                "EMA_200" DOUBLE PRECISION,
-                "MACD" DOUBLE PRECISION,
-                "MACD_Signal" DOUBLE PRECISION,
-                "MACD_Hist" DOUBLE PRECISION,
-                "RSI" DOUBLE PRECISION,
-                "ATR" DOUBLE PRECISION,
-                "BB_Middle" DOUBLE PRECISION,
-                "BB_Upper" DOUBLE PRECISION,
-                "BB_Lower" DOUBLE PRECISION,
-                "BB_Width" DOUBLE PRECISION
-            )
-            """))
-
-        Base.metadata.create_all(bind=engine)
-
-        # Create session
-        Session = sessionmaker(bind=engine)
-        session = Session()
-
-        try:
-            # Create subscription plans if they don't exist
-            session.execute(text("""
-            CREATE TABLE IF NOT EXISTS subscription_plans (
-                id SERIAL PRIMARY KEY,
-                name VARCHAR(100) NOT NULL,
-                duration_months INTEGER NOT NULL,
-                price DECIMAL(10,2) NOT NULL,
-                description TEXT,
-                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-            )
-            """))
-
-            session.execute(text("""
-            CREATE TABLE IF NOT EXISTS users (
-                id SERIAL PRIMARY KEY,
-                username VARCHAR(100) UNIQUE NOT NULL,
-                email VARCHAR(255),
-                password_hash VARCHAR(255),
-                is_active BOOLEAN DEFAULT TRUE,
-                subscription_expires_at TIMESTAMP,
-                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                last_login TIMESTAMP
-            )
-            """))
-
-            session.execute(text("""
-            CREATE TABLE IF NOT EXISTS activation_codes (
-                id SERIAL PRIMARY KEY,
-                code VARCHAR(20) UNIQUE NOT NULL,
-                plan_id INTEGER REFERENCES subscription_plans(id),
-                expires_at TIMESTAMP NOT NULL,
-                is_used BOOLEAN DEFAULT FALSE,
-                used_by INTEGER REFERENCES users(id),
-                used_at TIMESTAMP,
-                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-            )
-            """))
-
-            session.commit()
-            logger.info("Database tables initialized successfully")
-
-        except Exception as e:
-            logger.error(f"Error creating tables: {e}")
-            session.rollback()
-            raise
-        finally:
-            session.close()
-
+        session = db.get_session()
+        yield session
     except Exception as e:
-        logger.error(f"Database initialization error: {e}")
+        logger.error(f"Database session error: {e}")
+        if session:
+            session.rollback()
         raise
-
-# Initialize database
-try:
-    init_db()
-except Exception as e:
-    logger.error(f"Failed to initialize database: {e}")
+    finally:
+        if session:
+            session.close()
