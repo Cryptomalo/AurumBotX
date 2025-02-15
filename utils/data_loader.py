@@ -223,9 +223,8 @@ class CryptoDataLoader:
                 # Prepare the data as a list of dictionaries
                 records = []
                 for _, row in batch_df.iterrows():
-                    record = {
-                        'timestamp': row['timestamp'].strftime('%Y-%m-%d %H:%M:%S')
-                    }
+                    record = {}
+                    record['timestamp'] = row['timestamp'].strftime('%Y-%m-%d %H:%M:%S')
                     for col in required_columns:
                         val = row[col]
                         record[col] = float(val) if pd.notna(val) else None
@@ -233,12 +232,11 @@ class CryptoDataLoader:
 
                 # Construct the SQL query
                 columns = ['"timestamp"'] + [f'"{col}"' for col in required_columns]
-                placeholders = ['$1'] + [f'${i+2}' for i in range(len(required_columns))]
                 update_cols = [f'"{col}" = EXCLUDED."{col}"' for col in required_columns]
 
                 insert_sql = f"""
                 INSERT INTO {table_name} ({', '.join(columns)})
-                VALUES ({', '.join(placeholders)})
+                VALUES ({', '.join([f':{col}' for col in ['timestamp'] + required_columns])})
                 ON CONFLICT ("timestamp") 
                 DO UPDATE SET {', '.join(update_cols)}
                 """
@@ -248,8 +246,7 @@ class CryptoDataLoader:
                     try:
                         with self.engine.begin() as conn:
                             for record in records:
-                                values = [record['timestamp']] + [record[col] for col in required_columns]
-                                conn.execute(text(insert_sql), values)
+                                conn.execute(text(insert_sql), record)
                         break
                     except SQLAlchemyError as e:
                         if attempt == self.RETRY_ATTEMPTS - 1:
