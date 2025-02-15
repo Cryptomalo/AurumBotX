@@ -12,12 +12,9 @@ import json
 import asyncio
 from openai import OpenAI
 from typing import Dict, Any, List, Optional
-import numpy as np
-import pandas_ta as ta
+from utils.indicators import TechnicalIndicators  # Using our custom indicators
 
-# Use np.nan instead of NaN
-NaN = np.nan
-
+# Configure logging
 logging.basicConfig(level=logging.INFO)
 
 class PredictionModel:
@@ -27,6 +24,7 @@ class PredictionModel:
         self.scaler = StandardScaler()
         self.feature_importance = {}
         self.metrics = {}
+        self.indicators = TechnicalIndicators()  # Initialize our technical indicators
 
         # Risk management parameters
         self.max_position_size = 0.1  # 10% of portfolio
@@ -36,10 +34,34 @@ class PredictionModel:
         # Initialize OpenAI client
         self.openai_client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 
-    def _calculate_position_size(self, 
-                               confidence: float, 
-                               volatility: float, 
-                               portfolio_value: float) -> float:
+    def create_features(self, df):
+        """Create advanced technical indicators using standardized column names"""
+        try:
+            df = df.copy()
+
+            # Ensure proper column names
+            column_mapping = {
+                'open': 'Open', 'high': 'High', 'low': 'Low',
+                'close': 'Close', 'volume': 'Volume'
+            }
+            df.rename(columns={k: v for k, v in column_mapping.items() 
+                            if k in df.columns}, inplace=True)
+
+            # Add all technical indicators using our custom implementation
+            df = self.indicators.add_all_indicators(df)
+
+            # Price momentum
+            for period in [5, 10, 20, 30]:
+                df[f'momentum_{period}'] = df['Close'].pct_change(periods=period)
+
+            df = df.dropna()
+            return df
+
+        except Exception as e:
+            self.logger.error(f"Error creating features: {str(e)}")
+            return df
+
+    def _calculate_position_size(self, confidence: float, volatility: float, portfolio_value: float) -> float:
         """Calculate position size based on multiple risk factors"""
         try:
             # Base position size from confidence
@@ -72,17 +94,16 @@ class PredictionModel:
     def calculate_risk_metrics(self, df: pd.DataFrame) -> Dict[str, float]:
         """Calculate comprehensive risk metrics"""
         try:
-            # Calculate daily returns
-            returns = df['Close'].pct_change()
+            returns = df['Returns'].fillna(0)
 
             # Value at Risk (VaR)
-            var_95 = np.percentile(returns.dropna(), 5)
+            var_95 = np.percentile(returns, 5)
 
             # Expected Shortfall (Conditional VaR)
             es_95 = returns[returns <= var_95].mean()
 
             # Volatility (20-day)
-            volatility = returns.rolling(window=20).std().iloc[-1]
+            volatility = returns.rolling(window=20).std().iloc[-1] * np.sqrt(252)
 
             # Maximum Drawdown
             cumulative_returns = (1 + returns).cumprod()
@@ -109,13 +130,57 @@ class PredictionModel:
         except Exception as e:
             self.logger.error(f"Risk metrics calculation error: {e}")
             return {
-                'var_95': -0.02,  # Conservative estimate
+                'var_95': -0.02,
                 'expected_shortfall': -0.03,
                 'volatility': 0.02,
                 'max_drawdown': -0.1,
                 'sharpe_ratio': 0,
                 'sortino_ratio': 0
             }
+
+    async def analyze_market_with_ai(self, market_data: pd.DataFrame, social_data: Dict[str, Any]) -> Optional[Dict[str, Any]]:
+        """Market analysis using AI and multiple data sources with enhanced risk management"""
+        try:
+            # Prepare market data features
+            market_features = self.create_features(market_data)
+            if market_features is None:
+                return None
+
+            # Calculate risk metrics
+            risk_metrics = self.calculate_risk_metrics(market_features)
+
+            # Get technical predictions
+            technical_prediction = self.predict(market_features)
+            if technical_prediction is None:
+                return None
+
+            # Get AI analysis asynchronously
+            market_context = self._prepare_market_context(market_features)
+            ai_analysis = await self._get_openai_analysis(market_context)
+
+            # Calculate optimal position size
+            confidence = self._calculate_confidence(technical_prediction, ai_analysis)
+            position_size = self._calculate_position_size(
+                confidence,
+                risk_metrics['volatility'],
+                100000  # Example portfolio value
+            )
+
+            return {
+                'technical_score': technical_prediction.get('prediction', 0.5),
+                'sentiment_score': ai_analysis.get('sentiment', 0.5),
+                'confidence': confidence,
+                'suggested_position_size': position_size,
+                'risk_metrics': risk_metrics,
+                'indicators': {
+                    'rsi': market_features.get('RSI_14', pd.Series([])).iloc[-1],
+                    'macd': market_features.get('MACD', pd.Series([])).iloc[-1]
+                }
+            }
+
+        except Exception as e:
+            self.logger.error(f"AI analysis error: {str(e)}")
+            return None
 
     def calculate_stop_loss(self, 
                            entry_price: float, 
@@ -204,105 +269,9 @@ class PredictionModel:
                 'risk_metrics': risk_metrics,
                 'stop_levels': stop_levels,
                 'indicators': {
-                    'rsi': market_features.get('RSI', pd.Series([])).iloc[-1],
-                    'macd': market_features.get('MACD_12_26_9', pd.Series([])).iloc[-1],
+                    'rsi': market_features.get('RSI_14', pd.Series([])).iloc[-1],
+                    'macd': market_features.get('MACD', pd.Series([])).iloc[-1],
                     'atr': market_features.get('ATR', pd.Series([])).iloc[-1]
-                }
-            }
-
-        except Exception as e:
-            self.logger.error(f"AI analysis error: {str(e)}")
-            return None
-
-    def create_features(self, df):
-        """Create advanced technical indicators using standardized column names"""
-        df = df.copy()
-
-        try:
-            # Basic price features
-            df['Returns'] = df['Close'].pct_change()
-            df['log_returns'] = np.log1p(df['Returns'])
-
-            # Volatility features
-            for window in [5, 10, 20, 30]:
-                df[f'volatility_{window}'] = df['Returns'].rolling(window=window).std()
-                df[f'volume_ma_{window}'] = df['Volume'].rolling(window=window).mean()
-
-            # Price momentum
-            for period in [5, 10, 20, 30]:
-                df[f'momentum_{period}'] = df['Close'].pct_change(periods=period)
-
-            # Moving averages and crossovers
-            for ma_period in [5, 10, 20, 50]:
-                df[f'sma_{ma_period}'] = df['Close'].rolling(window=ma_period).mean()
-                df[f'ema_{ma_period}'] = df['Close'].ewm(span=ma_period, adjust=False).mean()
-
-            # RSI with error handling
-            try:
-                for period in [7, 14, 21]:
-                    rsi = ta.rsi(df['Close'], length=period)
-                    df[f'RSI_{period}'] = rsi
-            except Exception as e:
-                self.logger.error(f"Error calculating RSI: {str(e)}")
-
-            # MACD with error handling
-            try:
-                macd = ta.macd(df['Close'])
-                df = pd.concat([df, macd], axis=1)
-            except Exception as e:
-                self.logger.error(f"Error calculating MACD: {str(e)}")
-
-            # Bollinger Bands with error handling
-            try:
-                bb = ta.bbands(df['Close'])
-                df = pd.concat([df, bb], axis=1)
-            except Exception as e:
-                self.logger.error(f"Error calculating Bollinger Bands: {str(e)}")
-
-            # Add Average True Range (ATR)
-            try:
-                atr = ta.atr(df['High'], df['Low'], df['Close'], length=14)
-                df = pd.concat([df, atr], axis=1)
-            except Exception as e:
-                self.logger.error(f"Error calculating ATR: {str(e)}")
-
-
-            df = df.dropna()
-            return df
-
-        except Exception as e:
-            self.logger.error(f"Error creating features: {str(e)}")
-            return df
-
-    async def analyze_market_with_ai(self, market_data: pd.DataFrame, social_data: Dict[str, Any]) -> Optional[Dict[str, Any]]:
-        """Market analysis using AI and multiple data sources"""
-        try:
-            # Prepare market data features
-            market_features = self.create_features(market_data)
-            if market_features is None:
-                return None
-
-            # Get technical predictions synchronously
-            technical_prediction = self.predict(market_features)
-            if technical_prediction is None:
-                return None
-
-            # Get AI analysis from OpenAI asynchronously
-            market_context = self._prepare_market_context(market_features)
-            ai_analysis = await self._get_openai_analysis(market_context)
-
-            # Combine signals
-            confidence = self._calculate_confidence(technical_prediction, ai_analysis)
-
-            return {
-                'technical_score': technical_prediction.get('prediction', 0.5),
-                'sentiment_score': ai_analysis.get('sentiment', 0.5),
-                'confidence': confidence,
-                'suggested_position_size': self._calculate_position_size(confidence),
-                'indicators': {
-                    'rsi': market_features.get('RSI_14', pd.Series([])).iloc[-1] if 'RSI_14' in market_features else None,
-                    'macd': market_features.get('MACD_12_26_9', pd.Series([])).iloc[-1] if 'MACD_12_26_9' in market_features else None,
-                    'adx': market_features.get('ADX_14', pd.Series([])).iloc[-1] if 'ADX_14' in market_features else None
                 }
             }
 
@@ -318,8 +287,8 @@ class PredictionModel:
             f"Price: {latest_data.get('Close', 0):.2f}\n"
             f"Volume: {latest_data.get('Volume', 0):.2f}\n"
             f"RSI: {latest_data.get('RSI_14', 0):.2f}\n"
-            f"MACD: {latest_data.get('MACD_12_26_9', 0):.4f}\n"
-            f"ADX: {latest_data.get('ADX_14', 0):.2f}\n"
+            f"MACD: {latest_data.get('MACD', 0):.4f}\n"
+            f"ATR: {latest_data.get('ATR', 0):.2f}\n"
             f"Recent volatility: {latest_data.get('volatility_20', 0):.4f}"
         )
 

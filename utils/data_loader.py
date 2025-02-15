@@ -170,27 +170,31 @@ class CryptoDataLoader:
 
     def _process_klines_data(self, klines: List) -> pd.DataFrame:
         """Process raw klines data into DataFrame with standardized column names"""
-        df = pd.DataFrame(
-            klines,
-            columns=[
-                'Timestamp', 'Open', 'High', 'Low', 'Close', 'Volume',
-                'CloseTime', 'QuoteVolume', 'Trades', 'TakerBaseVolume', 'TakerQuoteVolume', 'Ignore'
-            ]
-        )
+        try:
+            # Create DataFrame with standard column names
+            df = pd.DataFrame(
+                klines,
+                columns=[
+                    'timestamp', 'Open', 'High', 'Low', 'Close', 'Volume',
+                    'close_time', 'quote_volume', 'trades', 'taker_base', 'taker_quote', 'ignore'
+                ]
+            )
 
-        # Convert string values to float
-        for col in ['open', 'high', 'low', 'close', 'volume']:
-            df[col] = pd.to_numeric(df[col], errors='coerce')
+            # Convert numeric columns
+            numeric_columns = ['Open', 'High', 'Low', 'Close', 'Volume']
+            for col in numeric_columns:
+                df[col] = pd.to_numeric(df[col], errors='coerce')
 
-        # Convert timestamp to datetime
-        df['timestamp'] = pd.to_datetime(df['timestamp'], unit='ms')
-        df.set_index('timestamp', inplace=True)
+            # Convert timestamp to datetime and set as index
+            df['timestamp'] = pd.to_datetime(df['timestamp'], unit='ms')
+            df.set_index('timestamp', inplace=True)
 
-        # Standardize column names to uppercase
-        df.columns = [col.title() for col in df.columns]
+            # Keep only OHLCV data
+            return df[numeric_columns]
 
-        # Drop unnecessary columns and keep only OHLCV data
-        return df[['Open', 'High', 'Low', 'Close', 'Volume']]
+        except Exception as e:
+            logger.error(f"Error processing klines data: {str(e)}")
+            raise
 
     def _normalize_symbol(self, symbol: str) -> str:
         """Normalize symbol format for exchange"""
@@ -231,11 +235,43 @@ class CryptoDataLoader:
 
         try:
             table_name = f"market_data_{symbol.lower()}"
+
+            # Create table with correct schema if it doesn't exist
+            create_table_sql = """
+            CREATE TABLE IF NOT EXISTS {} (
+                timestamp TIMESTAMP PRIMARY KEY,
+                "Open" DOUBLE PRECISION,
+                "High" DOUBLE PRECISION,
+                "Low" DOUBLE PRECISION,
+                "Close" DOUBLE PRECISION,
+                "Volume" DOUBLE PRECISION,
+                "Returns" DOUBLE PRECISION,
+                "Volatility" DOUBLE PRECISION,
+                "Volume_MA" DOUBLE PRECISION,
+                "Volume_Ratio" DOUBLE PRECISION,
+                "SMA_20" DOUBLE PRECISION,
+                "EMA_20" DOUBLE PRECISION,
+                "ATR" DOUBLE PRECISION,
+                "BB_Middle" DOUBLE PRECISION,
+                "BB_Upper" DOUBLE PRECISION,
+                "BB_Lower" DOUBLE PRECISION,
+                "BB_Width" DOUBLE PRECISION,
+                "RSI" DOUBLE PRECISION
+            )
+            """.format(table_name)
+
+            with self.engine.connect() as conn:
+                conn.execute(text(create_table_sql))
+                conn.commit()
+
+            # Save data
             df.to_sql(
                 table_name,
                 self.engine,
                 if_exists='append',
-                index=True
+                index=True,
+                method='multi',
+                chunksize=1000
             )
             logger.debug(f"Saved {len(df)} rows to database for {symbol}")
         except Exception as e:
