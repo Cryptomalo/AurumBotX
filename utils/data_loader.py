@@ -166,7 +166,7 @@ class CryptoDataLoader:
             raise DatabaseError(f"Schema consistency error: {str(e)}")
 
     def _save_to_database(self, symbol: str, df: pd.DataFrame):
-        """Enhanced database save with schema validation"""
+        """Enhanced database save with schema validation and proper conflict handling"""
         if not self.engine:
             return
 
@@ -230,14 +230,14 @@ class CryptoDataLoader:
                         record[col] = float(val) if pd.notna(val) else None
                     records.append(record)
 
-                # Construct the SQL query
+                # Construct the SQL query with explicit ON CONFLICT target
                 columns = ['"timestamp"'] + [f'"{col}"' for col in required_columns]
                 update_cols = [f'"{col}" = EXCLUDED."{col}"' for col in required_columns]
 
                 insert_sql = f"""
                 INSERT INTO {table_name} ({', '.join(columns)})
                 VALUES ({', '.join([f':{col}' for col in ['timestamp'] + required_columns])})
-                ON CONFLICT ("timestamp") 
+                ON CONFLICT ON CONSTRAINT {table_name}_pkey 
                 DO UPDATE SET {', '.join(update_cols)}
                 """
 
