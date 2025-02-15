@@ -4,6 +4,7 @@ import time
 import asyncio
 from typing import Dict, Any, Optional
 import pandas as pd
+import numpy as np # Added numpy import
 from utils.data_loader import CryptoDataLoader
 from utils.indicators import TechnicalIndicators
 from utils.strategies.base_strategy import BaseStrategy
@@ -104,44 +105,6 @@ class AutoTrader:
         # Start automatic backup
         self._start_config_backup()
 
-    def _format_symbol(self, symbol: str) -> str:
-        """Convert symbol to Binance format"""
-        return symbol.replace('-', '').replace('/', '')
-
-    def setup_logging(self):
-        """Configure logging with proper format and file output"""
-        log_filename = f'trading_log_{self.symbol}_{datetime.now().strftime("%Y%m%d")}.log'
-        logging.basicConfig(
-            filename=log_filename,
-            level=logging.INFO,
-            format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
-        )
-        self.logger = logging.getLogger(__name__)
-
-    def calculate_market_volatility(self, df: pd.DataFrame) -> Optional[float]:
-        """Calculate market volatility using standard deviation"""
-        try:
-            # Updated to use correct column name 'Close'
-            returns = df['Close'].pct_change().dropna()
-            volatility = returns.std()
-            self.logger.info(f"Calculated volatility: {volatility}")
-            return volatility
-        except Exception as e:
-            self.logger.error(f"Error calculating volatility: {str(e)}")
-            return None
-
-    def adjust_strategies_parameters(self, volatility: Optional[float]):
-        """Adjust strategy parameters based on market volatility"""
-        if volatility is None:
-            return
-
-        try:
-            for strategy in self.strategies.values():
-                strategy.optimize_parameters({'volatility': volatility})
-            self.logger.info("Strategy parameters updated based on volatility")
-        except Exception as e:
-            self.logger.error(f"Error adjusting parameters: {str(e)}")
-
     async def analyze_market_async(self, market_data: pd.DataFrame, sentiment_data: Optional[Dict] = None) -> Optional[Dict[str, Any]]:
         """Asynchronous version of market analysis"""
         try:
@@ -154,8 +117,6 @@ class AutoTrader:
 
             # Add technical indicators synchronously
             try:
-                # Convert column names to lowercase for consistency
-                market_data.columns = market_data.columns.str.lower()
                 market_data = self.indicators.add_all_indicators(market_data)
                 market_volatility = self.calculate_market_volatility(market_data)
                 self.adjust_strategies_parameters(market_volatility)
@@ -203,7 +164,7 @@ class AutoTrader:
                         'available_capital': self.balance,
                         'total_capital': self.initial_balance,
                         'current_spread': 0.001,
-                        'market_trend': 1 if market_data['Close'].iloc[-1] > market_data['sma_20'].iloc[-1] else -1
+                        'market_trend': 1 if market_data['Close'].iloc[-1] > market_data['SMA_20'].iloc[-1] else -1
                     }
 
                     if (signal.get('confidence', 0) > best_confidence and 
@@ -225,13 +186,32 @@ class AutoTrader:
             self.logger.error(f"Market analysis error: {str(e)}")
             return None
 
+    def calculate_market_volatility(self, df: pd.DataFrame) -> float:
+        """Calculate market volatility using standard deviation"""
+        try:
+            returns = df['Returns'].fillna(0)
+            volatility = returns.std() * np.sqrt(252)  # Annualized volatility
+            self.logger.info(f"Calculated volatility: {volatility}")
+            return volatility
+        except Exception as e:
+            self.logger.error(f"Error calculating volatility: {str(e)}")
+            return 0.01  # Default minimal volatility
+
+    def adjust_strategies_parameters(self, volatility: float):
+        """Adjust strategy parameters based on market volatility"""
+        try:
+            for strategy in self.strategies.values():
+                if hasattr(strategy, 'optimize_parameters'):
+                    strategy.optimize_parameters({'volatility': volatility})
+            self.logger.info("Strategy parameters updated based on volatility")
+        except Exception as e:
+            self.logger.error(f"Error adjusting parameters: {str(e)}")
+
     async def _calculate_target_price_async(self, df: pd.DataFrame, ai_signal: Dict[str, Any]) -> float:
         """Calculate target price based on AI signals asynchronously"""
         try:
             current_price = df['Close'].iloc[-1]
             volatility = self.calculate_market_volatility(df)
-            if volatility is None:
-                return current_price * 1.02
             target_multiplier = 1 + (ai_signal['confidence'] * volatility * 5)
             return current_price * target_multiplier
         except Exception as e:
@@ -243,13 +223,26 @@ class AutoTrader:
         try:
             current_price = df['Close'].iloc[-1]
             volatility = self.calculate_market_volatility(df)
-            if volatility is None:
-                return current_price * 0.98
             stop_multiplier = 1 - (ai_signal['confidence'] * volatility * 3)
             return current_price * stop_multiplier
         except Exception as e:
             self.logger.error(f"Error calculating stop loss: {str(e)}")
             return df['Close'].iloc[-1] * 0.98
+
+    def _format_symbol(self, symbol: str) -> str:
+        """Convert symbol to Binance format"""
+        return symbol.replace('-', '').replace('/', '')
+
+    def setup_logging(self):
+        """Configure logging with proper format and file output"""
+        log_filename = f'trading_log_{self.symbol}_{datetime.now().strftime("%Y%m%d")}.log'
+        logging.basicConfig(
+            filename=log_filename,
+            level=logging.INFO,
+            format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+        )
+        self.logger = logging.getLogger(__name__)
+
 
     async def execute_trade_async(self, signal: Optional[Dict[str, Any]]) -> Dict[str, Any]:
         """Execute a trade based on the generated signal asynchronously"""
@@ -362,8 +355,8 @@ class AutoTrader:
             df_long_resampled = df_long.resample('1min').ffill()
 
             df_merged = df_short.copy()
-            df_merged['sma_medium'] = df_medium_resampled['Close'].rolling(window=20).mean()
-            df_merged['sma_long'] = df_long_resampled['Close'].rolling(window=50).mean()
+            df_merged['SMA_medium'] = df_medium_resampled['Close'].rolling(window=20).mean() #Corrected column name
+            df_merged['SMA_long'] = df_long_resampled['Close'].rolling(window=50).mean() #Corrected column name
 
             return df_merged
 
