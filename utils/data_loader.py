@@ -173,8 +173,8 @@ class CryptoDataLoader:
         df = pd.DataFrame(
             klines,
             columns=[
-                'timestamp', 'open', 'high', 'low', 'close', 'volume',
-                'close_time', 'quote_av', 'trades', 'tb_base_av', 'tb_quote_av', 'ignore'
+                'Timestamp', 'Open', 'High', 'Low', 'Close', 'Volume',
+                'CloseTime', 'QuoteVolume', 'Trades', 'TakerBaseVolume', 'TakerQuoteVolume', 'Ignore'
             ]
         )
 

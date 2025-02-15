@@ -2999,7 +2999,7 @@ requires-dist = [
     { name = "numpy", specifier = ">=2.2.2" },
     { name = "openai", specifier = "==1.61.1" },
     { name = "pandas", specifier = ">=2.2.3" },
-    { name = "pandas-ta", specifier = ">=0.3.14b0" },
+    { name = "pandas-ta", specifier = "==0.3.14b0" },
     { name = "plotly", specifier = "==6.0.0" },
     { name = "praw", specifier = "==7.8.1" },
     { name = "psycopg2-binary", specifier = "==2.9.10" },

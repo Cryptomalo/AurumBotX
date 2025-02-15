@@ -254,7 +254,7 @@ class PredictionModel:
                 df = pd.concat([df, bb], axis=1)
             except Exception as e:
                 self.logger.error(f"Error calculating Bollinger Bands: {str(e)}")
-            
+
             # Add Average True Range (ATR)
             try:
                 atr = ta.atr(df['High'], df['Low'], df['Close'], length=14)
