@@ -96,13 +96,46 @@ class SimulationResult(Base):
     strategy = relationship("TradingStrategy", back_populates="simulations")
 
 def init_db():
-    """Initialize database tables"""
+    """Initialize database tables with standardized schema"""
     try:
         db_url = os.getenv('DATABASE_URL')
         if not db_url:
             raise ValueError("DATABASE_URL environment variable not set")
 
         engine = create_engine(db_url)
+        
+        # Create standardized market data table template
+        with engine.begin() as conn:
+            conn.execute(text("""
+            CREATE TABLE IF NOT EXISTS market_data_template (
+                timestamp TIMESTAMP PRIMARY KEY,
+                "Open" DOUBLE PRECISION,
+                "High" DOUBLE PRECISION,
+                "Low" DOUBLE PRECISION,
+                "Close" DOUBLE PRECISION,
+                "Volume" DOUBLE PRECISION,
+                "Returns" DOUBLE PRECISION,
+                "Volatility" DOUBLE PRECISION,
+                "Volume_MA" DOUBLE PRECISION,
+                "Volume_Ratio" DOUBLE PRECISION,
+                "SMA_20" DOUBLE PRECISION,
+                "SMA_50" DOUBLE PRECISION,
+                "SMA_200" DOUBLE PRECISION,
+                "EMA_20" DOUBLE PRECISION,
+                "EMA_50" DOUBLE PRECISION,
+                "EMA_200" DOUBLE PRECISION,
+                "MACD" DOUBLE PRECISION,
+                "MACD_Signal" DOUBLE PRECISION,
+                "MACD_Hist" DOUBLE PRECISION,
+                "RSI" DOUBLE PRECISION,
+                "ATR" DOUBLE PRECISION,
+                "BB_Middle" DOUBLE PRECISION,
+                "BB_Upper" DOUBLE PRECISION,
+                "BB_Lower" DOUBLE PRECISION,
+                "BB_Width" DOUBLE PRECISION
+            )
+            """))
+
         Base.metadata.create_all(bind=engine)
 
         # Create session
