@@ -11,6 +11,8 @@ from utils.strategies.strategy_manager import StrategyManager
 from utils.sentiment_analyzer import SentimentAnalyzer
 from utils.database import Database
 from utils.data_loader import CryptoDataLoader
+from utils.auto_optimizer import AutoOptimizer
+from utils.backup_manager import BackupManager
 
 # Setup logging
 log_filename = f'test_bot_{datetime.now().strftime("%Y%m%d_%H%M%S")}.log'
@@ -32,8 +34,10 @@ class TestBot:
         self.strategy_manager: Optional[StrategyManager] = None
         self.sentiment_analyzer: Optional[SentimentAnalyzer] = None
         self.data_loader: Optional[CryptoDataLoader] = None
+        self.auto_optimizer: Optional[AutoOptimizer] = None
+        self.backup_manager: Optional[BackupManager] = None
         self.should_run: bool = True
-        self.test_duration: timedelta = timedelta(hours=4)  # 4 hours test duration
+        self.test_duration: timedelta = timedelta(hours=4)
         self.start_time: datetime = datetime.now()
         self.setup_signal_handlers()
         logger.info("TestBot initialized successfully")
@@ -72,24 +76,18 @@ class TestBot:
                 logger.error("Database health check failed")
                 return False
 
-            # Initialize remaining components...
             logger.info("Database connection verified, proceeding with other components...")
 
-            # Initialize DataLoader with real market data
-            logger.info("Initializing DataLoader with real market data...")
+            # Initialize components
             self.data_loader = CryptoDataLoader(use_live_data=True)
-
-            # Initialize WebSocket handler
-            logger.info("Initializing WebSocket handler...")
             self.websocket_handler = WebSocketHandler(logger, self.db)
-
-            # Initialize Strategy manager with real data configuration
-            logger.info("Initializing Strategy manager...")
             self.strategy_manager = StrategyManager()
             await self.strategy_manager.configure_for_live_testing()
-
-            logger.info("Initializing Sentiment analyzer...")
             self.sentiment_analyzer = SentimentAnalyzer()
+
+            # Initialize auto-optimization components
+            self.backup_manager = BackupManager()
+            self.auto_optimizer = AutoOptimizer(self.db, self.strategy_manager)
 
             logger.info("All components initialized successfully")
             return True
@@ -140,59 +138,65 @@ class TestBot:
         try:
             logger.info("Starting extended test with real market data...")
 
-            # Initialize all components
             if not await self.initialize_components():
                 logger.error("Component initialization failed")
                 return False
 
             test_pairs = ['BTC/USDT', 'ETH/USDT', 'SOL/USDT']
+            optimization_interval = timedelta(hours=1)
+            last_optimization = datetime.now()
 
             while self.should_run and datetime.now() - self.start_time < self.test_duration:
-                for pair in test_pairs:
-                    try:
-                        # Get market data synchronously
-                        market_data = await self.data_loader.get_historical_data_async(pair)
-                        if market_data is None or market_data.empty:
-                            logger.warning(f"No market data available for {pair}")
-                            continue
+                try:
+                    # Regular trading logic
+                    for pair in test_pairs:
+                        try:
+                            market_data = await self.data_loader.get_historical_data_async(pair)
+                            if market_data is None or market_data.empty:
+                                logger.warning(f"No market data available for {pair}")
+                                continue
 
-                        logger.info(f"Retrieved market data for {pair}")
-
-                        # Get sentiment data asynchronously
-                        sentiment = await self.sentiment_analyzer.analyze_social_sentiment(pair.split('/')[0])
-
-                        # Run strategy analysis asynchronously
-                        signals = []
-                        if self.strategy_manager:
-                            signals = await self.strategy_manager.analyze_all_strategies(
-                                market_data,
-                                sentiment,
-                                {'available_balance': 10000}  # Test with 10k USDT
+                            sentiment = await self.sentiment_analyzer.analyze_social_sentiment(
+                                pair.split('/')[0]
                             )
 
-                        # Log analysis results
-                        logger.info(f"Analysis results for {pair}:")
-                        logger.info(f"Market price: {market_data['Close'].iloc[-1]}")
-                        logger.info(f"Sentiment score: {sentiment.get('score', 0)}")
-                        logger.info(f"Generated signals: {len(signals)}")
+                            signals = []
+                            if self.strategy_manager:
+                                signals = await self.strategy_manager.analyze_all_strategies(
+                                    market_data,
+                                    sentiment,
+                                    {'available_balance': 10000}
+                                )
 
-                        # Execute valid signals on testnet
-                        for signal in signals:
-                            if signal and signal.get('action') != 'hold':
-                                result = await self.execute_test_trade(signal)
-                                logger.info(f"Trade execution result: {result}")
+                            # Execute valid signals on testnet
+                            for signal in signals:
+                                if signal and signal.get('action') != 'hold':
+                                    result = await self.execute_test_trade(signal)
+                                    logger.info(f"Trade execution result: {result}")
 
-                    except Exception as e:
-                        logger.error(f"Error processing {pair}: {str(e)}", exc_info=True)
+                        except Exception as e:
+                            logger.error(f"Error processing {pair}: {str(e)}")
+                            continue
 
-                # Wait before next iteration
-                await asyncio.sleep(60)  # 1-minute interval
+                    # Run auto-optimization periodically
+                    current_time = datetime.now()
+                    if current_time - last_optimization >= optimization_interval:
+                        logger.info("Running strategy auto-optimization...")
+                        await self.auto_optimizer.optimize_strategies()
+                        last_optimization = current_time
+
+                    # Wait before next iteration
+                    await asyncio.sleep(60)
+
+                except Exception as e:
+                    logger.error(f"Error in main loop: {str(e)}")
+                    await asyncio.sleep(60)  # Wait before retry
 
             logger.info("Extended test completed successfully")
             return True
 
         except Exception as e:
-            logger.error(f"Error during extended test: {str(e)}", exc_info=True)
+            logger.error(f"Error during extended test: {str(e)}")
             return False
         finally:
             await self.cleanup()
