@@ -1,158 +1,135 @@
+
+import streamlit as st
 import logging
-import time
-import json
+import sys
+from datetime import datetime
+from utils.data_loader import CryptoDataLoader
+
+# Setup logging
+logging.basicConfig(
+    level=logging.DEBUG,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+    handlers=[
+        logging.StreamHandler(sys.stdout),
+        logging.FileHandler('streamlit_test.log', mode='w')
+    ]
+)
+logger = logging.getLogger(__name__)
+
+def main():
+    try:
+        logger.info("Starting minimal test app")
+        
+        # Basic page config
+        st.set_page_config(
+            page_title="AurumBot Test",
+            layout="wide"
+        )
+        
+        st.title("🤖 AurumBot Test")
+        st.write("Test di funzionalità base")
+
+        # Initialize data loader
+        data_loader = CryptoDataLoader()
+        
+        # Test cryptocurrency data loading
+        btc_price = data_loader.get_current_price("BTC-USD")
+        if btc_price:
+            st.success(f"✅ Data Loader funzionante - Prezzo BTC: ${btc_price:,.2f}")
+        else:
+            st.error("❌ Errore nel caricamento dei dati")
+
+    except Exception as e:
+        logger.error(f"Error in app: {str(e)}", exc_info=True)
+        st.error(f"Si è verificato un errore: {str(e)}")
+
+if __name__ == "__main__":
+    main()
+import streamlit as st
+import logging
+import sys
+
+# Setup logging
+logging.basicConfig(
+    level=logging.DEBUG,
+    format='%(asctime)s - %(levelname)s - %(message)s',
+    handlers=[
+        logging.StreamHandler(sys.stdout),
+        logging.FileHandler('streamlit_test.log')
+    ]
+)
+logger = logging.getLogger(__name__)
+
+logger.info("Starting minimal test app")
+
+try:
+    # Basic title
+    st.title("Test App")
+    st.write("If you see this message, Streamlit is working!")
+
+    logger.info("Basic UI elements rendered")
+
+except Exception as e:
+    logger.error(f"Error in test app: {str(e)}", exc_info=True)
+    st.error("An error occurred")import logging
 from datetime import datetime, timedelta
 import asyncio
-from utils.auto_trader import AutoTrader
-from utils.prediction_model import PredictionModel
-from utils.data_loader import CryptoDataLoader
-from utils.sentiment_analyzer import SentimentAnalyzer
+from utils.backtesting import Backtester
+from utils.strategies.scalping import ScalpingStrategy
 
-class AurumBotTester:
-    def __init__(self):
-        self.logger = logging.getLogger(__name__)
-        self.data_loader = CryptoDataLoader()
-        self.sentiment_analyzer = SentimentAnalyzer()
+# Configure logging
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
-    async def test_stability(self, duration_minutes=30):
-        """Test di stabilità del sistema"""
-        try:
-            start_time = datetime.now()
-            end_time = start_time + timedelta(minutes=duration_minutes)
+async def main():
+    # Initialize strategy with test configuration
+    strategy = ScalpingStrategy({
+        'volume_threshold': 500000,  # Ridotto per avere più segnali
+        'min_volatility': 0.001,    # Ridotto al 0.1%
+        'profit_target': 0.003,     # Target profit al 0.3%
+        'initial_stop_loss': 0.002, # Stop loss al 0.2%
+        'trailing_stop': 0.001,     # Trailing stop al 0.1%
+        'testnet': True
+    })
 
-            bot = AutoTrader("BTC-USD", initial_balance=10000)
-            errors = []
-            iterations = 0
+    # Set up backtester with longer timeframe
+    symbol = "BTC-USDT"
+    initial_balance = 10000
+    start_date = datetime.now() - timedelta(days=7)  # Ridotto a 7 giorni per test più precisi
+    end_date = datetime.now()
 
-            while datetime.now() < end_time:
-                try:
-                    # Use sync methods since analyze_market is not async
-                    signal = bot.analyze_market()
-                    if signal:
-                        bot.execute_trade(signal)
-                    iterations += 1
-                    await asyncio.sleep(10)  # Use asyncio.sleep instead of time.sleep
-                except Exception as e:
-                    errors.append(str(e))
-                    self.logger.error(f"Errore durante il test: {str(e)}")
+    backtester = Backtester(
+        symbol=symbol,
+        strategy=strategy,
+        initial_balance=initial_balance,
+        start_date=start_date,
+        end_date=end_date
+    )
 
-            results = {
-                "duration": duration_minutes,
-                "iterations": iterations,
-                "errors": len(errors),
-                "error_rate": len(errors) / iterations if iterations > 0 else 0,
-                "success_rate": 1 - (len(errors) / iterations if iterations > 0 else 0),
-                "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-            }
-            self.logger.info(f"Test Results: {json.dumps(results, indent=2)}")
-            return results
-        except Exception as e:
-            self.logger.error(f"Test di stabilità fallito: {str(e)}")
-            return None
+    # Run backtest
+    try:
+        results = await backtester.run_backtest()
 
-    async def test_sentiment_analysis(self, symbol: str = "BTC/USD") -> dict:
-        """Test the enhanced sentiment analysis with assistant"""
-        try:
-            # Test basic sentiment analysis
-            standard_analysis = await self.sentiment_analyzer.analyze_with_ai({
-                "reddit": [],
-                "twitter": [],
-                "telegram": [],
-                "timestamp": datetime.now().isoformat()
-            })
+        # Print results
+        print("\nBacktest Results:")
+        print(f"Strategy: {results.strategy_name}")
+        print(f"Symbol: {results.symbol}")
+        print(f"Period: {results.start_date} to {results.end_date}")
+        print(f"Initial Balance: ${results.initial_balance:,.2f}")
+        print(f"Final Balance: ${results.final_balance:,.2f}")
+        print(f"Total Profit/Loss: ${results.profit_loss:,.2f}")
+        print(f"Win Rate: {results.win_rate:.2%}")
+        print(f"Total Trades: {results.total_trades}")
+        print(f"Sharpe Ratio: {results.sharpe_ratio:.2f}")
+        print(f"Max Drawdown: {results.max_drawdown:.2%}")
 
-            # Test combined analysis with assistant
-            combined_analysis = await self.sentiment_analyzer.analyze_social_sentiment(symbol)
+        # Additional performance metrics
+        print("\nPerformance Metrics:")
+        for metric, value in results.performance_metrics.items():
+            print(f"{metric}: {value:.2f}")
 
-            return {
-                "standard_analysis": {
-                    "sentiment": standard_analysis.get("sentiment"),
-                    "confidence": standard_analysis.get("confidence"),
-                    "score": self.sentiment_analyzer.calculate_sentiment_score(standard_analysis)
-                },
-                "enhanced_analysis": {
-                    "sentiment": combined_analysis.get("analysis", {}).get("sentiment"),
-                    "confidence": combined_analysis.get("analysis", {}).get("confidence"),
-                    "trading_signals": combined_analysis.get("analysis", {}).get("trading_signals", []),
-                    "score": combined_analysis.get("score", 0.0)
-                },
-                "comparison": {
-                    "has_trading_signals": bool(combined_analysis.get("analysis", {}).get("trading_signals")),
-                    "confidence_improvement": (
-                        combined_analysis.get("analysis", {}).get("confidence", 0) -
-                        standard_analysis.get("confidence", 0)
-                    )
-                }
-            }
-        except Exception as e:
-            self.logger.error(f"Sentiment analysis test failed: {str(e)}")
-            return None
+    except Exception as e:
+        logger.error(f"Backtesting error: {str(e)}")
 
-    async def test_performance(self):
-        """Test delle performance del sistema"""
-        try:
-            start_time = time.time()
-
-            # Test velocità analisi mercato
-            market_analysis_times = []
-            for _ in range(10):
-                t0 = time.time()
-                bot = AutoTrader("BTC-USD")
-                # Use sync methods since analyze_market is not async
-                signal = bot.analyze_market()
-                if signal:
-                    market_analysis_times.append(time.time() - t0)
-
-            # Test predizione
-            prediction_times = []
-            model = PredictionModel()
-            # Use sync method for historical data
-            data = self.data_loader.get_historical_data("BTC-USD", period='30d')
-            for _ in range(5):
-                t0 = time.time()
-                await model.predict(data)  # Assuming predict is async
-                prediction_times.append(time.time() - t0)
-
-            return {
-                "avg_market_analysis_time": sum(market_analysis_times) / len(market_analysis_times) if market_analysis_times else 0,
-                "avg_prediction_time": sum(prediction_times) / len(prediction_times) if prediction_times else 0,
-                "total_test_time": time.time() - start_time
-            }
-        except Exception as e:
-            self.logger.error(f"Test performance fallito: {str(e)}")
-            return None
-
-    async def run_all_tests(self):
-        """Run all tests sequentially"""
-        try:
-            self.logger.info("Starting all tests...")
-
-            # Run stability test
-            stability_results = await self.test_stability(duration_minutes=15)
-            if stability_results:
-                self.logger.info("Stability test completed successfully")
-            else:
-                self.logger.error("Stability test failed")
-
-            # Run sentiment analysis test
-            sentiment_results = await self.test_sentiment_analysis()
-            if sentiment_results:
-                self.logger.info("Sentiment analysis test completed successfully")
-            else:
-                self.logger.error("Sentiment analysis test failed")
-
-            # Run performance test
-            performance_results = await self.test_performance()
-            if performance_results:
-                self.logger.info("Performance test completed successfully")
-            else:
-                self.logger.error("Performance test failed")
-
-            return {
-                "stability": stability_results,
-                "sentiment": sentiment_results,
-                "performance": performance_results
-            }
-        except Exception as e:
-            self.logger.error(f"Error running all tests: {str(e)}")
-            return None
+if __name__ == "__main__":
+    asyncio.run(main())

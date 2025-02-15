@@ -166,15 +166,25 @@ class PredictionModel:
                 100000  # Example portfolio value
             )
 
+            # Calculate stop loss levels
+            current_price = market_features['Close'].iloc[-1]
+            stop_levels = self.calculate_stop_loss(
+                current_price,
+                risk_metrics,
+                'long' if technical_prediction.get('prediction', 0.5) > 0.5 else 'short'
+            )
+
             return {
                 'technical_score': technical_prediction.get('prediction', 0.5),
                 'sentiment_score': ai_analysis.get('sentiment', 0.5),
                 'confidence': confidence,
-                'suggested_position_size': position_size,
+                'position_size': position_size,
                 'risk_metrics': risk_metrics,
+                'stop_levels': stop_levels,
                 'indicators': {
                     'rsi': market_features.get('RSI_14', pd.Series([])).iloc[-1],
-                    'macd': market_features.get('MACD', pd.Series([])).iloc[-1]
+                    'macd': market_features.get('MACD', pd.Series([])).iloc[-1],
+                    'atr': market_features.get('ATR', pd.Series([])).iloc[-1]
                 }
             }
 
@@ -294,19 +304,39 @@ class PredictionModel:
 
     def _prepare_training_data(self, df, target_column='Close', prediction_horizon=5):
         """Prepare data for training using standardized column names"""
-        df = self.create_features(df)
+        try:
+            df = self.create_features(df)
 
-        # Create target variable (future returns)
-        df['target'] = df[target_column].shift(-prediction_horizon)
-        df['target_returns'] = df['target'].pct_change(prediction_horizon)
+            # Clean any string values in numeric columns
+            numeric_columns = df.select_dtypes(include=[np.number]).columns
+            for col in numeric_columns:
+                # Extract numeric values from strings like 'bullish_0.60'
+                if df[col].dtype == object:
+                    df[col] = df[col].apply(lambda x: float(str(x).split('_')[-1]) 
+                                          if isinstance(x, str) and '_' in str(x) 
+                                          else x)
+                df[col] = pd.to_numeric(df[col], errors='coerce')
 
-        # Select features
-        feature_columns = [col for col in df.columns if col not in ['target', 'target_returns', 'Open', 'High', 'Low', 'Close', 'Volume']]
+            # Create target variable (future returns)
+            df['target'] = df[target_column].shift(-prediction_horizon)
+            df['target_returns'] = df['target'].pct_change(prediction_horizon)
 
-        X = df[feature_columns].iloc[:-prediction_horizon]
-        y = df['target_returns'].iloc[:-prediction_horizon]
+            # Select features
+            feature_columns = [col for col in df.columns 
+                             if col not in ['target', 'target_returns', 'Open', 'High', 'Low', 'Close', 'Volume']]
 
-        return X, y
+            X = df[feature_columns].iloc[:-prediction_horizon]
+            y = df['target_returns'].iloc[:-prediction_horizon]
+
+            # Fill any remaining NaN values
+            X = X.fillna(0)
+            y = y.fillna(0)
+
+            return X, y
+
+        except Exception as e:
+            self.logger.error(f"Error preparing training data: {e}")
+            raise
 
     def _calculate_confidence(self, technical_pred: Dict[str, Any], ai_analysis: Dict[str, Any]) -> float:
         """Calculate overall confidence score"""
@@ -411,13 +441,18 @@ class PredictionModel:
             }
 
     def predict(self, df, target_column='Close', prediction_horizon=5):
-        """Generate ensemble predictions"""
+        """Generate ensemble predictions with improved error handling"""
         try:
             if not self.models:
                 self.logger.warning("Models not trained. Using default models.")
                 self.train(df, target_column, prediction_horizon)
 
             X, _ = self._prepare_training_data(df, target_column, prediction_horizon)
+
+            # Ensure all features are numeric
+            X = X.apply(pd.to_numeric, errors='coerce')
+            X = X.fillna(0)
+
             X_scaled = self.scaler.transform(X)
 
             predictions = {}
@@ -445,7 +480,7 @@ class PredictionModel:
             }
 
         except Exception as e:
-            self.logger.error(f"Prediction error: {str(e)}")
+            self.logger.error(f"Prediction error: {e}")
             return None
 
     def save_model(self, path: str):
