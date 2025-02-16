@@ -32,8 +32,10 @@ class CryptoDataLoader:
     BATCH_SIZE = 500
 
     def __init__(self, use_live_data: bool = True, testnet: bool = True):
+        """Initialize the data loader with supported coins and advanced caching"""
         self.use_live_data = use_live_data
         self.testnet = testnet
+        self.client = None  # Initialize client as None
         self.supported_coins = {
             'BTCUSDT': 'Bitcoin',
             'ETHUSDT': 'Ethereum',
@@ -58,7 +60,12 @@ class CryptoDataLoader:
         }
 
         if self.use_live_data:
-            self._setup_client()
+            try:
+                self._setup_client()
+                logger.info("Live data client setup completed successfully")
+            except Exception as e:
+                logger.warning(f"Failed to setup live data client: {e}. Falling back to mock data.")
+                self.use_live_data = False
         self._setup_database()
 
     def _setup_client(self):
@@ -68,7 +75,9 @@ class CryptoDataLoader:
             api_secret = os.environ.get('BINANCE_API_SECRET_TESTNET' if self.testnet else 'BINANCE_API_SECRET')
 
             if not api_key or not api_secret:
-                raise ValueError("API credentials not found. Please check environment variables.")
+                logger.warning("API credentials not found. Mock data will be used instead.")
+                self.use_live_data = False
+                return
 
             self.client = Client(
                 api_key,
@@ -84,10 +93,12 @@ class CryptoDataLoader:
         except BinanceAPIException as e:
             error_msg = f"Binance API error: {str(e)}"
             logger.error(error_msg, exc_info=True)
+            self.use_live_data = False
             raise DataLoadError(error_msg)
         except Exception as e:
             error_msg = f"Client setup error: {str(e)}"
             logger.error(error_msg, exc_info=True)
+            self.use_live_data = False
             raise DataLoadError(error_msg)
 
     def _setup_database(self):
@@ -317,7 +328,7 @@ class CryptoDataLoader:
                 "BB_Upper" DOUBLE PRECISION,
                 "BB_Lower" DOUBLE PRECISION,
                 "BB_Width" DOUBLE PRECISION
-            );
+            ) PARTITION BY RANGE (timestamp);
             """
             with self.engine.begin() as conn:
                 conn.execute(text(create_template_sql))
@@ -332,27 +343,51 @@ class CryptoDataLoader:
             df = pd.DataFrame(
                 klines,
                 columns=[
-                    'timestamp', 'Open', 'High', 'Low', 'Close', 'Volume',
+                    'timestamp', 'open', 'high', 'low', 'close', 'volume',
                     'close_time', 'quote_volume', 'trades', 'taker_base', 'taker_quote', 'ignore'
                 ]
             )
 
-            # Convert numeric columns
-            numeric_columns = ['Open', 'High', 'Low', 'Close', 'Volume']
-            for col in numeric_columns:
-                df[col] = pd.to_numeric(df[col], errors='coerce')
+            # Convert numeric columns and standardize column names
+            numeric_columns = {
+                'open': 'Open',
+                'high': 'High',
+                'low': 'Low', 
+                'close': 'Close',
+                'volume': 'Volume'
+            }
+
+            for old_name, new_name in numeric_columns.items():
+                df[new_name] = pd.to_numeric(df[old_name], errors='coerce')
+
+            # Drop original lowercase columns and unused columns
+            columns_to_drop = [
+                'open', 'high', 'low', 'close', 'volume',
+                'close_time', 'quote_volume', 'trades', 'taker_base', 'taker_quote', 'ignore'
+            ]
+            df = df.drop(columns=columns_to_drop)
 
             # Convert timestamp to datetime and set as index
             df['timestamp'] = pd.to_datetime(df['timestamp'], unit='ms')
             df.set_index('timestamp', inplace=True)
 
-            # Keep only OHLCV data
-            return df[numeric_columns]
+            # Sort index to ensure chronological order
+            df.sort_index(inplace=True)
+
+            # Verify required columns exist
+            required_columns = ['Open', 'High', 'Low', 'Close', 'Volume']
+            missing_columns = [col for col in required_columns if col not in df.columns]
+            if missing_columns:
+                raise ValueError(f"Missing required columns after processing: {missing_columns}")
+
+            # Add basic metrics before technical indicators
+            df['Returns'] = df['Close'].pct_change()
+
+            return df
 
         except Exception as e:
             logger.error(f"Error processing klines data: {str(e)}", exc_info=True)
             raise DataLoadError(f"Failed to process klines data: {str(e)}")
-
 
     def _normalize_symbol(self, symbol: str) -> str:
         """Normalize symbol format for exchange"""
@@ -463,13 +498,14 @@ class CryptoDataLoader:
         close_price = 100 * (1 + np.random.randn(n_periods).cumsum() * 0.02)
 
         df = pd.DataFrame({
-            'open': close_price * (1 + np.random.randn(n_periods) * 0.001),
-            'high': close_price * (1 + abs(np.random.randn(n_periods) * 0.002)),
-            'low': close_price * (1 - abs(np.random.randn(n_periods) * 0.002)),
-            'close': close_price,
-            'volume': np.random.randint(1000, 100000, n_periods)
+            'Open': close_price * (1 + np.random.randn(n_periods) * 0.001),
+            'High': close_price * (1 + abs(np.random.randn(n_periods) * 0.002)),
+            'Low': close_price * (1 - abs(np.random.randn(n_periods) * 0.002)),
+            'Close': close_price,
+            'Volume': np.random.randint(1000, 100000, n_periods)
         }, index=timestamps)
 
+        # Add technical indicators to mock data
         return self._add_technical_indicators(df)
 
     def get_market_summary(self, symbol: str) -> Dict[str, Union[float, str]]:
@@ -648,31 +684,28 @@ class CryptoDataLoader:
             return int((datetime.now() - delta).timestamp() * 1000)
         return None
 
-    async def preload_data(self, symbols: List[str], period: str = '30d') -> bool:
+    async def preload_data(self, period: str = '30d') -> bool:
         """
-        Preload historical data for specified symbols
+        Preload historical data for all supported coins
         Args:
-            symbols: List of symbols to preload
             period: Time period to load (default: 30 days)
         Returns:
             bool: True if successful, False otherwise
         """
         try:
+            symbols = list(self.supported_coins.keys())
             logger.info(f"Preloading data for {len(symbols)} symbols")
 
             # Create tasks for each symbol
             tasks = []
             for symbol in symbols:
-                if symbol in self.supported_coins:
-                    tasks.append(
-                        self.get_historical_data_async(
-                            symbol=symbol,
-                            period=period,
-                            interval='1m'
-                        )
+                tasks.append(
+                    self.get_historical_data_async(
+                        symbol=symbol,
+                        period=period,
+                        interval='1m'
                     )
-                else:
-                    logger.warning(f"Skipping unsupported symbol: {symbol}")
+                )
 
             # Execute all tasks concurrently
             if tasks:

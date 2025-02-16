@@ -180,6 +180,7 @@ task = "packager.installForAll"
 [[workflows.workflow.tasks]]
 task = "shell.exec"
 args = "python test_bot.py"
+waitForPort = 5000
 
 [[workflows.workflow]]
 name = "AurumBot"
