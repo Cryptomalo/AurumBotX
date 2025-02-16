@@ -19,6 +19,7 @@ from utils.learning_module import LearningModule
 from utils.ai_trading import AITrading
 from utils.dashboard import TradingDashboard
 
+# Setup logging
 log_filename = f'test_bot_{datetime.now().strftime("%Y%m%d_%H%M%S")}.log'
 logging.basicConfig(
     level=logging.INFO,
@@ -175,7 +176,6 @@ class TestBot:
         for attempt in range(max_attempts):
             try:
                 logger.info(f"Database health check attempt {attempt + 1}")
-                # Get a new session using the improved session handling
                 session = self.db.get_session()
                 try:
                     logger.debug("Executing test query...")
@@ -202,7 +202,6 @@ class TestBot:
 
     async def execute_ai_trade(self, signal: Dict) -> Dict:
         try:
-            #Simulate AI trade execution
             return {
                 'success': True,
                 'action': signal.get('action'),

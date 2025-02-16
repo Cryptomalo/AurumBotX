@@ -11,6 +11,37 @@ import threading
 
 logger = logging.getLogger(__name__)
 
+# Define Base first before any models
+Base = declarative_base()
+
+class TradingStrategy(Base):
+    __tablename__ = "trading_strategies"
+
+    id = Column(Integer, primary_key=True, index=True)
+    name = Column(String, unique=True, index=True)
+    description = Column(String)
+    parameters = Column(String)  # JSON string of strategy parameters
+    created_at = Column(DateTime, default=datetime.utcnow)
+    simulations = relationship("SimulationResult", back_populates="strategy")
+
+class SimulationResult(Base):
+    __tablename__ = "simulation_results"
+
+    id = Column(Integer, primary_key=True, index=True)
+    strategy_id = Column(Integer, ForeignKey("trading_strategies.id"))
+    symbol = Column(String, index=True)
+    start_date = Column(DateTime)
+    end_date = Column(DateTime)
+    initial_balance = Column(Float)
+    final_balance = Column(Float)
+    total_trades = Column(Integer)
+    win_rate = Column(Float)
+    sharpe_ratio = Column(Float)
+    max_drawdown = Column(Float)
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+    strategy = relationship("TradingStrategy", back_populates="simulations")
+
 class Database:
     def __init__(self, connection_string, max_retries=5):
         logger.info("Initializing Database with max_retries=%d", max_retries)
@@ -62,6 +93,9 @@ class Database:
                 with self.engine.connect() as conn:
                     conn.execute(text('SELECT 1'))
                     logger.debug("Connection test successful")
+
+                # Create tables if they don't exist
+                Base.metadata.create_all(bind=self.engine)
 
                 # Only create Session maker after successful connection
                 self.Session = sessionmaker(bind=self.engine)
@@ -159,48 +193,12 @@ def init_db():
             ON market_data_template ("Close", timestamp);
             """))
 
-        Base.metadata.create_all(bind=engine)
+        #Base.metadata.create_all(bind=engine) #This line is already in the _connect method. Removing to avoid redundancy.
         logger.info("Database tables initialized successfully")
 
     except Exception as e:
         logger.error(f"Database initialization error: {e}")
         raise
-
-# Initialize database
-try:
-    init_db()
-except Exception as e:
-    logger.error(f"Failed to initialize database: {e}")
-
-Base = declarative_base()
-
-class TradingStrategy(Base):
-    __tablename__ = "trading_strategies"
-
-    id = Column(Integer, primary_key=True, index=True)
-    name = Column(String, unique=True, index=True)
-    description = Column(String)
-    parameters = Column(String)  # JSON string of strategy parameters
-    created_at = Column(DateTime, default=datetime.utcnow)
-    simulations = relationship("SimulationResult", back_populates="strategy")
-
-class SimulationResult(Base):
-    __tablename__ = "simulation_results"
-
-    id = Column(Integer, primary_key=True, index=True)
-    strategy_id = Column(Integer, ForeignKey("trading_strategies.id"))
-    symbol = Column(String, index=True)
-    start_date = Column(DateTime)
-    end_date = Column(DateTime)
-    initial_balance = Column(Float)
-    final_balance = Column(Float)
-    total_trades = Column(Integer)
-    win_rate = Column(Float)
-    sharpe_ratio = Column(Float)
-    max_drawdown = Column(Float)
-    created_at = Column(DateTime, default=datetime.utcnow)
-
-    strategy = relationship("TradingStrategy", back_populates="simulations")
 
 # Improved database session generator
 def get_db():

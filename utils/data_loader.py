@@ -647,3 +647,45 @@ class CryptoDataLoader:
         if delta:
             return int((datetime.now() - delta).timestamp() * 1000)
         return None
+
+    async def preload_data(self, symbols: List[str], period: str = '30d') -> bool:
+        """
+        Preload historical data for specified symbols
+        Args:
+            symbols: List of symbols to preload
+            period: Time period to load (default: 30 days)
+        Returns:
+            bool: True if successful, False otherwise
+        """
+        try:
+            logger.info(f"Preloading data for {len(symbols)} symbols")
+
+            # Create tasks for each symbol
+            tasks = []
+            for symbol in symbols:
+                if symbol in self.supported_coins:
+                    tasks.append(
+                        self.get_historical_data_async(
+                            symbol=symbol,
+                            period=period,
+                            interval='1m'
+                        )
+                    )
+                else:
+                    logger.warning(f"Skipping unsupported symbol: {symbol}")
+
+            # Execute all tasks concurrently
+            if tasks:
+                results = await asyncio.gather(*tasks, return_exceptions=True)
+
+                # Check results
+                success_count = sum(1 for r in results if isinstance(r, pd.DataFrame))
+                logger.info(f"Successfully preloaded data for {success_count}/{len(tasks)} symbols")
+
+                return success_count > 0
+
+            return False
+
+        except Exception as e:
+            logger.error(f"Error preloading data: {e}", exc_info=True)
+            return False
