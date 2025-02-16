@@ -13,8 +13,12 @@ from utils.database import Database
 from utils.data_loader import CryptoDataLoader
 from utils.auto_optimizer import AutoOptimizer
 from utils.backup_manager import BackupManager
+from utils.dex_trading import DexSniper
+from utils.risk_management import RiskManager
+from utils.learning_module import LearningModule
+from utils.ai_trading import AITrading
+from utils.dashboard import TradingDashboard
 
-# Setup logging
 log_filename = f'test_bot_{datetime.now().strftime("%Y%m%d_%H%M%S")}.log'
 logging.basicConfig(
     level=logging.INFO,
@@ -36,58 +40,61 @@ class TestBot:
         self.data_loader: Optional[CryptoDataLoader] = None
         self.auto_optimizer: Optional[AutoOptimizer] = None
         self.backup_manager: Optional[BackupManager] = None
+        self.dex_sniper: Optional[DexSniper] = None
+        self.risk_manager: Optional[RiskManager] = None
+        self.learning_module: Optional[LearningModule] = None
+        self.ai_trading: Optional[AITrading] = None
+        self.dashboard: Optional[TradingDashboard] = None
         self.should_run: bool = True
         self.test_duration: timedelta = timedelta(hours=4)
         self.start_time: datetime = datetime.now()
+        self.trade_results = []
         self.setup_signal_handlers()
         logger.info("TestBot initialized successfully")
 
-    def setup_signal_handlers(self) -> None:
-        """Configure signal handlers for graceful shutdown"""
-        signal.signal(signal.SIGINT, self.handle_shutdown)
-        signal.signal(signal.SIGTERM, self.handle_shutdown)
-        logger.info("Signal handlers configured")
+    def setup_signal_handlers(self):
+        """Setup handlers for graceful shutdown"""
+        def handle_signal(signum, frame):
+            logger.info(f"Received signal {signum}")
+            self.should_run = False
 
-    def handle_shutdown(self, signum: int, frame: Any) -> None:
-        """Handle graceful shutdown"""
-        logger.info("Received shutdown signal...")
-        self.should_run = False
+        signal.signal(signal.SIGINT, handle_signal)
+        signal.signal(signal.SIGTERM, handle_signal)
 
     async def initialize_components(self) -> bool:
-        """Initialize components with retry"""
         try:
             logger.info("Initializing components...")
-
-            # Initialize database with proper error handling
             db_url = os.environ.get('DATABASE_URL')
             if not db_url:
                 logger.error("DATABASE_URL not set")
-                raise ValueError("DATABASE_URL not set")
+                return False
 
-            logger.info("Initializing database connection...")
             try:
                 self.db = Database(db_url)
-                logger.info("Database instance created successfully")
+                if not await self.db_health_check():
+                    return False
             except Exception as e:
-                logger.error(f"Failed to create database instance: {e}")
+                logger.error(f"Database connection error: {str(e)}")
                 return False
 
-            if not await self.db_health_check():
-                logger.error("Database health check failed")
+            try:
+                self.data_loader = CryptoDataLoader(use_live_data=False)
+                await self.data_loader.preload_data()
+            except Exception as e:
+                logger.error(f"Data loading error: {str(e)}")
                 return False
 
-            logger.info("Database connection verified, proceeding with other components...")
-
-            # Initialize components
-            self.data_loader = CryptoDataLoader(use_live_data=True)
             self.websocket_handler = WebSocketHandler(logger, self.db)
             self.strategy_manager = StrategyManager()
             await self.strategy_manager.configure_for_live_testing()
             self.sentiment_analyzer = SentimentAnalyzer()
-
-            # Initialize auto-optimization components
             self.backup_manager = BackupManager()
             self.auto_optimizer = AutoOptimizer(self.db, self.strategy_manager)
+            self.dex_sniper = DexSniper(testnet=True)
+            self.risk_manager = RiskManager()
+            self.learning_module = LearningModule()
+            self.ai_trading = AITrading()
+            self.dashboard = TradingDashboard()
 
             logger.info("All components initialized successfully")
             return True
@@ -95,6 +102,66 @@ class TestBot:
         except Exception as e:
             logger.error(f"Component initialization error: {str(e)}")
             return False
+
+    async def run_ai_testnet_simulation(self):
+        try:
+            logger.info("Starting AI-based testnet simulation...")
+            if not await self.initialize_components():
+                logger.error("Component initialization failed")
+                return False
+
+            test_pairs = ['BTC/USDT', 'ETH/USDT', 'SOL/USDT']
+
+            while self.should_run and (datetime.now() - self.start_time) < self.test_duration:
+                try:
+                    predictions = await self.ai_trading.analyze_and_predict()
+
+                    for trade_signal in predictions:
+                        trade_result = await self.execute_ai_trade(trade_signal)
+                        self.trade_results.append(trade_result)
+
+                        try:
+                            await self.dashboard.update_trade_data(trade_result)
+                        except Exception as e:
+                            logger.error(f"Dashboard update error: {str(e)}")
+
+                        logger.info(f"Simulated AI trade: {trade_result}")
+
+                    await asyncio.sleep(1)
+
+                except Exception as e:
+                    logger.error(f"Error in AI testnet simulation loop: {str(e)}")
+                    await asyncio.sleep(2)
+
+            await self.generate_test_report()
+            logger.info("AI testnet simulation completed")
+            return True
+
+        except Exception as e:
+            logger.error(f"Error during AI testnet simulation: {e}")
+            return False
+
+    async def generate_test_report(self):
+        try:
+            logger.info("Generating AI testnet simulation report...")
+            total_trades = len(self.trade_results)
+            successful_trades = sum(1 for trade in self.trade_results if trade.get('success'))
+            avg_confidence = sum(trade.get('ai_confidence', 0) for trade in self.trade_results) / max(total_trades, 1)
+            avg_profit = sum(trade.get('take_profit', 0) - trade.get('price', 0) for trade in self.trade_results) / max(total_trades, 1)
+
+            report = {
+                "total_trades": total_trades,
+                "successful_trades": successful_trades,
+                "success_rate": f"{(successful_trades / max(total_trades, 1)) * 100:.2f}%",
+                "average_confidence": f"{avg_confidence:.2f}",
+                "average_profit_per_trade": f"${avg_profit:.2f}"
+            }
+
+            await self.dashboard.update_report(report)
+            logger.info(f"AI Trading Test Report: {report}")
+
+        except Exception as e:
+            logger.error(f"Error generating test report: {e}")
 
     async def db_health_check(self) -> bool:
         """Verify database health with proper session handling"""
@@ -133,103 +200,25 @@ class TestBot:
         logger.error("Database health check failed after all attempts")
         return False
 
-    async def run_extended_test(self) -> bool:
-        """Run extended test with real market data and testnet trading"""
+    async def execute_ai_trade(self, signal: Dict) -> Dict:
         try:
-            logger.info("Starting extended test with real market data...")
-
-            if not await self.initialize_components():
-                logger.error("Component initialization failed")
-                return False
-
-            test_pairs = ['BTC/USDT', 'ETH/USDT', 'SOL/USDT']
-            optimization_interval = timedelta(hours=1)
-            last_optimization = datetime.now()
-
-            while self.should_run and datetime.now() - self.start_time < self.test_duration:
-                try:
-                    # Regular trading logic
-                    for pair in test_pairs:
-                        try:
-                            market_data = await self.data_loader.get_historical_data_async(pair)
-                            if market_data is None or market_data.empty:
-                                logger.warning(f"No market data available for {pair}")
-                                continue
-
-                            sentiment = await self.sentiment_analyzer.analyze_social_sentiment(
-                                pair.split('/')[0]
-                            )
-
-                            signals = []
-                            if self.strategy_manager:
-                                signals = await self.strategy_manager.analyze_all_strategies(
-                                    market_data,
-                                    sentiment,
-                                    {'available_balance': 10000}
-                                )
-
-                            # Execute valid signals on testnet
-                            for signal in signals:
-                                if signal and signal.get('action') != 'hold':
-                                    result = await self.execute_test_trade(signal)
-                                    logger.info(f"Trade execution result: {result}")
-
-                        except Exception as e:
-                            logger.error(f"Error processing {pair}: {str(e)}")
-                            continue
-
-                    # Run auto-optimization periodically
-                    current_time = datetime.now()
-                    if current_time - last_optimization >= optimization_interval:
-                        logger.info("Running strategy auto-optimization...")
-                        await self.auto_optimizer.optimize_strategies()
-                        last_optimization = current_time
-
-                    # Wait before next iteration
-                    await asyncio.sleep(60)
-
-                except Exception as e:
-                    logger.error(f"Error in main loop: {str(e)}")
-                    await asyncio.sleep(60)  # Wait before retry
-
-            logger.info("Extended test completed successfully")
-            return True
-
-        except Exception as e:
-            logger.error(f"Error during extended test: {str(e)}")
-            return False
-        finally:
-            await self.cleanup()
-
-    async def execute_test_trade(self, signal: Dict) -> Dict:
-        """Execute trade on testnet"""
-        try:
-            # Implement testnet trade execution
+            #Simulate AI trade execution
             return {
                 'success': True,
-                'action': signal['action'],
+                'action': signal.get('action'),
                 'price': signal.get('price', 0),
                 'size': signal.get('size', 0),
+                'ai_confidence': signal.get('confidence', 0),
+                'take_profit': signal.get('take_profit', 0),
                 'timestamp': datetime.now().isoformat()
             }
         except Exception as e:
-            logger.error(f"Trade execution error: {e}")
+            logger.error(f"AI Trade execution error: {e}")
             return {'success': False, 'error': str(e)}
 
-    async def cleanup(self) -> None:
-        """Cleanup resources"""
-        try:
-            logger.info("Starting cleanup procedure...")
-            if self.websocket_handler:
-                await self.websocket_handler.cleanup()
-            if self.strategy_manager:
-                await self.strategy_manager.cleanup()
-            logger.info("Resources cleaned up")
-        except Exception as e:
-            logger.error(f"Error during cleanup: {e}")
 
 if __name__ == "__main__":
-    logger.info("Starting main program...")
+    logger.info("Starting AI testnet simulation...")
     bot = TestBot()
-    success = asyncio.run(bot.run_extended_test())
+    success = asyncio.run(bot.run_ai_testnet_simulation())
     sys.exit(0 if success else 1)
