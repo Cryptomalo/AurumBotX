@@ -17,6 +17,10 @@ class SentimentAnalyzer:
         )
         self.initialize_social_clients()
 
+    async def analyze_sentiment(self, symbol: str) -> Dict[str, Any]:
+        """Alias for analyze_social_sentiment to maintain interface compatibility"""
+        return await self.analyze_social_sentiment(symbol)
+
     async def analyze_social_sentiment(self, symbol: str) -> Dict[str, Any]:
         """Analyze social media sentiment with comprehensive error handling"""
         try:
@@ -174,8 +178,8 @@ class SentimentAnalyzer:
 
             # Calcola lo score finale
             final_score = (base_score * 0.4 +
-                         confidence * 0.3 +
-                         momentum_score * 0.3)
+                           confidence * 0.3 +
+                           momentum_score * 0.3)
 
             return max(0.0, min(1.0, final_score))
 

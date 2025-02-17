@@ -53,6 +53,10 @@ args = "Streamlit Dashboard"
 task = "workflow.run"
 args = "Test Notifications"
 
+[[workflows.workflow.tasks]]
+task = "workflow.run"
+args = "Test Trading AI"
+
 [[workflows.workflow]]
 name = "Test WebSocket"
 author = 39294082
@@ -118,6 +122,20 @@ task = "packager.installForAll"
 [[workflows.workflow.tasks]]
 task = "shell.exec"
 args = "python utils/test_notifications.py"
+
+[[workflows.workflow]]
+name = "Test Trading AI"
+author = "agent"
+
+[workflows.workflow.metadata]
+agentRequireRestartOnSave = false
+
+[[workflows.workflow.tasks]]
+task = "packager.installForAll"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "python test_trading_ai.py"
 
 [[ports]]
 localPort = 5000

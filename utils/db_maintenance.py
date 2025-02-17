@@ -187,7 +187,8 @@ class DatabaseMaintenance:
                     partition_date = (current_date + timedelta(days=32 * month_offset)).replace(day=1)
                     next_month = (partition_date + timedelta(days=32)).replace(day=1)
 
-                    partition_name = f"{table_name}_{partition_date.strftime('%Y%m')}"
+                    # Use standardized partition naming format
+                    partition_name = f"{table_name}_y{partition_date.year}m{partition_date.month:02d}"
 
                     # Skip if partition already exists
                     if partition_name in existing_partitions:
@@ -611,6 +612,7 @@ class DatabaseMaintenance:
         except Exception as e:
             logger.error(f"Error restoring from backup: {e}")
             raise
+
 
 
 def setup_maintenance(db_url: Optional[str] = None) -> DatabaseMaintenance:

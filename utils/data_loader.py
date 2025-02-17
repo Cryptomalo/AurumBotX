@@ -131,6 +131,7 @@ class CryptoDataLoader:
     def _save_to_database(self, symbol: str, df: pd.DataFrame):
         """Save market data to database with optimized batch processing"""
         if not self.engine:
+            logger.warning("No database engine available, skipping save operation")
             return
 
         try:
@@ -148,7 +149,6 @@ class CryptoDataLoader:
                 batch_df = df.iloc[start_idx:end_idx]
 
                 try:
-                    # Convert batch to list of dictionaries with proper types
                     records = []
                     for _, row in batch_df.iterrows():
                         try:
@@ -177,44 +177,49 @@ class CryptoDataLoader:
 
                     # Create monthly partition if it doesn't exist
                     current_time = datetime.now()
-                    partition_date = current_time.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
-                    create_partition_sql = f"""
-                    DO $$ 
-                    BEGIN
-                        IF NOT EXISTS (
-                            SELECT 1 FROM pg_class c
-                            JOIN pg_namespace n ON n.oid = c.relnamespace
-                            WHERE c.relname = 'market_data_{partition_date.strftime("%Y_%m")}'
-                        ) THEN
-                            CREATE TABLE market_data_{partition_date.strftime('%Y_%m')} 
-                            PARTITION OF market_data
-                            FOR VALUES FROM ('{partition_date}') 
-                            TO ('{(partition_date + timedelta(days=32)).replace(day=1)}');
-                        END IF;
-                    END $$;
-                    """
+                    try:
+                        with self.engine.begin() as conn:
+                            # First ensure the partition exists using standardized format
+                            partition_date = current_time.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+                            partition_name = f"market_data_y{partition_date.year}m{partition_date.month:02d}"
 
-                    # Execute batch insert with proper transaction handling
-                    with self.engine.begin() as conn:
-                        # First ensure the partition exists
-                        conn.execute(text(create_partition_sql))
+                            create_partition_sql = f"""
+                            DO $$ 
+                            BEGIN
+                                IF NOT EXISTS (
+                                    SELECT 1 FROM pg_class c
+                                    JOIN pg_namespace n ON n.oid = c.relnamespace
+                                    WHERE c.relname = '{partition_name}'
+                                ) THEN
+                                    CREATE TABLE IF NOT EXISTS {partition_name}
+                                    PARTITION OF market_data
+                                    FOR VALUES FROM ('{partition_date}') 
+                                    TO ('{(partition_date + timedelta(days=32)).replace(day=1)}');
+                                END IF;
+                            END $$;
+                            """
+                            conn.execute(text(create_partition_sql))
 
-                        # Then execute the insert
-                        conn.execute(
-                            text("""
-                                INSERT INTO market_data 
-                                (symbol, timestamp, open, high, low, close, volume)
-                                VALUES 
-                                (:symbol, :timestamp, :open, :high, :low, :close, :volume)
-                                ON CONFLICT (symbol, timestamp) DO UPDATE SET
-                                open = EXCLUDED.open,
-                                high = EXCLUDED.high,
-                                low = EXCLUDED.low,
-                                close = EXCLUDED.close,
-                                volume = EXCLUDED.volume
-                            """),
-                            records
-                        )
+                            # Then insert the data
+                            conn.execute(
+                                text("""
+                                    INSERT INTO market_data 
+                                    (symbol, timestamp, open, high, low, close, volume)
+                                    VALUES 
+                                    (:symbol, :timestamp, :open, :high, :low, :close, :volume)
+                                    ON CONFLICT (symbol, timestamp) DO UPDATE SET
+                                    open = EXCLUDED.open,
+                                    high = EXCLUDED.high,
+                                    low = EXCLUDED.low,
+                                    close = EXCLUDED.close,
+                                    volume = EXCLUDED.volume
+                                """),
+                                records
+                            )
+
+                    except SQLAlchemyError as e:
+                        logger.error(f"Database error processing batch for {symbol}: {str(e)}")
+                        continue
 
                     logger.info(f"Successfully saved batch {start_idx}-{end_idx} for {symbol}")
 
@@ -294,15 +299,16 @@ class CryptoDataLoader:
 
     def _normalize_symbol(self, symbol: str) -> str:
         """Normalize symbol format for exchange"""
-        # Convert dashes to forward slashes for consistency
-        symbol = symbol.replace('-', '/')
-        # Handle both formats (BTC/USD and BTCUSDT)
-        if 'USDT' in symbol:
-            return symbol
-        elif '/USD' in symbol:
-            return symbol
-        else:
-            return f"{symbol}USDT"
+        # Rimuovi eventuali separatori
+        symbol = symbol.replace('-', '').replace('/', '')
+
+        # Se non termina già con USDT, aggiungilo
+        if not symbol.endswith('USDT'):
+            # Rimuovi USD se presente
+            symbol = symbol.replace('USD', '')
+            symbol = f"{symbol}USDT"
+
+        return symbol
 
     def _get_from_cache(self, key: str, interval: str = '1m') -> Optional[pd.DataFrame]:
         """Get data from cache if valid"""
@@ -537,7 +543,9 @@ class CryptoDataLoader:
         self,
         symbol: str,
         period: str = '1d',
-        interval: str = '1m'
+        interval: str = '1m',
+        start_date: Optional[str] = None,
+        end_date: Optional[str] = None
     ) -> Optional[pd.DataFrame]:
         """Async wrapper for get_historical_data with error handling"""
         try:
@@ -545,7 +553,9 @@ class CryptoDataLoader:
                 self.get_historical_data,
                 symbol,
                 period,
-                interval
+                interval,
+                start_date,
+                end_date
             )
         except Exception as e:
             error_msg = f"Error in async historical data fetch: {str(e)}"
@@ -556,7 +566,9 @@ class CryptoDataLoader:
         self,
         symbol: str,
         period: str = '1d',
-        interval: str = '1m'
+        interval: str = '1m',
+        start_date: Optional[str] = None,
+        end_date: Optional[str] = None
     ) -> Optional[pd.DataFrame]:
         """Get historical data using optimized queries"""
         try:
@@ -565,8 +577,13 @@ class CryptoDataLoader:
                 logger.warning(f"Unsupported symbol: {symbol}")
                 return None
 
-            # Check cache first
+            # Update cache key to include date range
             cache_key = f"{symbol}_{period}_{interval}"
+            if start_date:
+                cache_key += f"_from_{start_date}"
+            if end_date:
+                cache_key += f"_to_{end_date}"
+
             cached_data = self._get_from_cache(cache_key, interval)
             if cached_data is not None:
                 return cached_data
@@ -574,19 +591,25 @@ class CryptoDataLoader:
             if self.use_live_data and self.client:
                 try:
                     # Convert period to interval if needed
-                    interval_map = {
-                        '1d': '1d',
-                        '7d': '1d',
-                        '30d': '1d',
-                        'default': '1m'
-                    }
-                    actual_interval = interval_map.get(period, interval)
+                    actual_interval = interval
+
+                    # Convert dates to timestamp if provided
+                    since = None
+                    if start_date:
+                        since = int(pd.Timestamp(start_date).timestamp() * 1000)
+                    elif period == '1d':
+                        since = int((datetime.now() - timedelta(days=1)).timestamp() * 1000)
+                    elif period == '7d':
+                        since = int((datetime.now() - timedelta(days=7)).timestamp() * 1000)
+                    elif period == '30d':
+                        since = int((datetime.now() - timedelta(days=30)).timestamp() * 1000)
 
                     # Get klines data from Binance
                     klines = self.client.get_klines(
                         symbol=symbol,
                         interval=actual_interval,
-                        limit=1000
+                        limit=1000,
+                        startTime=since
                     )
 
                     if not klines:
@@ -595,61 +618,18 @@ class CryptoDataLoader:
 
                     # Process klines data
                     df = self._process_klines_data(klines)
+
+                    # Filter by end date if provided
+                    if end_date:
+                        end_timestamp = pd.Timestamp(end_date)
+                        df = df[df.index <= end_timestamp]
+
                     df = self._add_technical_indicators(df)
 
-                    # Save to database only recent data (last 90 days)
-                    if self.engine:
-                        current_time = datetime.now()
-                        cutoff_date = current_time - timedelta(days=90)
-
-                        records = []
-                        for idx, row in df.iterrows():
-                            if idx.to_pydatetime() >= cutoff_date:
-                                record = {
-                                    'symbol': symbol,
-                                    'timestamp': idx.to_pydatetime(),
-                                    'open': float(row['Open']),
-                                    'high': float(row['High']),
-                                    'low': float(row['Low']),
-                                    'close': float(row['Close']),
-                                    'volume': float(row['Volume'])
-                                }
-                                records.append(record)
-
-                        if records:
-                            try:
-                                with self.engine.begin() as conn:
-                                    # First ensure the partition exists
-                                    partition_date = current_time.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
-                                    create_partition_sql = f"""
-                                    CREATE TABLE IF NOT EXISTS market_data_{partition_date.strftime('%Y_%m')} 
-                                    PARTITION OF market_data
-                                    FOR VALUES FROM ('{partition_date}') 
-                                    TO ('{(partition_date + timedelta(days=32)).replace(day=1)}');
-                                    """
-                                    conn.execute(text(create_partition_sql))
-
-                                    # Then insert the data
-                                    conn.execute(
-                                        text("""
-                                            INSERT INTO market_data 
-                                            (symbol, timestamp, open, high, low, close, volume)
-                                            VALUES 
-                                            (:symbol, :timestamp, :open, :high, :low, :close, :volume)
-                                            ON CONFLICT (symbol, timestamp) DO UPDATE SET
-                                            open = EXCLUDED.open,
-                                            high = EXCLUDED.high,
-                                            low = EXCLUDED.low,
-                                            close = EXCLUDED.close,
-                                            volume = EXCLUDED.volume
-                                        """),
-                                        records
-                                    )
-                                logger.info(f"Successfully saved {len(records)} records for {symbol}")
-                            except SQLAlchemyError as e:
-                                logger.error(f"Database error for {symbol}: {str(e)}")
-
+                    # Save to database and cache
                     self._add_to_cache(cache_key, df)
+                    self._save_to_database(symbol, df)
+
                     return df
 
                 except Exception as e:
@@ -709,20 +689,26 @@ class CryptoDataLoader:
             symbols = list(self.supported_coins.keys())
             logger.info(f"Preloading data for {len(symbols)} symbols")
 
-            # Create tasks for each symbol
-            tasks = []
+            success_count = 0
             for symbol in symbols:
-                data = self.get_historical_data(
-                    symbol=symbol,
-                    period=period,
-                    interval='1m'
-                )
-                if isinstance(data, pd.DataFrame):
-                    logger.info(f"Successfully preloaded data for {symbol}")
-                else:
-                    logger.warning(f"Failed to preload data for {symbol}")
+                try:
+                    data = await asyncio.to_thread(
+                        self.get_historical_data,
+                        symbol=symbol,
+                        period=period,
+                        interval='1m'
+                    )
+                    if isinstance(data, pd.DataFrame):
+                        logger.info(f"Successfully preloaded data for {symbol}")
+                        success_count += 1
+                    else:
+                        logger.warning(f"Failed to preload data for {symbol}")
+                except Exception as e:
+                    logger.error(f"Error preloading data for {symbol}: {e}", exc_info=True)
+                    continue
 
-            return True
+            logger.info(f"Successfully preloaded data for {success_count}/{len(symbols)} symbols")
+            return success_count > 0
 
         except Exception as e:
             logger.error(f"Error preloading data: {e}", exc_info=True)
@@ -731,8 +717,14 @@ class CryptoDataLoader:
     def get_current_price(self, symbol: str) -> Optional[float]:
         """Get current price using ccxt"""
         try:
+            if not self.use_live_data:
+                # Return mock price for testing
+                return 41000.0
+
             if not self.client:
-                raise ValueError("Client not initialized")
+                self._setup_client()
+                if not self.client:
+                    raise ValueError("Client not initialized")
 
             symbol = self._normalize_symbol(symbol)
             if symbol not in self.supported_coins:
