@@ -39,6 +39,105 @@ class PredictionModel:
             self.logger.warning("OpenAI API key not found. AI analysis will be limited.")
             self.openai_client = None
 
+    def optimize_strategy_parameters(self, strategy_name: str, market_data: pd.DataFrame) -> Dict[str, Any]:
+        """
+        Ottimizza i parametri della strategia basandosi sui dati storici
+        """
+        try:
+            if market_data.empty:
+                raise ValueError("Empty market data provided")
+
+            # Prepare features
+            features = self.create_features(market_data)
+
+            # Calculate base metrics
+            volatility = features['Close'].pct_change().std() * np.sqrt(252)
+            avg_volume = features['Volume'].mean()
+            price_trend = features['Close'].pct_change(20).mean()
+
+            # Strategy-specific optimization
+            if strategy_name == "Scalping":
+                optimized_params = {
+                    'volume_threshold': int(avg_volume * 0.8),
+                    'min_volatility': max(0.0008, volatility / 252),
+                    'profit_target': max(0.002, volatility / 10),
+                    'initial_stop_loss': max(0.0015, volatility / 15),
+                    'trailing_stop': max(0.0008, volatility / 20),
+                }
+            elif strategy_name == "SwingTrading":
+                optimized_params = {
+                    'trend_period': 20 if abs(price_trend) > 0.01 else 30,
+                    'profit_target': max(0.15, volatility * 2),
+                    'stop_loss': max(0.10, volatility * 1.5),
+                    'min_trend_strength': min(0.6, volatility * 5),
+                }
+            else:
+                optimized_params = {}
+
+            self.logger.info(f"Optimized parameters for {strategy_name}: {optimized_params}")
+            return optimized_params
+
+        except Exception as e:
+            self.logger.error(f"Error optimizing strategy parameters: {str(e)}")
+            return {}
+
+    async def scan_twitter_sentiment(self, symbol: str) -> Dict[str, float]:
+        """
+        Analizza il sentiment da Twitter per un dato simbolo
+        """
+        try:
+            if not self.openai_client:
+                return {'sentiment': 0.5, 'confidence': 0.5}
+
+            # Simuliamo l'analisi del sentiment per ora
+            # TODO: Implementare l'integrazione reale con Twitter
+            sentiment_score = 0.5 + np.random.normal(0, 0.1)
+            confidence = 0.7 + np.random.normal(0, 0.1)
+
+            return {
+                'sentiment': max(0, min(1, sentiment_score)),
+                'confidence': max(0, min(1, confidence))
+            }
+
+        except Exception as e:
+            self.logger.error(f"Error scanning Twitter sentiment: {str(e)}")
+            return {'sentiment': 0.5, 'confidence': 0.5}
+
+    def _prepare_features(self, df: pd.DataFrame) -> pd.DataFrame:
+        """
+        Prepara le features per il modello predittivo
+        """
+        try:
+            features = df.copy()
+
+            # Ensure proper column names
+            column_mapping = {
+                'open': 'Open', 'high': 'High', 'low': 'Low',
+                'close': 'Close', 'volume': 'Volume'
+            }
+            features.rename(columns={k: v for k, v in column_mapping.items() 
+                                  if k in features.columns}, inplace=True)
+
+            # Add technical indicators
+            features = self.indicators.add_all_indicators(features)
+
+            # Add momentum features
+            for period in [5, 10, 20, 30]:
+                features[f'momentum_{period}'] = features['Close'].pct_change(periods=period)
+
+            # Add volatility features
+            for window in [5, 10, 20]:
+                features[f'volatility_{window}'] = features['Close'].pct_change().rolling(window=window).std()
+
+            # Clean NaN values
+            features = features.ffill().bfill()
+
+            return features
+
+        except Exception as e:
+            self.logger.error(f"Error preparing features: {str(e)}")
+            raise
+
     def create_features(self, df: pd.DataFrame) -> pd.DataFrame:
         """Create advanced technical indicators using standardized column names"""
         try:
@@ -72,7 +171,6 @@ class PredictionModel:
             df = df.ffill().bfill().fillna(0)
 
             return df
-
         except Exception as e:
             self.logger.error(f"Error creating features: {str(e)}")
             raise
@@ -221,7 +319,8 @@ class PredictionModel:
     def train(self, df: pd.DataFrame, target_column: str = 'Close', prediction_horizon: int = 5) -> Optional[Dict[str, Any]]:
         """Train ensemble of models with improved error handling"""
         try:
-            X, y = self._prepare_training_data(df, target_column, prediction_horizon)
+            features = self._prepare_features(df)
+            X, y = self._prepare_training_data(features, target_column, prediction_horizon)
 
             # Scale features
             X_scaled = self.scaler.fit_transform(X)
@@ -272,6 +371,30 @@ class PredictionModel:
         except Exception as e:
             self.logger.error(f"Training error: {str(e)}")
             return None
+
+    def _prepare_training_data(self, df: pd.DataFrame, target_column: str = 'Close', prediction_horizon: int = 5):
+        """Prepare data for training"""
+        try:
+            # Create target variable (future returns)
+            df['target'] = df[target_column].shift(-prediction_horizon)
+            df['target_returns'] = df['target'].pct_change(prediction_horizon)
+
+            # Select features
+            feature_columns = [col for col in df.columns 
+                             if col not in ['target', 'target_returns', 'Open', 'High', 'Low', 'Close', 'Volume']]
+
+            X = df[feature_columns].iloc[:-prediction_horizon]
+            y = df['target_returns'].iloc[:-prediction_horizon]
+
+            # Clean any remaining NaN values
+            X = X.fillna(0)
+            y = y.fillna(0)
+
+            return X, y
+
+        except Exception as e:
+            self.logger.error(f"Error preparing training data: {str(e)}")
+            raise
 
     def predict(self, df: pd.DataFrame, target_column: str = 'Close', prediction_horizon: int = 5) -> Optional[Dict[str, Any]]:
         """Generate ensemble predictions with improved error handling"""
@@ -396,42 +519,6 @@ class PredictionModel:
             self.logger.error(f"Position size calculation error: {e}")
             return self.max_position_size * 0.5  # Conservative fallback
 
-    def _prepare_training_data(self, df, target_column='Close', prediction_horizon=5):
-        """Prepare data for training using standardized column names"""
-        try:
-            df = self.create_features(df)
-
-            # Clean any string values in numeric columns
-            numeric_columns = df.select_dtypes(include=[np.number]).columns
-            for col in numeric_columns:
-                # Extract numeric values from strings like 'bullish_0.60'
-                if df[col].dtype == object:
-                    df[col] = df[col].apply(lambda x: float(str(x).split('_')[-1]) 
-                                          if isinstance(x, str) and '_' in str(x) 
-                                          else x)
-                df[col] = pd.to_numeric(df[col], errors='coerce')
-
-            # Create target variable (future returns)
-            df['target'] = df[target_column].shift(-prediction_horizon)
-            df['target_returns'] = df['target'].pct_change(prediction_horizon)
-
-            # Select features
-            feature_columns = [col for col in df.columns 
-                             if col not in ['target', 'target_returns', 'Open', 'High', 'Low', 'Close', 'Volume']]
-
-            X = df[feature_columns].iloc[:-prediction_horizon]
-            y = df['target_returns'].iloc[:-prediction_horizon]
-
-            # Fill any remaining NaN values
-            X = X.fillna(0)
-            y = y.fillna(0)
-
-            return X, y
-
-        except Exception as e:
-            self.logger.error(f"Error preparing training data: {e}")
-            raise
-
     def save_model(self, path: str):
         """Save model to disk"""
         if not self.models:
@@ -454,19 +541,3 @@ class PredictionModel:
         except Exception as e:
             self.logger.error(f"Error loading model: {str(e)}")
             raise
-
-    # Placeholder functions -  replace with actual implementations
-    def optimize_hyperparameters(self, df):
-        pass
-
-    def calculate_dynamic_weights(self, df):
-        return {'rf': 0.6, 'gb': 0.4}
-
-    def _get_technical_predictions(self, market_data):
-        return {'score': 0.7, 'confidence': 0.8}
-
-    def _analyze_social_sentiment(self, social_data):
-        return {'score': 0.6, 'confidence': 0.7}
-
-    def _analyze_blockchain_metrics(self, symbol):
-        return {'score': 0.5, 'confidence': 0.6}

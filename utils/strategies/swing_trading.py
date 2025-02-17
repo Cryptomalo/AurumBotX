@@ -5,6 +5,9 @@ from utils.strategies.base_strategy import BaseStrategy
 from openai import OpenAI
 import os
 import asyncio
+import logging
+
+logger = logging.getLogger(__name__)
 
 class SwingTradingStrategy(BaseStrategy):
     def __init__(self, config: Dict[str, Any]):
@@ -19,7 +22,7 @@ class SwingTradingStrategy(BaseStrategy):
             self.client = OpenAI(api_key=os.getenv('OPENAI_API_KEY'))
             self.has_sentiment = True
         except Exception as e:
-            print(f"OpenAI initialization failed: {str(e)}")
+            logger.error(f"OpenAI initialization failed: {str(e)}")
             self.has_sentiment = False
 
     async def analyze_market(
@@ -29,10 +32,13 @@ class SwingTradingStrategy(BaseStrategy):
     ) -> List[Dict[str, Any]]:
         """Analyze market for swing trading opportunities"""
         try:
+            if market_data is None or market_data.empty:
+                return []
+
             # Calculate technical indicators
             df = market_data.copy()
 
-            # Ensure columns are properly named
+            # Standardize column names
             if 'close' in df.columns:
                 df.rename(columns={
                     'close': 'Close',
@@ -45,8 +51,8 @@ class SwingTradingStrategy(BaseStrategy):
             df['SMA_50'] = df['Close'].rolling(window=50).mean()
 
             # Calculate trend
-            trend_direction = 1 if df['Close'].iloc[-1] > df['SMA_50'].iloc[-1] else -1
-            trend_strength = abs(df['Close'].iloc[-1] - df['SMA_50'].iloc[-1]) / df['SMA_50'].iloc[-1]
+            trend_direction = 1 if df['SMA_20'].iloc[-1] > df['SMA_50'].iloc[-1] else -1
+            trend_strength = abs(df['SMA_20'].iloc[-1] - df['SMA_50'].iloc[-1]) / df['SMA_50'].iloc[-1]
 
             # Calculate volatility
             volatility = df['Close'].pct_change().rolling(window=self.trend_period).std().iloc[-1]
@@ -62,21 +68,27 @@ class SwingTradingStrategy(BaseStrategy):
                 else await self._technical_sentiment(df)
             )
 
-            analysis = [{
+            # Generate signals based on analysis
+            signal = self.generate_signals({
                 'trend_direction': trend_direction,
                 'trend_strength': trend_strength,
                 'volatility': volatility,
                 'volume_ratio': volume_ratio,
                 'sentiment_score': sentiment_score,
-                'current_price': df['Close'].iloc[-1],
-                'sma_20': df['SMA_20'].iloc[-1] if 'SMA_20' in df.columns else None,
-                'sma_50': df['SMA_50'].iloc[-1] if 'SMA_50' in df.columns else None
+                'current_price': df['Close'].iloc[-1]
+            })
+
+            analysis = [{
+                **signal,
+                'sma_20': df['SMA_20'].iloc[-1],
+                'sma_50': df['SMA_50'].iloc[-1],
+                'timestamp': pd.Timestamp.now().isoformat()
             }]
 
             return analysis
 
         except Exception as e:
-            print(f"Error in market analysis: {str(e)}")
+            logger.error(f"Error in market analysis: {str(e)}")
             return []
 
     async def _technical_sentiment(self, df: pd.DataFrame) -> float:
@@ -108,7 +120,7 @@ class SwingTradingStrategy(BaseStrategy):
             return max(0, min(1, final_score))
 
         except Exception as e:
-            print(f"Error in technical sentiment: {str(e)}")
+            logger.error(f"Error in technical sentiment: {str(e)}")
             return 0.5
 
     async def _analyze_market_sentiment(self) -> float:
@@ -119,7 +131,7 @@ class SwingTradingStrategy(BaseStrategy):
 
             response = await asyncio.to_thread(
                 self.client.chat.completions.create,
-                model="gpt-4o",  # Latest stable model
+                model="gpt-4",
                 messages=[{
                     "role": "system",
                     "content": "Analyze the current market sentiment for long-term crypto trading and provide a sentiment score between 0 and 1."
@@ -129,7 +141,7 @@ class SwingTradingStrategy(BaseStrategy):
             result = response.choices[0].message.content
             return float(result.get('sentiment_score', 0.5))
         except Exception as e:
-            print(f"Error in sentiment analysis: {str(e)}")
+            logger.error(f"Error in sentiment analysis: {str(e)}")
             return 0.5
 
     def generate_signals(self, analysis: Dict[str, Any]) -> Dict[str, Any]:
@@ -227,6 +239,7 @@ class SwingTradingStrategy(BaseStrategy):
             return execution
 
         except Exception as e:
+            logger.error(f"Trade execution error: {str(e)}")
             return {
                 'success': False,
                 'error': str(e),

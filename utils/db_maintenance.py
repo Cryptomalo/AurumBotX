@@ -139,7 +139,6 @@ class DatabaseMaintenance:
                     LIKE market_data_template INCLUDING ALL
                 ) PARTITION BY RANGE (timestamp);
                 """))
-
                 # Create initial partitions for current and next month
                 current_date = datetime.now().replace(day=1)
                 next_month = (current_date + timedelta(days=32)).replace(day=1)
@@ -526,6 +525,92 @@ class DatabaseMaintenance:
 
         except Exception as e:
             logger.error(f"Error cleaning up old data: {str(e)}")
+
+    def _create_historical_partitions(self, table_name: str, start_date: datetime, end_date: datetime = None) -> None:
+        """Create partitions for historical data"""
+        try:
+            if end_date is None:
+                end_date = datetime.now()
+
+            current_date = start_date.replace(day=1)
+            while current_date <= end_date:
+                next_month = (current_date + timedelta(days=32)).replace(day=1)
+                partition_name = f"{table_name}_{current_date.strftime('%Y%m')}"
+
+                try:
+                    with self.engine.begin() as conn:
+                        conn.execute(text(f"""
+                        CREATE TABLE IF NOT EXISTS {partition_name}
+                        PARTITION OF {table_name}
+                        FOR VALUES FROM ('{current_date.strftime('%Y-%m-%d')}')
+                        TO ('{next_month.strftime('%Y-%m-%d')}');
+
+                        CREATE INDEX IF NOT EXISTS idx_{partition_name}_timestamp 
+                        ON {partition_name} USING btree (timestamp);
+
+                        CREATE INDEX IF NOT EXISTS idx_{partition_name}_symbol_timestamp 
+                        ON {partition_name} USING btree (symbol, timestamp);
+                        """))
+                        logger.info(f"Created historical partition {partition_name}")
+                except Exception as e:
+                    logger.error(f"Error creating partition {partition_name}: {e}")
+
+                current_date = next_month
+
+        except Exception as e:
+            logger.error(f"Error in _create_historical_partitions: {e}")
+            raise
+
+    def restore_from_backup(self, backup_table: str, target_symbol: str) -> None:
+        """Restore data from backup table with proper partition handling"""
+        try:
+            # First get the date range from backup
+            with self.engine.begin() as conn:
+                result = conn.execute(text(f"""
+                    SELECT MIN(timestamp) as min_date, 
+                           MAX(timestamp) as max_date 
+                    FROM {backup_table}
+                """)).fetchone()
+
+                if not result or not result[0]:
+                    logger.warning(f"No data found in backup table {backup_table}")
+                    return
+
+                min_date, max_date = result
+
+                # Create necessary partitions
+                for pair in self.trading_pairs:
+                    table_name = f"market_data_{pair.lower()}"
+                    self._create_historical_partitions(table_name, min_date, max_date)
+
+                # Transfer data
+                insert_sql = f"""
+                INSERT INTO market_data_partitioned (
+                    symbol, timestamp, open, high, low, close, volume
+                )
+                SELECT 
+                    $1 as symbol,
+                    timestamp,
+                    "Open" as open,
+                    "High" as high,
+                    "Low" as low,
+                    "Close" as close,
+                    "Volume" as volume
+                FROM {backup_table}
+                ON CONFLICT (symbol, timestamp) DO UPDATE SET
+                    open = EXCLUDED.open,
+                    high = EXCLUDED.high,
+                    low = EXCLUDED.low,
+                    close = EXCLUDED.close,
+                    volume = EXCLUDED.volume
+                """
+                conn.execute(text(insert_sql), [target_symbol])
+
+                logger.info(f"Successfully restored data from {backup_table} to {target_symbol}")
+
+        except Exception as e:
+            logger.error(f"Error restoring from backup: {e}")
+            raise
 
 
 def setup_maintenance(db_url: Optional[str] = None) -> DatabaseMaintenance:

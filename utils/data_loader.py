@@ -67,6 +67,7 @@ class CryptoDataLoader:
                 logger.warning(f"Failed to setup live data client: {e}. Falling back to mock data.")
                 self.use_live_data = False
         self._setup_database()
+        self.logger = logger # Added for logger access in _save_to_database
 
     def _setup_client(self):
         """Setup Binance client with enhanced error handling"""
@@ -163,6 +164,12 @@ class CryptoDataLoader:
                     records = []
                     for _, row in batch_df.iterrows():
                         try:
+                            # Validate data types before insertion
+                            numeric_cols = ['open', 'high', 'low', 'close', 'volume']
+                            if not all(isinstance(float(row[col]), float) for col in numeric_cols):
+                                self.logger.warning(f"Invalid numeric data in row, skipping: {row}")
+                                continue
+
                             record = {
                                 'symbol': str(row['symbol']),
                                 'timestamp': row['timestamp'].to_pydatetime(),
@@ -174,18 +181,17 @@ class CryptoDataLoader:
                             }
                             records.append(record)
                         except (ValueError, TypeError) as e:
-                            logger.error(f"Error converting row data: {row}, Error: {str(e)}")
+                            self.logger.error(f"Error converting row data: {row}, Error: {str(e)}")
                             continue
 
                     if not records:
-                        logger.warning(f"No valid records in batch {start_idx}-{end_idx} for {symbol}")
+                        self.logger.warning(f"No valid records in batch {start_idx}-{end_idx} for {symbol}")
                         continue
 
-                    # Prepare the SQL statement with proper parameter style
+                    # Use parameterized query with proper parameter style
                     insert_sql = """
-                    INSERT INTO market_data_partitioned 
-                    (symbol, timestamp, open, high, low, close, volume)
-                    VALUES (%(symbol)s, %(timestamp)s, %(open)s, %(high)s, %(low)s, %(close)s, %(volume)s)
+                    INSERT INTO market_data (symbol, timestamp, open, high, low, close, volume)
+                    VALUES (:symbol, :timestamp, :open, :high, :low, :close, :volume)
                     ON CONFLICT (symbol, timestamp) 
                     DO UPDATE SET
                         open = EXCLUDED.open,
@@ -196,20 +202,28 @@ class CryptoDataLoader:
                     """
 
                     # Execute batch insert with proper transaction handling
-                    with self.engine.begin() as conn:
-                        conn.execute(text(insert_sql), records)
+                    if self.engine is not None:
+                        with self.engine.connect() as conn:
+                            with conn.begin():
+                                conn.execute(
+                                    text(insert_sql),
+                                    records
+                                )
+                    else:
+                        self.logger.error("Database engine not initialized")
+                        return
 
-                    logger.info(f"Successfully saved batch {start_idx}-{end_idx} for {symbol}")
+                    self.logger.info(f"Successfully saved batch {start_idx}-{end_idx} for {symbol}")
 
                 except Exception as e:
-                    logger.error(f"Error processing batch for {symbol}: {str(e)}")
+                    self.logger.error(f"Error processing batch for {symbol}: {str(e)}")
                     continue
 
-            logger.info(f"Successfully saved all {total_rows} rows for {symbol}")
+            self.logger.info(f"Successfully saved all {total_rows} rows for {symbol}")
 
         except Exception as e:
             error_msg = f"Database error for {symbol}: {str(e)}"
-            logger.error(error_msg, exc_info=True)
+            self.logger.error(error_msg, exc_info=True)
             raise DatabaseError(error_msg)
 
     def _process_klines_data(self, klines: List) -> pd.DataFrame:
@@ -559,7 +573,7 @@ class CryptoDataLoader:
             # Optimize query using indexes
             query = """
             SELECT timestamp, open, high, low, close, volume
-            FROM market_data_partitioned
+            FROM market_data
             WHERE symbol = %s
             AND timestamp >= %s
             ORDER BY timestamp DESC

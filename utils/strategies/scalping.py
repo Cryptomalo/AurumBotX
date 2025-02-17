@@ -10,16 +10,16 @@ logger = logging.getLogger(__name__)
 class ScalpingStrategy(BaseStrategy):
     def __init__(self, config: Dict[str, Any]):
         super().__init__("Scalping", config)
-        # Parametri più aggressivi per scalping ultra-veloce
-        self.volume_threshold = config.get('volume_threshold', 300000)  # Ridotto per catturare più opportunità
-        self.min_volatility = config.get('min_volatility', 0.0008)    # Ridotto per operare su movimenti più piccoli
-        self.profit_target = config.get('profit_target', 0.002)      # Target più piccoli ma più frequenti
+        # Parametri ottimizzati per scalping ultra-veloce
+        self.volume_threshold = config.get('volume_threshold', 300000)
+        self.min_volatility = config.get('min_volatility', 0.0008)
+        self.profit_target = config.get('profit_target', 0.002)
         self.initial_stop_loss = config.get('initial_stop_loss', 0.0015)
         self.trailing_stop = config.get('trailing_stop', 0.0008)
         self.rsi_oversold = config.get('rsi_oversold', 35)
         self.rsi_overbought = config.get('rsi_overbought', 65)
-        self.volume_anomaly_threshold = 2.0  # Volume 2x sopra la media
-        self.min_profit_factor = 1.5  # Rapporto minimo rischio/rendimento
+        self.volume_anomaly_threshold = 2.0
+        self.min_profit_factor = 1.5
         self.logger = logger
 
     async def analyze_market(
@@ -32,23 +32,23 @@ class ScalpingStrategy(BaseStrategy):
             if market_data is None or market_data.empty:
                 return []
 
-            # Standardizzazione colonne per multi-exchange
+            # Standardizzazione colonne
             volume = market_data.get('Volume', market_data.get('volume'))
             close = market_data.get('Close', market_data.get('close'))
             high = market_data.get('High', market_data.get('high'))
             low = market_data.get('Low', market_data.get('low'))
 
             # Analisi volume avanzata
-            volume_sma = volume.rolling(window=5).mean()  # Finestra ridotta per reattività
+            volume_sma = volume.rolling(window=5).mean()
             volume_std = volume.rolling(window=5).std()
             volume_ratio = volume.iloc[-1] / volume_sma.iloc[-1]
             volume_anomaly = (volume.iloc[-1] - volume_sma.iloc[-1]) / volume_std.iloc[-1]
             volume_trend = volume.pct_change(3).mean()
 
-            # Analisi volatilità e momentum ottimizzata
-            volatility = close.pct_change().rolling(window=5).std().iloc[-1] * np.sqrt(288)  # Annualizzato per 1m
+            # Analisi volatilità e momentum
+            volatility = close.pct_change().rolling(window=5).std().iloc[-1] * np.sqrt(288)
             momentum = close.pct_change(periods=3).iloc[-1]
-            price_trend = close.pct_change(3).ewm(span=3).mean().iloc[-1]  # Media mobile esponenziale
+            price_trend = close.pct_change(3).ewm(span=3).mean().iloc[-1]
 
             current_price = close.iloc[-1]
 
@@ -57,11 +57,11 @@ class ScalpingStrategy(BaseStrategy):
             recent_low = low.rolling(window=12).min().iloc[-1]
             price_range = recent_high - recent_low
 
-            # Take profit adattivo basato sulla volatilità
+            # Take profit adattivo
             adaptive_profit_target = max(self.profit_target, volatility * 0.5)
             adaptive_stop_loss = min(self.initial_stop_loss, volatility * 0.3)
 
-            # Integrazione sentiment se disponibile
+            # Integrazione sentiment
             sentiment_score = sentiment_data.get('sentiment_score', 0.5) if sentiment_data else 0.5
 
             analysis = [{
@@ -185,8 +185,8 @@ class ScalpingStrategy(BaseStrategy):
             max_risk = portfolio.get('total_capital', 0) * 0.01  # 1% max risk per trade
 
             # Verify spread
-            current_spread = portfolio.get('current_spread', 0.001)  # 0.1% default spread
-            min_profit_after_fees = self.profit_target * 2  # Profit must be at least 2x spread
+            current_spread = portfolio.get('current_spread', 0.001)
+            min_profit_after_fees = self.profit_target * 2
 
             return risk_per_trade <= max_risk and current_spread < min_profit_after_fees
 
