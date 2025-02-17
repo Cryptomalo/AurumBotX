@@ -41,6 +41,10 @@ author = "agent"
 task = "workflow.run"
 args = "Test Bot"
 
+[[workflows.workflow.tasks]]
+task = "workflow.run"
+args = "Test Meme Strategy"
+
 [[workflows.workflow]]
 name = "Test WebSocket"
 author = 39294082
@@ -64,6 +68,20 @@ author = 39294082
 [[workflows.workflow.tasks]]
 task = "shell.exec"
 args = "python -m pytest utils/test_suite.py -v"
+
+[[workflows.workflow]]
+name = "Test Meme Strategy"
+author = "agent"
+
+[workflows.workflow.metadata]
+agentRequireRestartOnSave = false
+
+[[workflows.workflow.tasks]]
+task = "packager.installForAll"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "python test_meme_strategy.py"
 
 [[ports]]
 localPort = 5000

@@ -1,6 +1,6 @@
 from typing import Dict, Any, List, Optional
 import aiohttp
-from datetime import datetime
+from datetime import datetime, timedelta
 import logging
 from solana.rpc.async_api import AsyncClient
 from solana.transaction import Transaction
@@ -133,13 +133,12 @@ class MemeCoinStrategy(BaseStrategy):
     async def _get_viral_metrics(self, symbol: str) -> Dict[str, float]:
         """Analizza metriche virali dai social media"""
         try:
-            async with aiohttp.ClientSession() as session:
-                # Implement social media API calls here
-                return {
-                    'coefficient': 0.9,
-                    'momentum': 0.8,
-                    'social_volume': 1000
-                }
+            # Mock implementation for testing
+            return {
+                'coefficient': 0.9,
+                'momentum': 0.8,
+                'social_volume': 1000
+            }
         except Exception as e:
             logger.error(f"Error getting viral metrics: {e}")
             return {'coefficient': 0.0, 'momentum': 0.0, 'social_volume': 0}
@@ -147,10 +146,11 @@ class MemeCoinStrategy(BaseStrategy):
     async def _analyze_token_metrics(self, market_data: Dict) -> Dict[str, Any]:
         """Analizza metriche on-chain del token"""
         try:
+            holders = await self._get_holder_count(market_data.get('address'))
             return {
                 'valid': True,
                 'liquidity': market_data.get('liquidity', 0),
-                'holders': await self._get_holder_count(market_data.get('address')),
+                'holders': holders,
                 'volume_24h': market_data.get('volume_24h', 0)
             }
         except Exception as e:
@@ -171,11 +171,17 @@ class MemeCoinStrategy(BaseStrategy):
         """Calcola punti di ingresso ottimali"""
         try:
             current_price = float(market_data.get('price', 0))
+            confidence = min(
+                0.7 + (analysis.get('liquidity', 0) / 1000000) * 0.1 +
+                (analysis.get('holders', 0) / 1000) * 0.1,
+                0.9
+            )
+
             return [{
                 'price': current_price,
                 'stop_loss': current_price * 0.95,  # 5% stop loss
                 'take_profit': current_price * 1.3,  # 30% take profit
-                'confidence': min(analysis.get('confidence', 0), 0.9)
+                'confidence': confidence
             }]
         except Exception as e:
             logger.error(f"Error calculating entry points: {e}")
@@ -218,5 +224,10 @@ class MemeCoinStrategy(BaseStrategy):
             return None
 
     async def _get_holder_count(self, token_address: str) -> int:
-        # Placeholder implementation - needs to be replaced with actual holder count retrieval
-        return 1000
+        """Ottiene il numero di holders del token"""
+        try:
+            # Placeholder implementation
+            return 1000
+        except Exception as e:
+            logger.error(f"Error getting holder count: {e}")
+            return 0

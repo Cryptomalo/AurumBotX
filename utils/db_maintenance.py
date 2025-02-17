@@ -87,7 +87,7 @@ class DatabaseMaintenance:
             raise
 
     def _create_advance_partitions(self) -> None:
-        """Create partitions for future months with improved error handling"""
+        """Create partitions for future months with improved error handling and consistent naming"""
         try:
             current_date = datetime.now()
 
@@ -103,12 +103,14 @@ class DatabaseMaintenance:
                     # Calculate dates for partition
                     partition_date = (current_date + timedelta(days=32 * month_offset)).replace(day=1)
                     next_month = (partition_date + timedelta(days=32)).replace(day=1)
+                    next_month = next_month.replace(day=1)  # Ensure first day of next month
 
-                    partition_name = f"{table_name}_y{partition_date.year}m{partition_date.month:02d}"
+                    # Use YYYYMM format for partition names
+                    partition_name = f"{table_name}_{partition_date.strftime('%Y%m')}"
 
                     try:
                         with self.engine.begin() as conn:
-                            # Create partition as a direct child of the main table
+                            # Create partition
                             conn.execute(text(f"""
                             CREATE TABLE IF NOT EXISTS {partition_name}
                             PARTITION OF {table_name}
@@ -116,16 +118,17 @@ class DatabaseMaintenance:
                             TO ('{next_month.strftime('%Y-%m-%d')}');
                             """))
 
-                            # Create optimized indexes on partition
+                            # Create optimized indexes
                             conn.execute(text(f"""
-                            CREATE INDEX IF NOT EXISTS idx_{partition_name}_timestamp_btree 
+                            CREATE INDEX IF NOT EXISTS idx_{partition_name}_timestamp 
                             ON {partition_name} USING btree (timestamp);
 
-                            CREATE INDEX IF NOT EXISTS idx_{partition_name}_close_timestamp_btree 
+                            CREATE INDEX IF NOT EXISTS idx_{partition_name}_close 
                             ON {partition_name} USING btree ("Close", timestamp);
                             """))
 
-                        logger.info(f"Successfully created partition {partition_name}")
+                            logger.info(f"Successfully created partition {partition_name}")
+
                     except Exception as e:
                         if "already exists" not in str(e):
                             logger.error(f"Error creating partition {partition_name}: {e}")
@@ -170,8 +173,8 @@ class DatabaseMaintenance:
                     is_partitioned = conn.execute(is_partitioned_query).scalar()
 
                     if not is_partitioned:
-                        # Backup existing data
-                        backup_table = f"{table_name}_backup_{int(time.time())}"
+                        # Create backup with timestamp in YYYYMMDD format
+                        backup_table = f"{table_name}_backup_{datetime.now().strftime('%Y%m%d')}"
                         conn.execute(text(f"ALTER TABLE {table_name} RENAME TO {backup_table}"))
                         logger.info(f"Backed up existing table to {backup_table}")
 
