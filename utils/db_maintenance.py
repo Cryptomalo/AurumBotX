@@ -70,6 +70,7 @@ class DatabaseMaintenance:
         try:
             logger.info("Starting initial database maintenance...")
             self._create_template_table()
+            self._cleanup_old_data() # Added cleanup call
 
             # Setup partitioning for all trading pairs
             for pair in self.trading_pairs:
@@ -132,12 +133,9 @@ class DatabaseMaintenance:
                 return
 
             with self.engine.begin() as conn:
-                # Drop existing table if it exists
-                conn.execute(text(f"DROP TABLE IF EXISTS {table_name} CASCADE"))
-
                 # Create new partitioned table
                 conn.execute(text(f"""
-                CREATE TABLE {table_name} (
+                CREATE TABLE IF NOT EXISTS {table_name} (
                     LIKE market_data_template INCLUDING ALL
                 ) PARTITION BY RANGE (timestamp);
                 """))
@@ -293,8 +291,7 @@ class DatabaseMaintenance:
 
             stats = {}
             for row in result:
-                dead_tuple_pct = (row.dead_rows / (row.live_rows + row.dead_rows) * 100 
-                                if (row.live_rows + row.dead_rows) > 0 else 0)
+                dead_tuple_pct = (row.dead_rows / (row.live_rows + row.dead_rows) * 100) if (row.live_rows + row.dead_rows) > 0 else 0
                 stats[row.table_name] = {
                     'live_rows': row.live_rows,
                     'dead_rows': row.dead_rows,
@@ -509,6 +506,26 @@ class DatabaseMaintenance:
             logger.error(f"Error running VACUUM on {table_name}: {e}")
             return False
 
+    def _cleanup_old_data(self):
+        """Clean up old market data to maintain performance"""
+        try:
+            cleanup_sql = """
+            DELETE FROM market_data_partitioned 
+            WHERE timestamp < CURRENT_TIMESTAMP - INTERVAL '90 days'
+            AND id NOT IN (
+                SELECT id FROM market_data_partitioned
+                WHERE timestamp >= CURRENT_TIMESTAMP - INTERVAL '90 days'
+                ORDER BY timestamp DESC
+                LIMIT 1000000
+            );
+            """
+
+            with self.engine.begin() as conn:
+                conn.execute(text(cleanup_sql))
+                logger.info("Successfully cleaned up old market data")
+
+        except Exception as e:
+            logger.error(f"Error cleaning up old data: {str(e)}")
 
 
 def setup_maintenance(db_url: Optional[str] = None) -> DatabaseMaintenance:

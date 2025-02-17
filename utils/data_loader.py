@@ -150,11 +150,6 @@ class CryptoDataLoader:
             # Rename columns to match database schema
             df.columns = ['symbol', 'timestamp', 'open', 'high', 'low', 'close', 'volume']
 
-            # Log DataFrame info
-            logger.info(f"Preparing to save {len(df)} records for {symbol}")
-            logger.info(f"DataFrame columns: {df.columns.tolist()}")
-            logger.info(f"DataFrame types: {df.dtypes}")
-
             # Process in optimized batches
             batch_size = self.BATCH_SIZE
             total_rows = len(df)
@@ -163,38 +158,34 @@ class CryptoDataLoader:
                 end_idx = min(start_idx + batch_size, total_rows)
                 batch_df = df.iloc[start_idx:end_idx]
 
-                # Convert batch to records with proper format and add logging
                 try:
+                    # Convert batch to list of dictionaries with proper types
                     records = []
                     for _, row in batch_df.iterrows():
-                        record = {
-                            'symbol': str(row['symbol']),
-                            'timestamp': row['timestamp'].to_pydatetime(),
-                            'open': float(row['open']),
-                            'high': float(row['high']),
-                            'low': float(row['low']),
-                            'close': float(row['close']),
-                            'volume': float(row['volume'])
-                        }
-                        records.append(record)
+                        try:
+                            record = {
+                                'symbol': str(row['symbol']),
+                                'timestamp': row['timestamp'].to_pydatetime(),
+                                'open': float(row['open']),
+                                'high': float(row['high']),
+                                'low': float(row['low']),
+                                'close': float(row['close']),
+                                'volume': float(row['volume'])
+                            }
+                            records.append(record)
+                        except (ValueError, TypeError) as e:
+                            logger.error(f"Error converting row data: {row}, Error: {str(e)}")
+                            continue
 
-                        # Log the first record's types for debugging
-                        if len(records) == 1:
-                            logger.info("Sample record types:")
-                            for key, value in record.items():
-                                logger.info(f"{key}: {type(value)} = {value}")
+                    if not records:
+                        logger.warning(f"No valid records in batch {start_idx}-{end_idx} for {symbol}")
+                        continue
 
-                    logger.info(f"Prepared {len(records)} records for insertion")
-
-                    # Insert data with upsert using SQLAlchemy parameterization
+                    # Prepare the SQL statement with proper parameter style
                     insert_sql = """
-                    INSERT INTO market_data_optimized (
-                        symbol, timestamp, open, high, low, close, volume
-                    ) 
-                    VALUES (
-                        :symbol, :timestamp, :open, :high, 
-                        :low, :close, :volume
-                    )
+                    INSERT INTO market_data_partitioned 
+                    (symbol, timestamp, open, high, low, close, volume)
+                    VALUES (%(symbol)s, %(timestamp)s, %(open)s, %(high)s, %(low)s, %(close)s, %(volume)s)
                     ON CONFLICT (symbol, timestamp) 
                     DO UPDATE SET
                         open = EXCLUDED.open,
@@ -204,39 +195,15 @@ class CryptoDataLoader:
                         volume = EXCLUDED.volume;
                     """
 
-                    # Execute with retries and proper transaction handling
-                    for attempt in range(self.RETRY_ATTEMPTS):
-                        try:
-                            with self.engine.begin() as conn:
-                                # Log the SQL query with parameters
-                                logger.info(f"Executing SQL with {len(records)} records")
-                                logger.info(f"First record: {records[0]}")
+                    # Execute batch insert with proper transaction handling
+                    with self.engine.begin() as conn:
+                        conn.execute(text(insert_sql), records)
 
-                                # Execute the query with proper parameter binding
-                                successful_inserts = 0
-                                for record in records:
-                                    try:
-                                        result = conn.execute(text(insert_sql), record)
-                                        successful_inserts += 1
-                                        logger.debug(f"Inserted/Updated row with {record['symbol']} at {record['timestamp']}")
-                                    except SQLAlchemyError as insert_error:
-                                        logger.error(f"Error inserting record: {record}, Error: {str(insert_error)}")
-                                        continue
-
-                                logger.info(f"Successfully inserted {successful_inserts}/{len(records)} records")
-                                break
-                        except SQLAlchemyError as e:
-                            error_msg = f"Database error (attempt {attempt + 1}/{self.RETRY_ATTEMPTS}): {str(e)}"
-                            logger.error(error_msg)
-                            if attempt == self.RETRY_ATTEMPTS - 1:
-                                raise DatabaseError(error_msg)
-                            time.sleep(self.RETRY_DELAY * (2 ** attempt))
+                    logger.info(f"Successfully saved batch {start_idx}-{end_idx} for {symbol}")
 
                 except Exception as e:
-                    logger.error(f"Error preparing records: {str(e)}")
-                    raise
-
-                logger.info(f"Successfully saved batch {start_idx}-{end_idx} for {symbol}")
+                    logger.error(f"Error processing batch for {symbol}: {str(e)}")
+                    continue
 
             logger.info(f"Successfully saved all {total_rows} rows for {symbol}")
 
@@ -592,7 +559,7 @@ class CryptoDataLoader:
             # Optimize query using indexes
             query = """
             SELECT timestamp, open, high, low, close, volume
-            FROM market_data_optimized
+            FROM market_data_partitioned
             WHERE symbol = %s
             AND timestamp >= %s
             ORDER BY timestamp DESC
