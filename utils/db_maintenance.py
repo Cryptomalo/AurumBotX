@@ -1,3 +1,6 @@
+"""
+DatabaseMaintenance module with improved backup table handling
+"""
 import logging
 import time
 from datetime import datetime, timedelta
@@ -18,19 +21,21 @@ class DatabaseMaintenance:
         self.maintenance_interval = timedelta(hours=1)
         self.vacuum_threshold = 10
         self.analyze_interval = timedelta(hours=6)
-        self.partition_check_interval = timedelta(minutes=30)  # Reduced to 30 minutes
-        self.partition_advance_months = 6  # Increased to 6 months in advance
+        self.partition_check_interval = timedelta(minutes=30)
+        self.partition_advance_months = 6
         self.trading_pairs = ['BTCUSDT', 'ETHUSDT', 'SOLUSDT']
         self.last_analyze = None
         self.last_partition_check = None
         self._initialize_maintenance()
 
+    def _is_backup_table(self, table_name: str) -> bool:
+        """Check if a table is a backup table"""
+        return '_backup_' in table_name.lower()
+
     def _initialize_maintenance(self) -> None:
         """Initialize maintenance with improved error handling"""
         try:
             logger.info("Starting initial database maintenance...")
-
-            # Ensure template table exists
             self._create_template_table()
 
             # Setup partitioning for all trading pairs
@@ -38,9 +43,7 @@ class DatabaseMaintenance:
                 table_name = f"market_data_{pair.lower()}"
                 self._setup_table_partitioning(table_name)
 
-            # Create advance partitions
             self._create_advance_partitions()
-
             logger.info("Initial maintenance completed successfully")
         except Exception as e:
             logger.error(f"Error during initial maintenance: {e}")
@@ -105,7 +108,7 @@ class DatabaseMaintenance:
 
                     try:
                         with self.engine.begin() as conn:
-                            # Create partition with range check
+                            # Create partition as a direct child of the main table
                             conn.execute(text(f"""
                             CREATE TABLE IF NOT EXISTS {partition_name}
                             PARTITION OF {table_name}
@@ -136,10 +139,15 @@ class DatabaseMaintenance:
             raise
 
     def _setup_table_partitioning(self, table_name: str) -> None:
-        """Setup partitioning for a table with improved error handling"""
+        """Setup partitioning for a table with improved backup handling"""
         try:
+            # Skip backup tables
+            if self._is_backup_table(table_name):
+                logger.info(f"Skipping partitioning setup for backup table: {table_name}")
+                return
+
             with self.engine.begin() as conn:
-                # Check if table exists and is already partitioned
+                # Check if table exists
                 exists_query = text(f"""
                 SELECT EXISTS (
                     SELECT FROM pg_tables 
@@ -162,7 +170,7 @@ class DatabaseMaintenance:
                     is_partitioned = conn.execute(is_partitioned_query).scalar()
 
                     if not is_partitioned:
-                        # Backup existing data if any
+                        # Backup existing data
                         backup_table = f"{table_name}_backup_{int(time.time())}"
                         conn.execute(text(f"ALTER TABLE {table_name} RENAME TO {backup_table}"))
                         logger.info(f"Backed up existing table to {backup_table}")
@@ -180,7 +188,7 @@ class DatabaseMaintenance:
             raise
 
     def perform_maintenance(self) -> None:
-        """Perform scheduled maintenance tasks with improved error handling"""
+        """Perform scheduled maintenance tasks"""
         try:
             current_time = datetime.now()
 
@@ -190,20 +198,29 @@ class DatabaseMaintenance:
 
             logger.info("Starting scheduled database maintenance")
 
-            # Check and create advance partitions
+            # Manage partitions if needed
             if (not self.last_partition_check or 
                 current_time - self.last_partition_check >= self.partition_check_interval):
-                self._create_advance_partitions()
+                self.manage_partitions()
                 self.last_partition_check = current_time
 
             # Run VACUUM ANALYZE on tables with high dead tuples
-            self._vacuum_analyze_needed_tables()
+            with self.engine.connect() as conn:
+                stats = self._get_table_stats(conn)
+                for table_name, table_stats in stats.items():
+                    if (table_stats['dead_tuple_pct'] > self.vacuum_threshold or 
+                        table_stats.get('modifications', 0) > 1000):
+                        logger.info(f"Table {table_name} needs maintenance:")
+                        logger.info(f"Dead tuples: {table_stats['dead_tuple_pct']}%")
+                        logger.info(f"Modifications: {table_stats.get('modifications', 0)}")
+                        self._vacuum_analyze_table(table_name)
 
             self.last_maintenance = current_time
             logger.info("Database maintenance completed successfully")
 
         except Exception as e:
             logger.error(f"Error during maintenance: {e}")
+
 
     def _vacuum_analyze_needed_tables(self) -> None:
         """Run VACUUM ANALYZE on tables that need it"""
@@ -267,18 +284,20 @@ class DatabaseMaintenance:
             return {}
 
     def manage_partitions(self) -> None:
-        """Manage table partitions automatically"""
+        """Manage table partitions with backup table handling"""
         try:
             tables = self._get_market_data_tables()
             for table_name in tables:
-                if table_name == 'market_data_template':
+                # Skip template and backup tables
+                if table_name == 'market_data_template' or self._is_backup_table(table_name):
                     continue
 
-                # Create next month's partition if needed
+                # Create next month's partition
                 next_month = datetime.now() + timedelta(days=32)
                 partition_name = f"{table_name}_y{next_month.year}m{next_month.month:02d}"
 
                 with self.engine.connect() as conn:
+                    # Create the partition directly under the main table
                     conn.execute(text(f"""
                     CREATE TABLE IF NOT EXISTS {partition_name}
                     PARTITION OF {table_name}
@@ -447,40 +466,6 @@ class DatabaseMaintenance:
             logger.error(f"Error running VACUUM on {table_name}: {e}")
             return False
 
-
-    def perform_maintenance(self) -> None:
-        """Perform scheduled maintenance tasks"""
-        try:
-            current_time = datetime.now()
-
-            if (self.last_maintenance and 
-                current_time - self.last_maintenance < self.maintenance_interval):
-                return
-
-            logger.info("Starting scheduled database maintenance")
-
-            # Manage partitions if needed
-            if (not self.last_partition_check or 
-                current_time - self.last_partition_check >= self.partition_check_interval):
-                self.manage_partitions()
-                self.last_partition_check = current_time
-
-            # Run VACUUM ANALYZE on tables with high dead tuples
-            with self.engine.connect() as conn:
-                stats = self._get_table_stats(conn)
-                for table_name, table_stats in stats.items():
-                    if (table_stats['dead_tuple_pct'] > self.vacuum_threshold or 
-                        table_stats.get('modifications', 0) > 1000):
-                        logger.info(f"Table {table_name} needs maintenance:")
-                        logger.info(f"Dead tuples: {table_stats['dead_tuple_pct']}%")
-                        logger.info(f"Modifications: {table_stats.get('modifications', 0)}")
-                        self._vacuum_analyze_table(table_name)
-
-            self.last_maintenance = current_time
-            logger.info("Database maintenance completed successfully")
-
-        except Exception as e:
-            logger.error(f"Error during maintenance: {e}")
 
 
 def setup_maintenance(db_url: Optional[str] = None) -> DatabaseMaintenance:

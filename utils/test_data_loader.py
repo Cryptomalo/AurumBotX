@@ -4,6 +4,8 @@ import pandas as pd
 import numpy as np
 from datetime import datetime
 from utils.data_loader import CryptoDataLoader
+import pandas.api.types as pdtypes
+
 
 class TestCryptoDataLoader(unittest.TestCase):
     def setUp(self):
@@ -18,16 +20,15 @@ class TestCryptoDataLoader(unittest.TestCase):
 
     @patch('utils.data_loader.Client')
     def test_get_historical_data(self, mock_client_class):
+        """Test data retrieval with proper type checking"""
         # Setup mock client
         mock_client = MagicMock()
         mock_client_class.return_value = mock_client
 
-        # Prepare mock data
+        # Prepare mock data with all required columns
         mock_klines = [
             [1612137600000, "40000", "42000", "39000", "41000", "1000000",
              1612138500000, "42000000", 1000, "500000", "20500000", "0"],
-            [1612138500000, "41000", "43000", "40000", "42000", "1100000",
-             1612139400000, "44000000", 1100, "550000", "21000000", "0"]
         ]
         mock_client.get_klines.return_value = mock_klines
 
@@ -44,8 +45,28 @@ class TestCryptoDataLoader(unittest.TestCase):
         # Verify returned dataframe
         self.assertIsInstance(df, pd.DataFrame)
         self.assertFalse(df.empty)
-        required_columns = ['Open', 'High', 'Low', 'Close', 'Volume']
-        self.assertTrue(all(col in df.columns for col in required_columns))
+
+        # Check all required columns are present
+        required_columns = [
+            'Open', 'High', 'Low', 'Close', 'Volume',
+            'Returns', 'Volatility', 'Volume_MA', 'Volume_Ratio',
+            'SMA_20', 'SMA_50', 'SMA_200', 'EMA_20', 'EMA_50', 'EMA_200',
+            'MACD', 'MACD_Signal', 'MACD_Hist', 'RSI', 'ATR',
+            'BB_Middle', 'BB_Upper', 'BB_Lower', 'BB_Width'
+        ]
+
+        self.assertTrue(
+            all(col in df.columns for col in required_columns),
+            f"Missing columns: {[col for col in required_columns if col not in df.columns]}"
+        )
+
+        # Verify data types
+        numeric_columns = [col for col in required_columns if col != 'timestamp']
+        for col in numeric_columns:
+            self.assertTrue(
+                pdtypes.is_numeric_dtype(df[col]),
+                f"Column {col} is not numeric"
+            )
 
     def test_get_available_coins(self):
         coins = self.data_loader.get_available_coins()
@@ -81,27 +102,27 @@ class TestCryptoDataLoader(unittest.TestCase):
         self.assertIsInstance(price, float)
         self.assertEqual(price, 41000.0)
 
-    def test_error_handling(self):
+    @patch('utils.data_loader.Client')
+    def test_error_handling(self, mock_client_class):
         """Test error handling during data fetching"""
         # Configure mock to raise exception
-        with patch('utils.data_loader.Client') as mock_client_class:
-            mock_client = MagicMock()
-            mock_client_class.return_value = mock_client
-            mock_client.get_klines.side_effect = Exception("API Error")
+        mock_client = MagicMock()
+        mock_client_class.return_value = mock_client
+        mock_client.get_klines.side_effect = Exception("API Error")
 
-            # Set client instance
-            self.data_loader.client = mock_client
-            self.data_loader.use_live_data = True
+        # Set client instance
+        self.data_loader.client = mock_client
+        self.data_loader.use_live_data = True
 
-            # Test error handling with live data - should return mock data
-            df = self.data_loader.get_historical_data(self.test_symbol)
-            self.assertIsNotNone(df)  # Should return mock data
-            self.assertIsInstance(df, pd.DataFrame)
-            self.assertFalse(df.empty)
+        # Test error handling with live data - should return mock data
+        df = self.data_loader.get_historical_data(self.test_symbol)
+        self.assertIsNotNone(df)  # Should return mock data
+        self.assertIsInstance(df, pd.DataFrame)
+        self.assertFalse(df.empty)
 
-            # Test with unsupported symbol
-            df = self.data_loader.get_historical_data("INVALID-SYMBOL")
-            self.assertIsNone(df)  # Should return None for unsupported symbols
+        # Test with unsupported symbol
+        df = self.data_loader.get_historical_data("INVALID-SYMBOL")
+        self.assertIsNone(df)  # Should return None for unsupported symbols
 
     def test_process_klines_data(self):
         """Test klines data processing with standardized column names"""
@@ -146,6 +167,7 @@ class TestCryptoDataLoader(unittest.TestCase):
         ]
         for indicator in expected_indicators:
             self.assertIn(indicator, result.columns)
+
 
 if __name__ == '__main__':
     unittest.main()

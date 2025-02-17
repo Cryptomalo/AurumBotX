@@ -563,9 +563,6 @@ class CryptoDataLoader:
             'Volume': np.random.randint(1000, 100000, n_periods)
         }, index=timestamps)
 
-        # Add technical indicators and other required columns
-        df = self._add_technical_indicators(df)
-
         # Ensure all required columns exist
         required_columns = [
             'Open', 'High', 'Low', 'Close', 'Volume',
@@ -595,26 +592,44 @@ class CryptoDataLoader:
             symbol = self._normalize_symbol(symbol)
             df = self.get_historical_data(symbol, period='1d')
             if df is None or df.empty:
-                return {}
+                return {
+                    'current_price': 0.0,
+                    'price_change_24h': 0.0,
+                    'volume_24h': 0.0,
+                    'high_24h': 0.0,
+                    'low_24h': 0.0,
+                    'volatility': 0.0,
+                    'rsi': 0.0,
+                    'trend': 'Unknown'
+                }
 
-            current_price = df['Close'].iloc[-1]
-            previous_close = df['Close'].iloc[-2]
+            current_price = float(df['Close'].iloc[-1])
+            previous_close = float(df['Close'].iloc[-2])
             price_change = ((current_price - previous_close) / previous_close) * 100
 
             return {
                 'current_price': current_price,
-                'price_change_24h': price_change,
-                'volume_24h': df['Volume'].sum(),
-                'high_24h': df['High'].max(),
-                'low_24h': df['Low'].min(),
-                'volatility': df['Returns'].std() * 100 if 'Returns' in df else 0,
-                'rsi': df['RSI'].iloc[-1] if 'RSI' in df else None,
+                'price_change_24h': float(price_change),
+                'volume_24h': float(df['Volume'].sum()),
+                'high_24h': float(df['High'].max()),
+                'low_24h': float(df['Low'].min()),
+                'volatility': float(df['Returns'].std() * 100) if 'Returns' in df else 0.0,
+                'rsi': float(df['RSI'].iloc[-1]) if 'RSI' in df else 0.0,
                 'trend': 'Bullish' if current_price > df['SMA_20'].iloc[-1] else 'Bearish'
             }
 
         except Exception as e:
             logger.error(f"Error getting market summary for {symbol}: {e}", exc_info=True)
-            return {}
+            return {
+                'current_price': 0.0,
+                'price_change_24h': 0.0,
+                'volume_24h': 0.0,
+                'high_24h': 0.0,
+                'low_24h': 0.0,
+                'volatility': 0.0,
+                'rsi': 0.0,
+                'trend': 'Error'
+            }
 
     def get_available_coins(self) -> Dict[str, str]:
         """Return dictionary of supported cryptocurrencies"""
@@ -773,7 +788,7 @@ class CryptoDataLoader:
         required_columns = [
             'Open', 'High', 'Low', 'Close', 'Volume',
             'Returns', 'Volatility', 'Volume_MA', 'Volume_Ratio',
-            'SMA_20', ''SMA_50', 'SMA_200', 'EMA_20', 'EMA_50', 'EMA_200',
+            'SMA_20', 'SMA_50', 'SMA_200', 'EMA_20', 'EMA_50', 'EMA_200',
             'MACD', 'MACD_Signal', 'MACD_Hist', 'RSI', 'ATR',
             'BB_Middle', 'BB_Upper', 'BB_Lower', 'BB_Width'
         ]
@@ -802,8 +817,8 @@ class CryptoDataLoader:
             for col in missing_columns:
                 df[col] = 0.0
 
-        # Clean up NaN values
-        df = df.fillna(method='ffill').fillna(method='bfill').fillna(0)
+        # Clean up NaN values using the recommended approach instead of the deprecated method
+        df = df.ffill().bfill().fillna(0)
 
         return df
 
