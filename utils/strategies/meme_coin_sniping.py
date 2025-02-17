@@ -1,8 +1,9 @@
+import numpy as np
 from typing import Dict, Any, List, Optional
 from datetime import datetime, timedelta
 import logging
 from utils.learning_module import LearningModule
-from utils.notifications import TradingNotifier # Assuming TradingNotifier is here
+from utils.notifications import TradingNotifier
 
 logger = logging.getLogger(__name__)
 
@@ -25,7 +26,7 @@ class MemeCoinStrategy:
         self.learning_module = LearningModule()
         self.notifier = TradingNotifier()
         self.min_prediction_confidence = config.get('min_prediction_confidence', 0.7)
-        self.logger = logging.getLogger(__name__) #Added logger to self
+        self.logger = logging.getLogger(__name__)
 
         # Setup notifiche se il numero di telefono è configurato
         if config.get('phone_number'):
@@ -34,9 +35,17 @@ class MemeCoinStrategy:
     def analyze_market(self, market_data: Dict, sentiment_data: Optional[Dict] = None) -> List[Dict]:
         """Analisi ottimizzata del mercato per meme coin con predizioni ML"""
         try:
-            if not market_data or not sentiment_data:
-                self.logger.info("Dati di mercato o sentiment mancanti")
+            if not market_data:
+                self.logger.warning("Dati di mercato mancanti")
                 return []
+
+            # Se non ci sono dati di sentiment, creiamo un dict di default
+            if not sentiment_data:
+                sentiment_data = {
+                    'score': 0.5,
+                    'confidence': 0.5,
+                    'viral_coefficient': 0.5
+                }
 
             if not self._validate_basic_requirements(market_data, sentiment_data):
                 self.logger.info("Requisiti base non soddisfatti")
@@ -59,6 +68,15 @@ class MemeCoinStrategy:
             signals = [self._create_signal(market_data, entry, success_probability)
                       for entry in entry_points]
 
+            # Notifica analisi significativa
+            if signals:
+                self.notifier.send_analysis_alert(market_data.get('symbol', 'Unknown'), {
+                    'ml_confidence': success_probability,
+                    'technical_score': token_metrics.get('momentum', 0),
+                    'sentiment_score': sentiment_data.get('score', 0),
+                    'viral_score': sentiment_data.get('viral_coefficient', 0)
+                })
+
             self.logger.info(f"Generati {len(signals)} segnali di trading")
             return signals
 
@@ -70,20 +88,26 @@ class MemeCoinStrategy:
                            token_metrics: Dict) -> Dict[str, float]:
         """Prepara features per il modello ML"""
         try:
+            price = float(market_data.get('price', 0))
+            volume = float(token_metrics.get('volume', 0))
+            momentum = float(token_metrics.get('momentum', 0))
+            rsi = float(market_data.get('indicators', {}).get('rsi', 50))
+            macd = float(market_data.get('indicators', {}).get('macd', 0))
+
             return {
-                'price': float(market_data.get('price', 0)),
-                'volume': token_metrics.get('volume', 0),
-                'volatility': market_data.get('volatility', 0),
-                'rsi': market_data.get('indicators', {}).get('rsi', 50),
-                'macd': market_data.get('indicators', {}).get('macd', 0),
-                'sentiment_score': sentiment_data.get('score', 0.5),
-                'viral_score': sentiment_data.get('viral_coefficient', 0.5),
-                'holder_count': token_metrics.get('estimated_holders', 0),
-                'liquidity': token_metrics.get('liquidity', 0),
-                'momentum': token_metrics.get('momentum', 0),
+                'price': price,
+                'volume': volume,
+                'volatility': float(market_data.get('volatility', 0.1)),
+                'rsi': rsi,
+                'macd': macd,
+                'sentiment_score': float(sentiment_data.get('score', 0.5)),
+                'viral_score': float(sentiment_data.get('viral_coefficient', 0.5)),
+                'holder_count': float(token_metrics.get('estimated_holders', 100)),
+                'liquidity': float(token_metrics.get('liquidity', 10000)),
+                'momentum': momentum,
                 'confidence': min(
-                    sentiment_data.get('confidence', 0.5),
-                    market_data.get('technical_confidence', 0.5)
+                    float(sentiment_data.get('confidence', 0.5)),
+                    float(market_data.get('technical_confidence', 0.5))
                 )
             }
         except Exception as e:
@@ -94,7 +118,8 @@ class MemeCoinStrategy:
         """Validazione requisiti base"""
         try:
             sentiment_score = sentiment_data.get('score', 0)
-            liquidity = market_data.get('liquidity', 0)
+            liquidity = float(market_data.get('liquidity', 0))
+            volume = float(market_data.get('volume_24h', 0))
 
             if sentiment_score < self.sentiment_threshold:
                 self.logger.info(f"Sentiment score troppo basso: {sentiment_score}")
@@ -102,6 +127,10 @@ class MemeCoinStrategy:
 
             if liquidity < self.min_liquidity * 1000:
                 self.logger.info(f"Liquidità troppo bassa: {liquidity}")
+                return False
+
+            if volume < 1000:  # Minimo volume giornaliero
+                self.logger.info(f"Volume troppo basso: {volume}")
                 return False
 
             return True
@@ -117,15 +146,18 @@ class MemeCoinStrategy:
             liquidity = float(market_data.get('liquidity', 0))
             price = float(market_data.get('price', 0))
 
-            if not all([volume, liquidity, price]):
+            if not all([volume > 0, liquidity > 0, price > 0]):
                 return {'valid': False}
+
+            # Calcolo momentum ottimizzato
+            momentum = self._calculate_momentum(market_data)
 
             return {
                 'valid': True,
                 'volume': volume,
                 'liquidity': liquidity,
                 'price': price,
-                'momentum': min(volume / (liquidity + 1) * 0.5, 1.0),
+                'momentum': momentum,
                 'estimated_holders': min(int((volume * 0.1 + liquidity * 0.2) / 1000), 10000)
             }
 
@@ -133,8 +165,34 @@ class MemeCoinStrategy:
             self.logger.error(f"Errore nel calcolo metriche: {e}")
             return {'valid': False}
 
+    def _calculate_momentum(self, market_data: Dict) -> float:
+        """Calcolo momentum basato su multipli indicatori"""
+        try:
+            volume = float(market_data.get('volume_24h', 0))
+            liquidity = float(market_data.get('liquidity', 0))
+            rsi = float(market_data.get('indicators', {}).get('rsi', 50))
+            macd = float(market_data.get('indicators', {}).get('macd', 0))
+
+            # Normalizza i componenti
+            volume_score = min(volume / (liquidity + 1), 1.0) if liquidity > 0 else 0
+            rsi_score = (rsi - 30) / 40 if 30 <= rsi <= 70 else 0
+            macd_score = 1 / (1 + np.exp(-10 * macd)) if macd else 0.5
+
+            # Media pesata
+            momentum = (
+                0.4 * volume_score +
+                0.3 * rsi_score +
+                0.3 * macd_score
+            )
+
+            return max(0, min(1, momentum))
+
+        except Exception as e:
+            self.logger.error(f"Errore nel calcolo momentum: {e}")
+            return 0.5
+
     def _calculate_entry_points(self, market_data: Dict, metrics: Dict,
-                               ml_confidence: float) -> List[Dict]:
+                              ml_confidence: float) -> List[Dict]:
         """Calcolo punti di ingresso con ML confidence"""
         try:
             price = metrics['price']
@@ -149,10 +207,14 @@ class MemeCoinStrategy:
                 0.95  # Cap massimo
             )
 
+            # Stop loss e take profit dinamici basati su confidence
+            stop_loss_margin = 0.05 + (1 - ml_confidence) * 0.05
+            take_profit_margin = 0.2 + ml_confidence * 0.3
+
             return [{
                 'price': price,
-                'stop_loss': price * (0.95 + (1 - ml_confidence) * 0.03),  # Stop loss dinamico
-                'take_profit': price * (1.3 + ml_confidence * 0.2),  # Take profit dinamico
+                'stop_loss': price * (1 - stop_loss_margin),
+                'take_profit': price * (1 + take_profit_margin),
                 'confidence': confidence
             }]
 
@@ -186,8 +248,17 @@ class MemeCoinStrategy:
         try:
             # Aumenta position size in base alla confidenza ML
             base_size = self.risk_per_trade * price
-            adjusted_size = base_size * (1 + (ml_confidence - 0.5))
-            return min(adjusted_size, self.config.get('max_position_size', float('inf')))
+            confidence_multiplier = 1 + (ml_confidence - 0.5)
+            position_size = base_size * confidence_multiplier
+
+            # Applica limiti di position size
+            max_position = min(
+                self.config.get('max_position_size', float('inf')),
+                price * self.config.get('max_tokens', float('inf'))
+            )
+
+            return min(position_size, max_position)
+
         except Exception as e:
             self.logger.error(f"Errore nel calcolo position size: {e}")
             return 0.0
@@ -224,10 +295,15 @@ class MemeCoinStrategy:
                 'success': True,
                 'price': signal['entry_price'],
                 'volume': signal.get('volume', 0),
-                'indicators': {
-                    'rsi': signal.get('rsi', 50),
-                    'macd': signal.get('macd', 0)
-                }
+                'rsi': signal.get('rsi', 50),
+                'macd': signal.get('macd', 0),
+                'momentum': signal.get('momentum', 0.5),
+                'volatility': signal.get('volatility', 0.1),
+                'sentiment_score': signal.get('sentiment_score', 0.5),
+                'viral_score': signal.get('viral_score', 0.5),
+                'holder_count': signal.get('holder_count', 100),
+                'liquidity': signal.get('liquidity', 10000),
+                'confidence': signal.get('confidence', 0.5)
             })
 
             # Invia notifica del trade

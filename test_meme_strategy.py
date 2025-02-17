@@ -11,7 +11,7 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 def test_meme_strategy():
-    """Test della strategia meme coin"""
+    """Test della strategia meme coin con notifiche in tempo reale"""
     try:
         logger.info("Inizializzazione test meme coin strategy")
 
@@ -51,7 +51,7 @@ def test_meme_strategy():
             macd = 0.0001 * np.sin(index/7) + np.random.normal(0, 0.0001)
 
             # Sentiment e viralità correlati
-            sentiment = 0.7 + 0.2 * np.sin(index/8) + np.random.normal(0, 0.1)
+            sentiment = 0.7 + 0.2 * np.sin(index/8) + np.random.normal(0, 0.1) 
             sentiment = max(0, min(1, sentiment))
 
             viral = 0.8 + 0.15 * np.sin(index/6) + np.random.normal(0, 0.1)
@@ -64,7 +64,7 @@ def test_meme_strategy():
             # Success probability based on indicators
             success_probability = (
                 0.3 * (rsi - 30) / 70 +  # RSI contribution
-                0.2 * (sentiment - 0.5) / 0.5 +  # Sentiment contribution
+                0.2 * (sentiment - 0.5) / 0.5 +  # Sentiment contribution 
                 0.2 * (viral - 0.5) / 0.5 +  # Viral contribution
                 0.3 * momentum  # Momentum contribution
             )
@@ -101,80 +101,63 @@ def test_meme_strategy():
             logger.error("Errore nell'addestramento del modello ML")
             return
 
-        # Stampa metriche di performance
-        metrics = strategy.learning_module.get_model_metrics()
-        logger.info("Performance del modello ML:")
-        logger.info(f"Random Forest - Precision: {metrics['rf_metrics']['precision']:.2f}, "
-                   f"Recall: {metrics['rf_metrics']['recall']:.2f}, "
-                   f"F1: {metrics['rf_metrics']['f1']:.2f}")
-        logger.info(f"Gradient Boosting - Precision: {metrics['gb_metrics']['precision']:.2f}, "
-                   f"Recall: {metrics['gb_metrics']['recall']:.2f}, "
-                   f"F1: {metrics['gb_metrics']['f1']:.2f}")
+        # Test della generazione segnali e notifiche
+        test_signals = []
+        logger.info("Test generazione segnali e notifiche...")
 
-        # Feature importance
-        important_features = strategy.learning_module.get_important_features(top_n=5)
-        logger.info("Top 5 feature più importanti:")
-        for feature in important_features:
-            logger.info(f"{feature['feature']}: {feature['importance']:.3f}")
+        # Genera 5 segnali di test con dati realistici
+        for i in range(5):
+            test_data = generate_trade_data(100 + i)  # Nuovi dati fuori dal training set
 
-        logger.info("Modello ML addestrato con successo")
+            market_data = {
+                'symbol': 'PEPE/USDT',
+                'price': test_data['price'],
+                'volume_24h': test_data['volume'],
+                'liquidity': test_data['liquidity'],
+                'volatility': test_data['volatility'],
+                'indicators': {
+                    'rsi': test_data['rsi'],
+                    'macd': test_data['macd']
+                },
+                'momentum': test_data['momentum']
+            }
 
-        # Salva il modello addestrato
-        try:
-            strategy.learning_module.save_model('meme_strategy_model.joblib')
-            logger.info("Modello salvato con successo")
-        except Exception as e:
-            logger.error(f"Errore nel salvataggio del modello: {e}")
+            sentiment_data = {
+                'score': test_data['sentiment_score'],
+                'confidence': test_data['confidence'],
+                'mentions': 1000 + i * 100,
+                'social_volume': 5000 + i * 500,
+                'trending_score': test_data['viral_score'],
+                'viral_coefficient': test_data['viral_score']
+            }
 
-        # Dati di test più realistici basati sulla stessa distribuzione
-        test_data = generate_trade_data(101)  # Nuovo trade fuori dal training set
+            logger.info(f"Analisi mercato per segnale {i+1}...")
+            signals = strategy.analyze_market(market_data, sentiment_data)
 
-        market_data = {
-            'symbol': 'PEPE/USDT',
-            'price': test_data['price'],
-            'volume_24h': test_data['volume'],
-            'liquidity': test_data['liquidity'],
-            'volatility': test_data['volatility'],
-            'indicators': {
-                'rsi': test_data['rsi'],
-                'macd': test_data['macd']
-            },
-            'momentum': test_data['momentum']
-        }
+            if signals:
+                test_signals.extend(signals)
+                logger.info(f"Generati {len(signals)} segnali per test {i+1}")
 
-        sentiment_data = {
-            'score': test_data['sentiment_score'],
-            'confidence': test_data['confidence'],
-            'mentions': 1000,
-            'social_volume': 5000,
-            'trending_score': test_data['viral_score'],
-            'viral_coefficient': test_data['viral_score']
-        }
+                for signal in signals:
+                    logger.info(f"Validazione segnale: {signal}")
 
-        logger.info("Analisi mercato...")
-        signals = strategy.analyze_market(market_data, sentiment_data)
+                    # Portfolio di test
+                    portfolio = {
+                        'available_balance': 1000,
+                        'total_balance': 10000
+                    }
 
-        if signals:
-            logger.info(f"Generati {len(signals)} segnali")
-            for signal in signals:
-                logger.info(f"Segnale: {signal}")
+                    is_valid = strategy.validate_trade(signal, portfolio)
+                    logger.info(f"Segnale valido: {is_valid}")
 
-                # Test validazione
-                portfolio = {
-                    'available_balance': 1000,
-                    'total_balance': 10000
-                }
+                    if is_valid:
+                        logger.info("Esecuzione trade e invio notifica...")
+                        result = strategy.execute_trade(signal)
+                        logger.info(f"Risultato trade: {result}")
+            else:
+                logger.info(f"Nessun segnale generato per test {i+1}")
 
-                logger.info("Validazione trade...")
-                is_valid = strategy.validate_trade(signal, portfolio)
-                logger.info(f"Trade valido: {is_valid}")
-
-                if is_valid:
-                    logger.info("Esecuzione trade...")
-                    result = strategy.execute_trade(signal)
-                    logger.info(f"Risultato: {result}")
-        else:
-            logger.info("Nessun segnale generato")
+        logger.info(f"Test completato. Generati {len(test_signals)} segnali totali")
 
     except Exception as e:
         logger.error(f"Errore nel test: {e}")
