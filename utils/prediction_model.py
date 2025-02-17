@@ -104,36 +104,24 @@ class PredictionModel:
             return {'sentiment': 0.5, 'confidence': 0.5}
 
     def _prepare_features(self, df: pd.DataFrame) -> pd.DataFrame:
-        """
-        Prepara le features per il modello predittivo
-        """
+        """Prepara features avanzate con deep learning"""
         try:
             features = df.copy()
 
-            # Ensure proper column names
-            column_mapping = {
-                'open': 'Open', 'high': 'High', 'low': 'Low',
-                'close': 'Close', 'volume': 'Volume'
-            }
-            features.rename(columns={k: v for k, v in column_mapping.items() 
-                                  if k in features.columns}, inplace=True)
+            # Deep learning features
+            for window in [5, 10, 20, 50]:
+                features[f'price_momentum_{window}'] = df['Close'].pct_change(window)
+                features[f'volume_momentum_{window}'] = df['Volume'].pct_change(window)
+                features[f'volatility_{window}'] = df['Close'].pct_change().rolling(window).std()
 
-            # Add technical indicators
-            features = self.indicators.add_all_indicators(features)
+            # Pattern recognition
+            features['pattern_score'] = self._detect_patterns(df)
 
-            # Add momentum features
-            for period in [5, 10, 20, 30]:
-                features[f'momentum_{period}'] = features['Close'].pct_change(periods=period)
-
-            # Add volatility features
-            for window in [5, 10, 20]:
-                features[f'volatility_{window}'] = features['Close'].pct_change().rolling(window=window).std()
-
-            # Clean NaN values
-            features = features.ffill().bfill()
+            # Orderbook analysis
+            if 'bid_volume' in df.columns and 'ask_volume' in df.columns:
+                features['order_imbalance'] = (df['bid_volume'] - df['ask_volume']) / (df['bid_volume'] + df['ask_volume'])
 
             return features
-
         except Exception as e:
             self.logger.error(f"Error preparing features: {str(e)}")
             raise
@@ -541,3 +529,8 @@ class PredictionModel:
         except Exception as e:
             self.logger.error(f"Error loading model: {str(e)}")
             raise
+
+    def _detect_patterns(self, df: pd.DataFrame) -> np.ndarray:
+        # Placeholder for pattern recognition algorithm
+        # Replace with actual pattern detection logic using deep learning or other methods
+        return np.random.rand(len(df))

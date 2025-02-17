@@ -512,7 +512,29 @@ class StrategyManager:
         return self.strategy_performance
 
     def optimize_strategies(self, market_conditions: Dict) -> None:
-        """Ottimizza i parametri delle strategie in base alle condizioni di mercato"""
+        """Ottimizza strategie con reinforcement learning"""
+        try:
+            for strategy_name, strategy in self.active_strategies.items():
+                # Analisi performance
+                perf = self.strategy_performance[strategy_name]
+                
+                # Reinforcement learning per ottimizzazione parametri
+                if perf['sharpe_ratio'] < 1.5:
+                    self._optimize_with_rl(strategy, market_conditions)
+                    
+                # Adatta aggressività alla volatilità
+                volatility = market_conditions.get('volatility', 0)
+                if volatility > 0.02:  # Alta volatilità
+                    strategy.config['position_size_multiplier'] *= 0.8
+                    strategy.config['stop_loss_multiplier'] *= 1.2
+                else:  # Bassa volatilità
+                    strategy.config['position_size_multiplier'] *= 1.2
+                    strategy.config['stop_loss_multiplier'] *= 0.9
+                    
+                logger.info(f"Strategy {strategy_name} ottimizzata per condizioni attuali")
+                
+        except Exception as e:
+            logger.error(f"Errore ottimizzazione strategie: {e}")
         try:
             for strategy_name, strategy in self.active_strategies.items():
                 perf = self.strategy_performance[strategy_name]
