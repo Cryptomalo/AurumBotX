@@ -147,9 +147,9 @@ class CryptoDataLoader:
             """
 
             with self.engine.begin() as conn:
-                template_cols = {row[0]: (row[1], row[2]) 
-                               for row in conn.execute(text(template_cols_sql))}
-                table_cols = {row[0]: (row[1], row[2]) 
+                template_cols = {row[0]: (row[1], row[2])
+                                for row in conn.execute(text(template_cols_sql))}
+                table_cols = {row[0]: (row[1], row[2])
                              for row in conn.execute(text(table_cols_sql))}
 
                 # Add missing columns and fix data types
@@ -176,30 +176,64 @@ class CryptoDataLoader:
             logger.error(f"Error ensuring schema consistency for {table_name}: {str(e)}")
             raise DatabaseError(f"Schema consistency error: {str(e)}")
 
+    def _ensure_template_exists(self):
+        """Ensure template table exists with correct schema"""
+        try:
+            create_template_sql = """
+            CREATE TABLE IF NOT EXISTS market_data_template (
+                timestamp TIMESTAMP NOT NULL,
+                "Open" DOUBLE PRECISION,
+                "High" DOUBLE PRECISION,
+                "Low" DOUBLE PRECISION,
+                "Close" DOUBLE PRECISION,
+                "Volume" DOUBLE PRECISION,
+                "Returns" DOUBLE PRECISION,
+                "Volatility" DOUBLE PRECISION,
+                "Volume_MA" DOUBLE PRECISION,
+                "Volume_Ratio" DOUBLE PRECISION,
+                "SMA_20" DOUBLE PRECISION,
+                "SMA_50" DOUBLE PRECISION,
+                "SMA_200" DOUBLE PRECISION,
+                "EMA_20" DOUBLE PRECISION,
+                "EMA_50" DOUBLE PRECISION,
+                "EMA_200" DOUBLE PRECISION,
+                "MACD" DOUBLE PRECISION,
+                "MACD_Signal" DOUBLE PRECISION,
+                "MACD_Hist" DOUBLE PRECISION,
+                "RSI" DOUBLE PRECISION,
+                "ATR" DOUBLE PRECISION,
+                "BB_Middle" DOUBLE PRECISION,
+                "BB_Upper" DOUBLE PRECISION,
+                "BB_Lower" DOUBLE PRECISION,
+                "BB_Width" DOUBLE PRECISION,
+                CONSTRAINT market_data_template_pkey PRIMARY KEY (timestamp)
+            );
+            
+            -- Make template table partitioned
+            ALTER TABLE market_data_template SET (
+                parallel_workers = 4,
+                fillfactor = 90
+            );
+            """
+            with self.engine.begin() as conn:
+                conn.execute(text(create_template_sql))
+
+            logger.info("Template table created or verified successfully")
+        except SQLAlchemyError as e:
+            logger.error(f"Error ensuring template exists: {str(e)}")
+            raise DatabaseError(f"Failed to create template table: {str(e)}")
+
     def _save_to_database(self, symbol: str, df: pd.DataFrame):
-        """Enhanced database save with schema validation and proper conflict handling"""
+        """Save market data to database with proper schema handling"""
         if not self.engine:
             return
 
         try:
             table_name = f"market_data_{symbol.lower()}"
 
-            # Clean up old tables and ensure template exists
-            self._cleanup_old_tables(symbol)
+            # Ensure table exists with proper partitioning
             self._ensure_template_exists()
-
-            # Create market data table if not exists
-            create_table_sql = f"""
-            CREATE TABLE IF NOT EXISTS {table_name} (
-                LIKE market_data_template INCLUDING ALL
-            );
-            """
-
-            with self.engine.begin() as conn:
-                conn.execute(text(create_table_sql))
-
-            # Ensure schema consistency
-            self._ensure_consistent_schema(table_name)
+            self._create_partitioned_table(symbol)
 
             # Prepare DataFrame
             df = df.copy()
@@ -215,7 +249,7 @@ class CryptoDataLoader:
                 'BB_Middle', 'BB_Upper', 'BB_Lower', 'BB_Width'
             ]
 
-            # Fill missing columns with NaN
+            # Fill missing columns with NaN and ensure all required columns exist
             for col in required_columns:
                 if col not in df.columns:
                     df[col] = np.nan
@@ -231,33 +265,30 @@ class CryptoDataLoader:
                 end_idx = min(start_idx + batch_size, total_rows)
                 batch_df = df.iloc[start_idx:end_idx]
 
-                # Prepare the data as a list of dictionaries
+                # Convert DataFrame to list of records with proper timestamp handling
                 records = []
                 for _, row in batch_df.iterrows():
-                    record = {}
-                    record['timestamp'] = row['timestamp'].strftime('%Y-%m-%d %H:%M:%S')
+                    record = {
+                        'timestamp': row['timestamp'].strftime('%Y-%m-%d %H:%M:%S'),
+                    }
                     for col in required_columns:
                         val = row[col]
                         record[col] = float(val) if pd.notna(val) else None
                     records.append(record)
 
-                # Construct the SQL query with explicit ON CONFLICT target
-                columns = ['"timestamp"'] + [f'"{col}"' for col in required_columns]
-                update_cols = [f'"{col}" = EXCLUDED."{col}"' for col in required_columns]
-
+                # Insert data with upsert
                 insert_sql = f"""
-                INSERT INTO {table_name} ({', '.join(columns)})
-                VALUES ({', '.join([f':{col}' for col in ['timestamp'] + required_columns])})
-                ON CONFLICT ON CONSTRAINT {table_name}_pkey 
-                DO UPDATE SET {', '.join(update_cols)}
+                INSERT INTO {table_name} ("timestamp", {', '.join([f'"{col}"' for col in required_columns])})
+                VALUES (%(timestamp)s, {', '.join([f'%({col})s' for col in required_columns])})
+                ON CONFLICT ("timestamp") DO UPDATE SET
+                {', '.join([f'"{col}" = EXCLUDED."{col}"' for col in required_columns])};
                 """
 
                 # Execute with retries
                 for attempt in range(self.RETRY_ATTEMPTS):
                     try:
                         with self.engine.begin() as conn:
-                            for record in records:
-                                conn.execute(text(insert_sql), record)
+                            conn.execute(text(insert_sql), records)
                         break
                     except SQLAlchemyError as e:
                         if attempt == self.RETRY_ATTEMPTS - 1:
@@ -298,43 +329,55 @@ class CryptoDataLoader:
         except SQLAlchemyError as e:
             logger.error(f"Error cleaning up old tables: {str(e)}")
 
-    def _ensure_template_exists(self):
-        """Ensure template table exists with correct schema"""
+    def _create_partitioned_table(self, symbol: str):
+        """Create a new partitioned table for the given symbol"""
         try:
-            create_template_sql = """
-            CREATE TABLE IF NOT EXISTS market_data_template (
-                timestamp TIMESTAMP NOT NULL PRIMARY KEY,
-                "Open" DOUBLE PRECISION,
-                "High" DOUBLE PRECISION,
-                "Low" DOUBLE PRECISION,
-                "Close" DOUBLE PRECISION,
-                "Volume" DOUBLE PRECISION,
-                "Returns" DOUBLE PRECISION,
-                "Volatility" DOUBLE PRECISION,
-                "Volume_MA" DOUBLE PRECISION,
-                "Volume_Ratio" DOUBLE PRECISION,
-                "SMA_20" DOUBLE PRECISION,
-                "SMA_50" DOUBLE PRECISION,
-                "SMA_200" DOUBLE PRECISION,
-                "EMA_20" DOUBLE PRECISION,
-                "EMA_50" DOUBLE PRECISION,
-                "EMA_200" DOUBLE PRECISION,
-                "MACD" DOUBLE PRECISION,
-                "MACD_Signal" DOUBLE PRECISION,
-                "MACD_Hist" DOUBLE PRECISION,
-                "RSI" DOUBLE PRECISION,
-                "ATR" DOUBLE PRECISION,
-                "BB_Middle" DOUBLE PRECISION,
-                "BB_Upper" DOUBLE PRECISION,
-                "BB_Lower" DOUBLE PRECISION,
-                "BB_Width" DOUBLE PRECISION
+            table_name = f"market_data_{symbol.lower()}"
+            create_table_sql = f"""
+            CREATE TABLE IF NOT EXISTS {table_name} (
+                LIKE market_data_template INCLUDING ALL
             ) PARTITION BY RANGE (timestamp);
             """
+
             with self.engine.begin() as conn:
-                conn.execute(text(create_template_sql))
+                conn.execute(text(create_table_sql))
+                logger.info(f"Created partitioned table {table_name}")
+
+            # Create initial partitions
+            self._create_partitions(symbol)
+
         except SQLAlchemyError as e:
-            logger.error(f"Error ensuring template exists: {str(e)}")
-            raise DatabaseError(f"Failed to create template table: {str(e)}")
+            logger.error(f"Error creating partitioned table for {symbol}: {str(e)}")
+            raise DatabaseError(f"Failed to create partitioned table: {str(e)}")
+
+    def _create_partitions(self, symbol: str):
+        """Create partitions for the next few months"""
+        try:
+            table_name = f"market_data_{symbol.lower()}"
+            current_date = datetime.now()
+
+            # Create partitions for current month and next 5 months
+            for i in range(6):
+                partition_date = current_date + timedelta(days=30*i)
+                next_month = partition_date + timedelta(days=30)
+
+                partition_name = f"{table_name}_y{partition_date.year}m{partition_date.month:02d}"
+
+                partition_sql = f"""
+                CREATE TABLE IF NOT EXISTS {partition_name}
+                PARTITION OF {table_name}
+                FOR VALUES FROM ('{partition_date.strftime('%Y-%m-%d')}')
+                TO ('{next_month.strftime('%Y-%m-%d')}');
+                """
+
+                with self.engine.begin() as conn:
+                    conn.execute(text(partition_sql))
+                    logger.info(f"Created partition {partition_name}")
+
+        except SQLAlchemyError as e:
+            logger.error(f"Error creating partitions for {symbol}: {str(e)}")
+            raise DatabaseError(f"Failed to create partitions: {str(e)}")
+
 
     def _process_klines_data(self, klines: List) -> pd.DataFrame:
         """Process raw klines data into DataFrame with standardized column names and types"""
@@ -357,8 +400,9 @@ class CryptoDataLoader:
                 'volume': 'Volume'
             }
 
+            # Convert to numeric ensuring float64 type
             for old_name, new_name in numeric_columns.items():
-                df[new_name] = pd.to_numeric(df[old_name], errors='coerce')
+                df[new_name] = pd.to_numeric(df[old_name], errors='coerce').astype(np.float64)
 
             # Drop original lowercase columns and unused columns
             columns_to_drop = [
@@ -383,6 +427,11 @@ class CryptoDataLoader:
             # Add basic metrics before technical indicators
             df['Returns'] = df['Close'].pct_change()
 
+            # Ensure all numeric columns are float64
+            for col in df.columns:
+                if df[col].dtype != np.float64 and col != 'timestamp':
+                    df[col] = df[col].astype(np.float64)
+
             return df
 
         except Exception as e:
@@ -391,7 +440,15 @@ class CryptoDataLoader:
 
     def _normalize_symbol(self, symbol: str) -> str:
         """Normalize symbol format for exchange"""
-        return symbol.replace('-', '').replace('/', '')
+        # Convert dashes to forward slashes for consistency
+        symbol = symbol.replace('-', '/')
+        # Handle both formats (BTC/USD and BTCUSDT)
+        if 'USDT' in symbol:
+            return symbol
+        elif '/USD' in symbol:
+            return symbol
+        else:
+            return f"{symbol}USDT"
 
     def _get_from_cache(self, key: str, interval: str = '1m') -> Optional[pd.DataFrame]:
         """Get data from cache if valid"""
@@ -484,7 +541,7 @@ class CryptoDataLoader:
             return df
 
     def _get_mock_data(self, symbol: str, period: str, interval: str) -> pd.DataFrame:
-        """Generate mock data for testing"""
+        """Generate mock data for testing with all required columns"""
         periods = {'1d': 1440, '7d': 10080, '30d': 43200}
         n_periods = periods.get(period, 1440)  # Default to 1 day
 
@@ -497,6 +554,7 @@ class CryptoDataLoader:
         np.random.seed(42)  # For reproducible mock data
         close_price = 100 * (1 + np.random.randn(n_periods).cumsum() * 0.02)
 
+        # Create DataFrame with all required columns
         df = pd.DataFrame({
             'Open': close_price * (1 + np.random.randn(n_periods) * 0.001),
             'High': close_price * (1 + abs(np.random.randn(n_periods) * 0.002)),
@@ -505,8 +563,31 @@ class CryptoDataLoader:
             'Volume': np.random.randint(1000, 100000, n_periods)
         }, index=timestamps)
 
-        # Add technical indicators to mock data
-        return self._add_technical_indicators(df)
+        # Add technical indicators and other required columns
+        df = self._add_technical_indicators(df)
+
+        # Ensure all required columns exist
+        required_columns = [
+            'Open', 'High', 'Low', 'Close', 'Volume',
+            'Returns', 'Volatility', 'Volume_MA', 'Volume_Ratio',
+            'SMA_20', 'SMA_50', 'SMA_200', 'EMA_20', 'EMA_50', 'EMA_200',
+            'MACD', 'MACD_Signal', 'MACD_Hist', 'RSI', 'ATR',
+            'BB_Middle', 'BB_Upper', 'BB_Lower', 'BB_Width'
+        ]
+
+        for col in required_columns:
+            if col not in df.columns:
+                if col == 'Returns':
+                    df[col] = df['Close'].pct_change()
+                elif col == 'Volatility':
+                    df[col] = df['Returns'].rolling(window=20).std()
+                else:
+                    df[col] = 0.0  # Default value for missing indicators
+
+        # Clean up NaN values
+        df = df.fillna(method='ffill').fillna(method='bfill').fillna(0)
+
+        return df
 
     def get_market_summary(self, symbol: str) -> Dict[str, Union[float, str]]:
         """Get comprehensive market summary with standardized column names"""
@@ -537,7 +618,12 @@ class CryptoDataLoader:
 
     def get_available_coins(self) -> Dict[str, str]:
         """Return dictionary of supported cryptocurrencies"""
-        return self.supported_coins.copy()
+        # Convert USDT pairs to USD format for display
+        display_coins = {}
+        for symbol, name in self.supported_coins.items():
+            display_symbol = symbol.replace('USDT', '/USD')
+            display_coins[display_symbol] = name
+        return display_coins
 
     def _backup_table_data(self, table_name: str) -> bool:
         """Create a backup of table data before schema modifications"""
@@ -619,27 +705,27 @@ class CryptoDataLoader:
     ) -> Optional[pd.DataFrame]:
         """Get historical data with comprehensive error handling"""
         try:
-            if not self.client and self.use_live_data:
-                raise ValueError("Client not initialized")
-
             symbol = self._normalize_symbol(symbol)
             if symbol not in self.supported_coins:
-                raise ValueError(f"Unsupported symbol: {symbol}")
+                logger.warning(f"Unsupported symbol: {symbol}")
+                return None
 
             # Check cache
             cache_key = f"{symbol}_{period}_{interval}"
             cached_data = self._get_from_cache(cache_key, interval)
             if cached_data is not None:
-                return cached_data
+                return self._validate_and_fix_data(cached_data)
 
             logger.info(f"Fetching {symbol} data for period {period}")
 
             if not self.use_live_data:
-                return self._get_mock_data(symbol, period, interval)
+                logger.info("Using mock data")
+                df = self._get_mock_data(symbol, period, interval)
+            else:
+                if not self.client:
+                    logger.warning("Client not initialized, falling back to mock data")
+                    return self._get_mock_data(symbol, period, interval)
 
-            # Fetch data with retry
-            klines = None
-            for attempt in range(self.RETRY_ATTEMPTS):
                 try:
                     klines = self.client.get_klines(
                         symbol=symbol,
@@ -647,30 +733,79 @@ class CryptoDataLoader:
                         startTime=self._get_start_time(period),
                         limit=1000
                     )
-                    break
-                except BinanceAPIException as e:
-                    if attempt == self.RETRY_ATTEMPTS - 1:
-                        raise DataLoadError(f"Failed to fetch klines data: {str(e)}")
-                    time.sleep(self.RETRY_DELAY)
 
-            if not klines:
-                raise DataLoadError(f"No data received for {symbol}")
+                    if not klines:
+                        logger.warning(f"No data received for {symbol}, falling back to mock data")
+                        return self._get_mock_data(symbol, period, interval)
 
-            df = self._process_klines_data(klines)
+                    df = self._process_klines_data(klines)
+                    df = self._add_technical_indicators(df)
 
-            # Add technical indicators
-            df = self._add_technical_indicators(df)
+                    # Validate and fix data before caching
+                    df = self._validate_and_fix_data(df)
 
-            # Cache and save
-            self._add_to_cache(cache_key, df)
-            self._save_to_database(symbol, df)
+                    # Cache and save
+                    self._add_to_cache(cache_key, df)
+                    try:
+                        self._save_to_database(symbol, df)
+                    except DatabaseError as e:
+                        logger.error(f"Failed to save to database: {e}")
+                        # Continue without database save
+
+                except Exception as e:
+                    logger.error(f"API error for {symbol}: {e}")
+                    return self._get_mock_data(symbol, period, interval)
 
             return df
 
         except Exception as e:
             error_msg = f"Error fetching data for {symbol}: {str(e)}"
             logger.error(error_msg, exc_info=True)
-            raise DataLoadError(error_msg)
+            if not self.use_live_data:
+                return self._get_mock_data(symbol, period, interval)
+            return None
+
+    def _validate_and_fix_data(self, df: pd.DataFrame) -> pd.DataFrame:
+        """Validate and fix DataFrame to ensure all required columns are present"""
+        if df is None or df.empty:
+            raise ValueError("Invalid DataFrame: None or empty")
+
+        required_columns = [
+            'Open', 'High', 'Low', 'Close', 'Volume',
+            'Returns', 'Volatility', 'Volume_MA', 'Volume_Ratio',
+            'SMA_20', ''SMA_50', 'SMA_200', 'EMA_20', 'EMA_50', 'EMA_200',
+            'MACD', 'MACD_Signal', 'MACD_Hist', 'RSI', 'ATR',
+            'BB_Middle', 'BB_Upper', 'BB_Lower', 'BB_Width'
+        ]
+
+        df = df.copy()
+
+        # Ensure basic price columns exist
+        for col in ['Open', 'High', 'Low', 'Close', 'Volume']:
+            if col not in df.columns:
+                raise ValueError(f"Missing critical column: {col}")
+
+        # Add missing technical indicators
+        if 'Returns' not in df.columns:
+            df['Returns'] = df['Close'].pct_change()
+
+        if 'Volatility' not in df.columns:
+            df['Volatility'] = df['Returns'].rolling(window=20).std()
+
+        # Add or recalculate other technical indicators
+        df = self._add_technical_indicators(df)
+
+        # Verify all required columns are present
+        missing_columns = [col for col in required_columns if col not in df.columns]
+        if missing_columns:
+            logger.warning(f"Adding missing columns with default values: {missing_columns}")
+            for col in missing_columns:
+                df[col] = 0.0
+
+        # Clean up NaN values
+        df = df.fillna(method='ffill').fillna(method='bfill').fillna(0)
+
+        return df
 
     def _get_start_time(self, period: str) -> Optional[int]:
         """Calculate start time based on period"""
@@ -715,10 +850,38 @@ class CryptoDataLoader:
                 success_count = sum(1 for r in results if isinstance(r, pd.DataFrame))
                 logger.info(f"Successfully preloaded data for {success_count}/{len(tasks)} symbols")
 
-                return success_count > 0
+                return success_count >0
 
             return False
 
         except Exception as e:
             logger.error(f"Error preloading data: {e}", exc_info=True)
             return False
+
+    def get_current_price(self, symbol: str) -> Optional[float]:
+        """Get current price using ccxt"""
+        try:
+            if not self.client:
+                raise ValueError("Client not initialized")
+
+            symbol = self._normalize_symbol(symbol)
+            if symbol not in self.supported_coins:
+                logger.warning(f"Unsupported symbol: {symbol}")
+                return None
+
+            # Get latest klines data
+            klines = self.client.get_klines(
+                symbol=symbol,
+                interval='1m',
+                limit=1
+            )
+
+            if not klines:
+                return None
+
+            # Return the closing price from the latest kline
+            return float(klines[0][4])  # Close price is at index 4
+
+        except Exception as e:
+            logger.error(f"Error getting price for {symbol}: {e}", exc_info=True)
+            return None

@@ -64,7 +64,7 @@ class TelegramScanner:
             buffer.seek(0)
 
             # Wait for user to scan QR
-            logger.info("Please scan the QR code with your Telegram app")
+            logger.info("Waiting for QR code scan...")
             await qr_login.wait()
 
             # Start client
@@ -92,7 +92,8 @@ class TelegramScanner:
         try:
             # Get all dialogs (channels, groups, etc.)
             all_dialogs = await self.client.get_dialogs(limit=scan_limit)
-            channels = [d for d in all_dialogs if isinstance(d.entity, (Channel, User)) and d.entity.id not in self.monitored_channels]
+            channels = [d for d in all_dialogs if isinstance(d.entity, (Channel, User)) 
+                       and d.entity.id not in self.monitored_channels]
 
             logger.info(f"Found {len(channels)} new channels to scan")
 
@@ -101,7 +102,7 @@ class TelegramScanner:
                     break
 
                 try:
-                    channel_name = dialog.name if hasattr(dialog, 'name') else f"Channel {dialog.id}"
+                    channel_name = getattr(dialog, 'name', f"Channel {dialog.id}")
                     logger.info(f"Scanning channel: {channel_name}")
 
                     # Get recent messages

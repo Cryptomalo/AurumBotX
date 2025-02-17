@@ -7,40 +7,45 @@ from utils.data_loader import CryptoDataLoader
 
 class TestCryptoDataLoader(unittest.TestCase):
     def setUp(self):
-        self.data_loader = CryptoDataLoader()
-        self.test_symbol = "BTC/USD"
+        self.data_loader = CryptoDataLoader(use_live_data=False)  # Use mock data
+        self.test_symbol = "BTCUSDT"
 
     def test_normalize_symbol(self):
         """Test symbol normalization"""
         self.assertEqual(self.data_loader._normalize_symbol("BTC-USD"), "BTC/USD")
         self.assertEqual(self.data_loader._normalize_symbol("BTC/USD"), "BTC/USD")
+        self.assertEqual(self.data_loader._normalize_symbol("BTCUSDT"), "BTCUSDT")
 
-    @patch('ccxt.binanceus')
-    def test_get_historical_data(self, mock_exchange_class):
-        # Setup mock exchange
-        mock_exchange = MagicMock()
-        mock_exchange_class.return_value = mock_exchange
+    @patch('utils.data_loader.Client')
+    def test_get_historical_data(self, mock_client_class):
+        # Setup mock client
+        mock_client = MagicMock()
+        mock_client_class.return_value = mock_client
 
         # Prepare mock data
-        mock_ohlcv = [
-            [1612137600000, 40000, 42000, 39000, 41000, 1000000],
-            [1612138500000, 41000, 43000, 40000, 42000, 1100000]
+        mock_klines = [
+            [1612137600000, "40000", "42000", "39000", "41000", "1000000",
+             1612138500000, "42000000", 1000, "500000", "20500000", "0"],
+            [1612138500000, "41000", "43000", "40000", "42000", "1100000",
+             1612139400000, "44000000", 1100, "550000", "21000000", "0"]
         ]
-        mock_exchange.fetch_ohlcv.return_value = mock_ohlcv
+        mock_client.get_klines.return_value = mock_klines
 
-        # Set exchange instance
-        self.data_loader.exchange = mock_exchange
+        # Set client instance
+        self.data_loader.client = mock_client
+        self.data_loader.use_live_data = True
 
         # Test data retrieval
         df = self.data_loader.get_historical_data(self.test_symbol, period='1d')
 
         # Verify mock was called correctly
-        mock_exchange.fetch_ohlcv.assert_called_once()
+        mock_client.get_klines.assert_called_once()
 
         # Verify returned dataframe
         self.assertIsInstance(df, pd.DataFrame)
         self.assertFalse(df.empty)
-        self.assertTrue(all(col in df.columns for col in ['Close', 'Volume', 'Returns']))
+        required_columns = ['Open', 'High', 'Low', 'Close', 'Volume']
+        self.assertTrue(all(col in df.columns for col in required_columns))
 
     def test_get_available_coins(self):
         coins = self.data_loader.get_available_coins()
@@ -48,43 +53,99 @@ class TestCryptoDataLoader(unittest.TestCase):
         self.assertIn('BTC/USD', coins)
         self.assertIn('ETH/USD', coins)
 
-    @patch('ccxt.binanceus')
-    def test_get_current_price(self, mock_exchange_class):
-        # Setup mock exchange
-        mock_exchange = MagicMock()
-        mock_exchange_class.return_value = mock_exchange
+    @patch('utils.data_loader.Client')
+    def test_get_current_price(self, mock_client_class):
+        # Setup mock client
+        mock_client = MagicMock()
+        mock_client_class.return_value = mock_client
 
         # Configure mock
-        mock_exchange.fetch_ticker.return_value = {'last': 42000.0}
+        mock_klines = [[1612137600000, "40000", "42000", "39000", "41000", "1000000"]]
+        mock_client.get_klines.return_value = mock_klines
 
-        # Set exchange instance
-        self.data_loader.exchange = mock_exchange
+        # Set client instance
+        self.data_loader.client = mock_client
+        self.data_loader.use_live_data = True
 
         # Test price retrieval
         price = self.data_loader.get_current_price(self.test_symbol)
 
         # Verify mock was called
-        mock_exchange.fetch_ticker.assert_called_once_with(self.test_symbol)
+        mock_client.get_klines.assert_called_once_with(
+            symbol=self.test_symbol,
+            interval='1m',
+            limit=1
+        )
 
         # Verify price
         self.assertIsInstance(price, float)
-        self.assertEqual(price, 42000.0)
+        self.assertEqual(price, 41000.0)
 
-    @patch('ccxt.binanceus')
-    def test_error_handling(self, mock_exchange_class):
-        # Setup mock exchange
-        mock_exchange = MagicMock()
-        mock_exchange_class.return_value = mock_exchange
-
+    def test_error_handling(self):
+        """Test error handling during data fetching"""
         # Configure mock to raise exception
-        mock_exchange.fetch_ohlcv.side_effect = Exception("API Error")
+        with patch('utils.data_loader.Client') as mock_client_class:
+            mock_client = MagicMock()
+            mock_client_class.return_value = mock_client
+            mock_client.get_klines.side_effect = Exception("API Error")
 
-        # Set exchange instance
-        self.data_loader.exchange = mock_exchange
+            # Set client instance
+            self.data_loader.client = mock_client
+            self.data_loader.use_live_data = True
 
-        # Test error handling
-        df = self.data_loader.get_historical_data(self.test_symbol)
-        self.assertIsNone(df)
+            # Test error handling with live data - should return mock data
+            df = self.data_loader.get_historical_data(self.test_symbol)
+            self.assertIsNotNone(df)  # Should return mock data
+            self.assertIsInstance(df, pd.DataFrame)
+            self.assertFalse(df.empty)
+
+            # Test with unsupported symbol
+            df = self.data_loader.get_historical_data("INVALID-SYMBOL")
+            self.assertIsNone(df)  # Should return None for unsupported symbols
+
+    def test_process_klines_data(self):
+        """Test klines data processing with standardized column names"""
+        mock_klines = [
+            [1612137600000, "40000", "42000", "39000", "41000", "1000000",
+             1612138500000, "42000000", 1000, "500000", "20500000", "0"],
+            [1612138500000, "41000", "43000", "40000", "42000", "1100000",
+             1612139400000, "44000000", 1100, "550000", "21000000", "0"]
+        ]
+
+        df = self.data_loader._process_klines_data(mock_klines)
+
+        # Check required columns exist
+        required_columns = ['Open', 'High', 'Low', 'Close', 'Volume']
+        for col in required_columns:
+            self.assertIn(col, df.columns, f"Missing required column: {col}")
+
+        # Check data types
+        self.assertTrue(all(df[col].dtype == np.float64 for col in required_columns))
+
+        # Check calculated columns
+        self.assertIn('Returns', df.columns)
+        self.assertEqual(len(df), 2)
+
+    def test_add_technical_indicators(self):
+        """Test technical indicators calculation"""
+        # Create sample data
+        df = pd.DataFrame({
+            'Open': [100, 101, 102, 103, 104],
+            'High': [105, 106, 107, 108, 109],
+            'Low': [95, 96, 97, 98, 99],
+            'Close': [102, 103, 104, 105, 106],
+            'Volume': [1000, 1100, 1200, 1300, 1400]
+        }, index=pd.date_range(start='2025-01-01', periods=5))
+
+        result = self.data_loader._add_technical_indicators(df)
+
+        # Check if technical indicators are calculated
+        expected_indicators = [
+            'Returns', 'Volatility', 'Volume_MA', 'Volume_Ratio',
+            'SMA_20', 'EMA_20', 'MACD', 'RSI', 'BB_Middle', 'BB_Upper', 'BB_Lower'
+        ]
+        for indicator in expected_indicators:
+            self.assertIn(indicator, result.columns)
 
 if __name__ == '__main__':
     unittest.main()

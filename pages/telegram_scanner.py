@@ -18,22 +18,22 @@ async def render_telegram_scanner():
 
     # Login section
     if not scanner.client or not scanner.client.is_connected():
-        st.write("Scansiona il codice QR qui sotto per accedere con il tuo account Telegram:")
+        st.write("Scan the QR code below to login with your Telegram account:")
 
-        if st.button("Genera QR per Login") or st.session_state.qr_shown:
+        if st.button("Generate QR Login") or st.session_state.qr_shown:
             st.session_state.qr_shown = True
-            with st.spinner("Generazione codice QR in corso..."):
+            with st.spinner("Generating QR code..."):
                 success = await scanner.start()
                 if success:
-                    st.success("Login effettuato con successo!")
+                    st.success("Login successful!")
                     st.experimental_rerun()
                 else:
-                    st.error("Errore durante il login. Riprova.")
+                    st.error("Login failed. Please try again.")
     else:
         # Scanning controls
         col1, col2 = st.columns(2)
         with col1:
-            if st.button("Avvia Scanning" if not st.session_state.scanning else "Ferma Scanning"):
+            if st.button("Start Scanning" if not st.session_state.scanning else "Stop Scanning"):
                 st.session_state.scanning = not st.session_state.scanning
                 if st.session_state.scanning:
                     # Reset monitoring for fresh scan
@@ -42,47 +42,47 @@ async def render_telegram_scanner():
                 st.experimental_rerun()
 
         with col2:
-            min_mentions = st.number_input("Menzioni minime", min_value=1, value=3)
-            hours = st.number_input("Nelle ultime ore", min_value=1, value=24)
+            min_mentions = st.number_input("Minimum mentions", min_value=1, value=3)
+            hours = st.number_input("In last hours", min_value=1, value=24)
 
         # Display trending coins
         trending = scanner.get_trending_coins(min_mentions=min_mentions, hours=hours)
         if trending:
-            st.subheader("Meme Coin Trending")
+            st.subheader("Trending Meme Coins")
 
             # Metrics overview
             total_coins = len(trending)
             total_mentions = sum(coin['total_mentions'] for coin in trending)
-            st.metric("Coin Rilevate", total_coins)
-            st.metric("Menzioni Totali", total_mentions)
+            st.metric("Detected Coins", total_coins)
+            st.metric("Total Mentions", total_mentions)
 
             # Detailed coin information
             for coin in trending:
-                with st.expander(f"💎 {coin['symbol']} - {coin['recent_mentions']} menzioni recenti"):
+                with st.expander(f"💎 {coin['symbol']} - {coin['recent_mentions']} recent mentions"):
                     col1, col2 = st.columns(2)
 
                     with col1:
                         st.write(f"⚡ Trend Score: {coin['trending_score']}")
-                        st.write(f"📈 Velocità: {coin['velocity']} menzioni/ora")
-                        st.write(f"📅 Prima menzione: {coin['first_seen']}")
+                        st.write(f"📈 Velocity: {coin['velocity']} mentions/hour")
+                        st.write(f"📅 First seen: {coin['first_seen']}")
 
                     with col2:
-                        st.write(f"🔄 Menzioni totali: {coin['total_mentions']}")
-                        st.write(f"📢 Canali: {coin['channels']}")
+                        st.write(f"🔄 Total mentions: {coin['total_mentions']}")
+                        st.write(f"📢 Channels: {coin['channels']}")
 
                     if coin.get('latest_message'):
-                        st.text_area("Ultimo messaggio", coin['latest_message'], height=100)
+                        st.text_area("Latest message", coin['latest_message'], height=100)
         else:
             if st.session_state.scanning:
-                st.info("Scanning in corso... Attendi il rilevamento delle prime coin.")
+                st.info("Scanning in progress... Waiting for first coins to be detected.")
             else:
-                st.info("Nessuna coin trending rilevata. Avvia lo scanning per scoprire nuove coin!")
+                st.info("No trending coins detected. Start scanning to discover new coins!")
 
         # Scanning status
         if st.session_state.scanning:
-            st.warning("Scanner attivo... Ferma lo scanning prima di chiudere l'applicazione.")
+            st.warning("Scanner active... Stop scanning before closing the application.")
 
             # Progress placeholder
             progress_placeholder = st.empty()
-            if 'monitored_channels' in dir(scanner):
-                progress_placeholder.text(f"Canali monitorati: {len(scanner.monitored_channels)}")
+            if hasattr(scanner, 'monitored_channels'):
+                progress_placeholder.text(f"Monitored channels: {len(scanner.monitored_channels)}")
