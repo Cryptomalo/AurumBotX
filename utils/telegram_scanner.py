@@ -55,26 +55,42 @@ class TelegramScanner:
             else:
                 # Use QR login as fallback
 
-            # Generate QR login widget
+            # Generate QR login with token
             self.qr_login = await self.client.qr_login()
-
-            # Convert QR to image
+            
+            # Generate QR code with enhanced error correction
             qr = qrcode.QRCode(
                 version=1,
-                error_correction=qrcode.constants.ERROR_CORRECT_L,
+                error_correction=qrcode.constants.ERROR_CORRECT_H,  # Higher error correction
                 box_size=10,
                 border=4
             )
+            
+            # Add login URL to QR
             qr.add_data(self.qr_login.url)
             qr.make(fit=True)
 
-            # Create QR image
+            # Create QR image with enhanced visibility
             img = qr.make_image(fill_color="black", back_color="white")
 
-            # Save QR to buffer
+            # Save QR to buffer with high quality
             buffer = io.BytesIO()
-            img.save(buffer, format='PNG')
+            img.save(buffer, format='PNG', quality=95)
             buffer.seek(0)
+
+            # Start token refresh background task
+            asyncio.create_task(self._refresh_qr_token())
+
+    async def _refresh_qr_token(self):
+        """Refresh QR token periodically to maintain login validity"""
+        while not await self.client.is_user_authorized():
+            try:
+                await asyncio.sleep(30)  # Check every 30 seconds
+                if self.qr_login and not self.qr_login.expired():
+                    await self.qr_login.refresh()
+            except Exception as e:
+                logger.error(f"Error refreshing QR token: {e}")
+                break
 
             self.connection_state = "awaiting_qr_scan"
             logger.info("Waiting for QR code scan...")
