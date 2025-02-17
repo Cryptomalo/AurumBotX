@@ -27,12 +27,17 @@ class TelegramScanner:
             r'([A-Z]{3,10})(?:\s+(?:address|contract))',  # Match contract addresses
             r'0x[a-fA-F0-9]{40}',  # Match Ethereum contract addresses
         ]
+        self.qr_login = None
+        self.connection_state = "disconnected"
 
     async def start(self) -> bool:
         """Start Telegram client with QR login"""
         try:
+            if self.client and self.client.is_connected():
+                await self.client.disconnect()
+                self.client = None
+
             # Initialize client with placeholder API credentials
-            # These are replaced by QR login
             self.client = TelegramClient(
                 self.session_file,
                 api_id=1,  # Placeholder
@@ -43,7 +48,7 @@ class TelegramScanner:
             )
 
             # Generate QR login widget
-            qr_login = await self.client.qr_login()
+            self.qr_login = await self.client.qr_login()
 
             # Convert QR to image
             qr = qrcode.QRCode(
@@ -52,7 +57,7 @@ class TelegramScanner:
                 box_size=10,
                 border=4
             )
-            qr.add_data(qr_login.url)
+            qr.add_data(self.qr_login.url)
             qr.make(fit=True)
 
             # Create QR image
@@ -63,24 +68,40 @@ class TelegramScanner:
             img.save(buffer, format='PNG')
             buffer.seek(0)
 
-            # Wait for user to scan QR
+            self.connection_state = "awaiting_qr_scan"
             logger.info("Waiting for QR code scan...")
-            await qr_login.wait()
 
-            # Start client
-            await self.client.connect()
+            # Wait for user to scan QR
+            try:
+                await asyncio.wait_for(self.qr_login.wait(), timeout=120)
+                self.connection_state = "connecting"
 
-            if await self.client.is_user_authorized():
-                me = await self.client.get_me()
-                logger.info(f"Successfully logged in as {me.username if me.username else me.id}")
-                return True
-            else:
-                logger.error("Failed to authorize with Telegram")
+                # Start client
+                await self.client.connect()
+
+                if await self.client.is_user_authorized():
+                    me = await self.client.get_me()
+                    logger.info(f"Successfully logged in as {me.username if me.username else me.id}")
+                    self.connection_state = "connected"
+                    return True
+                else:
+                    logger.error("Failed to authorize with Telegram")
+                    self.connection_state = "unauthorized"
+                    return False
+
+            except asyncio.TimeoutError:
+                logger.error("QR code scan timeout")
+                self.connection_state = "timeout"
                 return False
 
         except Exception as e:
             logger.error(f"Error starting Telegram client: {e}", exc_info=True)
+            self.connection_state = "error"
             return False
+
+    def get_connection_state(self) -> str:
+        """Get current connection state"""
+        return self.connection_state
 
     async def scan_channels(self, scan_limit: int = 1000):
         """Scan subscribed channels for potential meme coins"""
@@ -205,6 +226,7 @@ class TelegramScanner:
         self.scanning = False
         if self.client:
             await self.client.disconnect()
+            self.connection_state = "disconnected"
             logger.info("Telegram client disconnected")
 
     def reset_monitoring(self):
