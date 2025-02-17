@@ -418,14 +418,18 @@ class CryptoDataLoader:
             # Sort index to ensure chronological order
             df.sort_index(inplace=True)
 
-            # Verify required columns exist
+            # Verify required columns exist with correct types
             required_columns = ['Open', 'High', 'Low', 'Close', 'Volume']
             missing_columns = [col for col in required_columns if col not in df.columns]
             if missing_columns:
+                logger.error(f"Missing required columns after processing: {missing_columns}")
                 raise ValueError(f"Missing required columns after processing: {missing_columns}")
 
             # Add basic metrics before technical indicators
             df['Returns'] = df['Close'].pct_change()
+
+            # Clean up NaN values using recommended methods
+            df = df.ffill().bfill().fillna(0)
 
             # Ensure all numeric columns are float64
             for col in df.columns:
@@ -563,26 +567,11 @@ class CryptoDataLoader:
             'Volume': np.random.randint(1000, 100000, n_periods)
         }, index=timestamps)
 
-        # Ensure all required columns exist
-        required_columns = [
-            'Open', 'High', 'Low', 'Close', 'Volume',
-            'Returns', 'Volatility', 'Volume_MA', 'Volume_Ratio',
-            'SMA_20', 'SMA_50', 'SMA_200', 'EMA_20', 'EMA_50', 'EMA_200',
-            'MACD', 'MACD_Signal', 'MACD_Hist', 'RSI', 'ATR',
-            'BB_Middle', 'BB_Upper', 'BB_Lower', 'BB_Width'
-        ]
+        # Clean up NaN values using recommended methods
+        df = df.ffill().bfill().fillna(0)
 
-        for col in required_columns:
-            if col not in df.columns:
-                if col == 'Returns':
-                    df[col] = df['Close'].pct_change()
-                elif col == 'Volatility':
-                    df[col] = df['Returns'].rolling(window=20).std()
-                else:
-                    df[col] = 0.0  # Default value for missing indicators
-
-        # Clean up NaN values
-        df = df.fillna(method='ffill').fillna(method='bfill').fillna(0)
+        # Add technical indicators
+        df = self._add_technical_indicators(df)
 
         return df
 

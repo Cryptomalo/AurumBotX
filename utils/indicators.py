@@ -22,11 +22,50 @@ class TechnicalIndicators:
     STANDARD_COLUMNS = ['Open', 'High', 'Low', 'Close', 'Volume']
 
     def __init__(self):
+        self.logger = logging.getLogger(__name__)
         self.cache = {}
         self.trend_indicators = ['SMA', 'EMA', 'MACD']
         self.momentum_indicators = ['RSI', 'Stochastic', 'MFI']
         self.volatility_indicators = ['BB', 'ATR', 'KC']
         self.volume_indicators = ['OBV', 'Volume_MA', 'Volume_Ratio']
+
+    def add_sma(self, df: pd.DataFrame, period: int = 20) -> pd.DataFrame:
+        """Add Simple Moving Average"""
+        try:
+            df = df.copy()
+            df[f'SMA_{period}'] = df['Close'].rolling(window=period).mean()
+            return df
+        except Exception as e:
+            self.logger.error(f"Error adding SMA: {str(e)}")
+            return df
+
+    def add_rsi(self, df: pd.DataFrame, period: int = 14) -> pd.DataFrame:
+        """Add Relative Strength Index"""
+        try:
+            df = df.copy()
+            delta = df['Close'].diff()
+            gain = (delta.where(delta > 0, 0)).rolling(window=period).mean()
+            loss = (-delta.where(delta < 0, 0)).rolling(window=period).mean()
+            rs = gain / loss
+            df[f'RSI_{period}'] = 100 - (100 / (1 + rs))
+            return df
+        except Exception as e:
+            self.logger.error(f"Error adding RSI: {str(e)}")
+            return df
+
+    def add_macd(self, df: pd.DataFrame) -> pd.DataFrame:
+        """Add MACD indicator"""
+        try:
+            df = df.copy()
+            exp1 = df['Close'].ewm(span=12, adjust=False).mean()
+            exp2 = df['Close'].ewm(span=26, adjust=False).mean()
+            df['MACD'] = exp1 - exp2
+            df['MACD_Signal'] = df['MACD'].ewm(span=9, adjust=False).mean()
+            df['MACD_Hist'] = df['MACD'] - df['MACD_Signal']
+            return df
+        except Exception as e:
+            self.logger.error(f"Error adding MACD: {str(e)}")
+            return df
 
     def add_all_indicators(self, df: pd.DataFrame) -> pd.DataFrame:
         """Add all technical indicators with standardized column names"""
@@ -55,13 +94,15 @@ class TechnicalIndicators:
             df['Resistance'] = resistance
             df['Market_Condition'] = self.determine_market_condition(df)
 
-            # Clean up NaN values
-            df = df.fillna(method='ffill').fillna(method='bfill').fillna(0)
+            # Clean up NaN values using recommended methods
+            df = df.ffill()  # Forward fill
+            df = df.bfill()  # Backward fill
+            df = df.fillna(0)  # Fill remaining NaNs with 0
 
             return df
 
         except Exception as e:
-            logger.error(f"Error adding indicators: {str(e)}")
+            self.logger.error(f"Error adding indicators: {str(e)}")
             return df
 
     def add_trend_indicators(self, df: pd.DataFrame) -> pd.DataFrame:
@@ -70,15 +111,11 @@ class TechnicalIndicators:
             # Moving Averages
             periods = [20, 50, 200]
             for period in periods:
-                df[f'SMA_{period}'] = df['Close'].rolling(window=period).mean()
+                df = self.add_sma(df, period)
                 df[f'EMA_{period}'] = df['Close'].ewm(span=period, adjust=False).mean()
 
             # MACD with standard names
-            exp1 = df['Close'].ewm(span=12, adjust=False).mean()
-            exp2 = df['Close'].ewm(span=26, adjust=False).mean()
-            df['MACD'] = exp1 - exp2
-            df['MACD_Signal'] = df['MACD'].ewm(span=9, adjust=False).mean()
-            df['MACD_Hist'] = df['MACD'] - df['MACD_Signal']
+            df = self.add_macd(df)
 
             return df
         except Exception as e:
@@ -90,11 +127,7 @@ class TechnicalIndicators:
         try:
             # RSI
             for period in [14, 28]:
-                delta = df['Close'].diff()
-                gain = (delta.where(delta > 0, 0)).rolling(window=period).mean()
-                loss = (-delta.where(delta < 0, 0)).rolling(window=period).mean()
-                rs = gain / loss
-                df[f'RSI_{period}'] = 100 - (100 / (1 + rs))
+                df = self.add_rsi(df, period)
 
             return df
         except Exception as e:

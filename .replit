@@ -195,6 +195,7 @@ task = "packager.installForAll"
 [[workflows.workflow.tasks]]
 task = "shell.exec"
 args = "python -m streamlit run app.py --server.address=0.0.0.0 --server.headless=true"
+waitForPort = 5000
 
 [[workflows.workflow]]
 name = "Testnet Trading Bot"

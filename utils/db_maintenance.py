@@ -284,7 +284,7 @@ class DatabaseMaintenance:
             return {}
 
     def manage_partitions(self) -> None:
-        """Manage table partitions with backup table handling"""
+        """Manage table partitions with improved error handling"""
         try:
             tables = self._get_market_data_tables()
             for table_name in tables:
@@ -296,27 +296,45 @@ class DatabaseMaintenance:
                 next_month = datetime.now() + timedelta(days=32)
                 partition_name = f"{table_name}_y{next_month.year}m{next_month.month:02d}"
 
-                with self.engine.connect() as conn:
-                    # Create the partition directly under the main table
-                    conn.execute(text(f"""
-                    CREATE TABLE IF NOT EXISTS {partition_name}
-                    PARTITION OF {table_name}
-                    FOR VALUES FROM 
-                    ('{next_month.replace(day=1).strftime('%Y-%m-%d')}')
-                    TO 
-                    ('{(next_month.replace(day=1) + timedelta(days=32)).replace(day=1).strftime('%Y-%m-%d')}');
-                    """))
+                try:
+                    with self.engine.connect() as conn:
+                        # Check if partition exists
+                        exists_query = text(f"""
+                        SELECT EXISTS (
+                            SELECT FROM pg_tables 
+                            WHERE schemaname = 'public' 
+                            AND tablename = '{partition_name}'
+                        )
+                        """)
+                        partition_exists = conn.execute(exists_query).scalar()
 
-                    # Create indexes on partition
-                    conn.execute(text(f"""
-                    CREATE INDEX IF NOT EXISTS idx_{partition_name}_timestamp 
-                    ON {partition_name} (timestamp);
+                        if not partition_exists:
+                            # Create the partition directly under the main table
+                            conn.execute(text(f"""
+                            CREATE TABLE IF NOT EXISTS {partition_name}
+                            PARTITION OF {table_name}
+                            FOR VALUES FROM 
+                            ('{next_month.replace(day=1).strftime('%Y-%m-%d')}')
+                            TO 
+                            ('{(next_month.replace(day=1) + timedelta(days=32)).replace(day=1).strftime('%Y-%m-%d')}');
+                            """))
 
-                    CREATE INDEX IF NOT EXISTS idx_{partition_name}_close_timestamp 
-                    ON {partition_name} ("Close", timestamp);
-                    """))
+                            # Create indexes on new partition
+                            conn.execute(text(f"""
+                            CREATE INDEX IF NOT EXISTS idx_{partition_name}_timestamp 
+                            ON {partition_name} (timestamp);
 
-                logger.info(f"Created partition {partition_name}")
+                            CREATE INDEX IF NOT EXISTS idx_{partition_name}_close_timestamp 
+                            ON {partition_name} ("Close", timestamp);
+                            """))
+
+                            logger.info(f"Created partition {partition_name} with indexes")
+                        else:
+                            logger.debug(f"Partition {partition_name} already exists")
+
+                except Exception as e:
+                    logger.error(f"Error creating partition {partition_name}: {e}")
+                    # Continue with next table even if one fails
 
         except Exception as e:
             logger.error(f"Error managing partitions: {e}")
