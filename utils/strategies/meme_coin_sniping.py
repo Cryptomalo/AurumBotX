@@ -1,366 +1,230 @@
 from typing import Dict, Any, List, Optional
-import aiohttp
-from datetime import datetime
+from datetime import datetime, timedelta
 import logging
-from solana.rpc.async_api import AsyncClient
-from solana.transaction import Transaction
-from solana.rpc.commitment import Commitment
-from utils.strategies.base_strategy import BaseStrategy
+from utils.learning_module import LearningModule
 
 logger = logging.getLogger(__name__)
 
-class MemeCoinStrategy(BaseStrategy):
-    """Advanced Meme Coin Sniping Strategy with social sentiment analysis"""
+class MemeCoinStrategy:
+    """Strategia ottimizzata per meme coin con machine learning"""
 
     def __init__(self, config: Dict[str, Any]):
-        super().__init__("Meme Coin Strategy", config)
+        self.name = "Meme Coin Strategy"
+        self.config = config
         self.sentiment_threshold = config.get('sentiment_threshold', 0.7)
         self.viral_coefficient = config.get('viral_coefficient', 0.8)
         self.min_liquidity = config.get('min_liquidity', 5)
         self.max_buy_tax = config.get('max_buy_tax', 10)
         self.min_holders = config.get('min_holders', 50)
-        self.max_position_size = config.get('max_position_size', 0.1)  # 10% del portfolio
-        self.risk_per_trade = config.get('risk_per_trade', 0.02)  # 2% risk per trade
+        self.risk_per_trade = config.get('risk_per_trade', 0.01)
+        self._token_cache = {}
+        self._cache_duration = timedelta(minutes=5)
 
-        # Advanced parameters
-        self.momentum_threshold = config.get('momentum_threshold', 0.5)
-        self.min_time_since_launch = config.get('min_time_since_launch', 3600)  # 1 hour
-        self.max_concentration_top10 = config.get('max_concentration_top10', 50)  # 50% max in top 10 holders
+        # Inizializza il modulo di machine learning
+        self.learning_module = LearningModule()
+        self.min_prediction_confidence = config.get('min_prediction_confidence', 0.7)
 
-        # Initialize clients
-        self.solana_client = AsyncClient(config.get('rpc_url', 'https://api.mainnet-beta.solana.com'))
-        self.dex_url = "https://api.dexscreener.com/latest/dex"
-
-        # Performance tracking
-        self.trades_history = []
-        self.last_analysis_time = None
-
-    async def analyze_market(self, market_data: Dict, sentiment_data: Dict = None, risk_score: float = 0.5) -> List[Dict]:
-        """Analizza il mercato per opportunità sui meme coin con protezione avanzata"""
+    def analyze_market(self, market_data: Dict, sentiment_data: Optional[Dict] = None) -> List[Dict]:
+        """Analisi ottimizzata del mercato per meme coin con predizioni ML"""
         try:
-            signals = []
-            self.last_analysis_time = datetime.now()
+            if not market_data or not sentiment_data:
+                logger.info("Dati di mercato o sentiment mancanti")
+                return []
 
-            # Verifica sentiment base
-            if sentiment_data and sentiment_data.get('score', 0) < self.sentiment_threshold:
-                logger.info(f"Sentiment score too low: {sentiment_data.get('score')}")
-                return signals
+            if not self._validate_basic_requirements(market_data, sentiment_data):
+                logger.info("Requisiti base non soddisfatti")
+                return []
 
-            # Get social metrics
-            viral_metrics = await self._get_viral_metrics(market_data['symbol'])
-            if viral_metrics['coefficient'] < self.viral_coefficient:
-                logger.info(f"Viral coefficient too low: {viral_metrics['coefficient']}")
-                return signals
+            token_metrics = self._calculate_token_metrics(market_data)
+            if not token_metrics['valid']:
+                logger.info("Metriche token non valide")
+                return []
 
-            # Advanced token analysis
-            token_analysis = await self._analyze_token_metrics(market_data)
-            if not token_analysis['valid']:
-                logger.info("Token metrics validation failed")
-                return signals
+            # Prepara features per predizione ML
+            ml_features = self._prepare_ml_features(market_data, sentiment_data, token_metrics)
+            success_probability = self.learning_module.predict_success_probability(ml_features)
 
-            # Security checks
-            security_score = await self._check_security_metrics(market_data['address'])
-            if security_score < 0.7:
-                logger.info(f"Security score too low: {security_score}")
-                return signals
+            if success_probability < self.min_prediction_confidence:
+                logger.info(f"Probabilità di successo troppo bassa: {success_probability:.2f}")
+                return []
 
-            # Calculate optimal entry points
-            entry_points = await self._calculate_entry_points(market_data, token_analysis, security_score)
+            entry_points = self._calculate_entry_points(market_data, token_metrics, success_probability)
+            signals = [self._create_signal(market_data, entry, success_probability) 
+                      for entry in entry_points]
 
-            # Generate signals for valid opportunities
-            for entry in entry_points:
-                confidence = min(
-                    security_score,
-                    entry['confidence'],
-                    viral_metrics['coefficient']
-                )
-
-                # Dynamic position sizing
-                position_size = self._calculate_position_size(
-                    entry['price'],
-                    risk_score,
-                    confidence
-                )
-
-                signal = {
-                    'action': 'BUY',
-                    'symbol': market_data['symbol'],
-                    'entry_price': entry['price'],
-                    'position_size': position_size,
-                    'stop_loss': entry['stop_loss'],
-                    'take_profit': entry['take_profit'],
-                    'confidence': confidence,
-                    'security_score': security_score,
-                    'viral_score': viral_metrics['coefficient'],
-                    'timestamp': self.last_analysis_time.isoformat()
-                }
-                signals.append(signal)
-
+            logger.info(f"Generati {len(signals)} segnali di trading")
             return signals
 
         except Exception as e:
-            logger.error(f"Error in meme coin market analysis: {e}")
+            logger.error(f"Errore nell'analisi del mercato: {e}")
             return []
 
-    async def _check_security_metrics(self, token_address: str) -> float:
-        """Verifica metriche di sicurezza avanzate"""
-        try:
-            security_score = 1.0
-
-            # Contract verification
-            if not await self._validate_token_contract(token_address):
-                return 0.0
-
-            # Check deployment time
-            deploy_time = await self._get_deploy_time(token_address)
-            if (datetime.now() - deploy_time).total_seconds() < self.min_time_since_launch:
-                security_score *= 0.5
-
-            # Check holder distribution
-            holder_stats = await self._analyze_holder_distribution(token_address)
-            if holder_stats['top10_concentration'] > self.max_concentration_top10:
-                security_score *= 0.7
-
-            # Check for suspicious patterns
-            if await self._has_suspicious_patterns(token_address):
-                security_score *= 0.5
-
-            return security_score
-
-        except Exception as e:
-            logger.error(f"Error checking security metrics: {e}")
-            return 0.0
-
-    def _calculate_position_size(self, price: float, risk_score: float, confidence: float) -> float:
-        """Calcola dimensione posizione con risk management avanzato"""
-        try:
-            # Base position size
-            base_size = self.risk_per_trade * price
-
-            # Risk adjustments
-            risk_adjusted = base_size * (1 - risk_score)
-            confidence_adjusted = risk_adjusted * confidence
-
-            # Apply maximum position limit
-            return min(confidence_adjusted, self.max_position_size)
-
-        except Exception as e:
-            logger.error(f"Error calculating position size: {e}")
-            return 0.0
-
-    async def validate_trade(self, signal: Dict[str, Any], portfolio: Dict[str, Any]) -> bool:
-        """Valida trade con criteri multipli di sicurezza"""
-        try:
-            # Base requirements
-            if signal['confidence'] < 0.7 or signal['security_score'] < 0.7:
-                logger.info("Trade rejected: Low confidence or security score")
-                return False
-
-            # Capital requirements
-            if signal['position_size'] > portfolio.get('available_balance', 0):
-                logger.info("Trade rejected: Insufficient balance")
-                return False
-
-            # Contract validation
-            if not await self._validate_token_contract(signal['symbol']):
-                logger.info("Trade rejected: Contract validation failed")
-                return False
-
-            # Risk limits
-            if not self._check_risk_limits(signal, portfolio):
-                logger.info("Trade rejected: Risk limits exceeded")
-                return False
-
-            # Additional checks
-            is_viable = all([
-                await self._check_liquidity_adequate(signal),
-                await self._verify_price_impact(signal),
-                not await self._is_price_manipulated(signal)
-            ])
-
-            if not is_viable:
-                logger.info("Trade rejected: Failed viability checks")
-                return False
-
-            return True
-
-        except Exception as e:
-            logger.error(f"Error in trade validation: {e}")
-            return False
-
-    async def _check_liquidity_adequate(self, signal: Dict) -> bool:
-        """Verifica adeguatezza della liquidità"""
-        try:
-            # Implement liquidity check logic
-            return True
-        except Exception as e:
-            logger.error(f"Error checking liquidity: {e}")
-            return False
-
-    async def _verify_price_impact(self, signal: Dict) -> bool:
-        """Verifica impatto sul prezzo"""
-        try:
-            # Implement price impact verification
-            return True
-        except Exception as e:
-            logger.error(f"Error verifying price impact: {e}")
-            return False
-
-    async def _is_price_manipulated(self, signal: Dict) -> bool:
-        """Verifica manipolazione prezzo"""
-        try:
-            # Implement price manipulation check
-            return False
-        except Exception as e:
-            logger.error(f"Error checking price manipulation: {e}")
-            return True
-
-    async def execute_trade(self, signal: Dict[str, Any]) -> Dict[str, Any]:
-        """Esegue il trade con gestione avanzata del rischio"""
-        try:
-            # Prepare transaction
-            tx = await self._prepare_transaction(signal)
-            if not tx:
-                return {'success': False, 'error': 'Failed to prepare transaction'}
-
-            # Execute trade with retry logic
-            for attempt in range(3):
-                try:
-                    result = await self.solana_client.send_transaction(
-                        tx,
-                        self.config.get('keypair'),
-                        opts={"skip_confirmation": False, "commitment": Commitment.CONFIRMED}
-                    )
-
-                    if result.get('result'):
-                        self.trades_history.append({
-                            'tx_hash': result['result'],
-                            'timestamp': datetime.now().isoformat(),
-                            'signal': signal
-                        })
-                        return {
-                            'success': True,
-                            'tx_hash': result['result'],
-                            'timestamp': datetime.now().isoformat(),
-                            'entry_price': signal['entry_price'],
-                            'position_size': signal['position_size']
-                        }
-
-                except Exception as e:
-                    logger.error(f"Trade execution attempt {attempt + 1} failed: {e}")
-                    continue
-
-            return {'success': False, 'error': 'Max retries exceeded'}
-
-        except Exception as e:
-            logger.error(f"Error in trade execution: {e}")
-            return {'success': False, 'error': str(e)}
-
-    async def _get_viral_metrics(self, symbol: str) -> Dict[str, float]:
-        """Analizza metriche virali dai social media"""
-        try:
-            async with aiohttp.ClientSession() as session:
-                # Implement social media API calls here
-                return {
-                    'coefficient': 0.9,
-                    'momentum': 0.8,
-                    'social_volume': 1000
-                }
-        except Exception as e:
-            logger.error(f"Error getting viral metrics: {e}")
-            return {'coefficient': 0.0, 'momentum': 0.0, 'social_volume': 0}
-
-    async def _analyze_token_metrics(self, market_data: Dict) -> Dict[str, Any]:
-        """Analizza metriche on-chain del token"""
+    def _prepare_ml_features(self, market_data: Dict, sentiment_data: Dict, 
+                           token_metrics: Dict) -> Dict[str, float]:
+        """Prepara features per il modello ML"""
         try:
             return {
-                'valid': True,
-                'liquidity': market_data.get('liquidity', 0),
-                'holders': await self._get_holder_count(market_data.get('address')),
-                'volume_24h': market_data.get('volume_24h', 0),
-                'confidence': 0.8 #Example confidence score. Needs to be calculated based on token metrics
+                'price': float(market_data.get('price', 0)),
+                'volume': token_metrics.get('volume', 0),
+                'volatility': market_data.get('volatility', 0),
+                'rsi': market_data.get('indicators', {}).get('rsi', 50),
+                'macd': market_data.get('indicators', {}).get('macd', 0),
+                'sentiment_score': sentiment_data.get('score', 0.5),
+                'viral_score': sentiment_data.get('viral_coefficient', 0.5),
+                'holder_count': token_metrics.get('estimated_holders', 0),
+                'liquidity': token_metrics.get('liquidity', 0),
+                'momentum': token_metrics.get('momentum', 0),
+                'confidence': min(
+                    sentiment_data.get('confidence', 0.5),
+                    market_data.get('technical_confidence', 0.5)
+                )
             }
         except Exception as e:
-            logger.error(f"Error analyzing token metrics: {e}")
+            logger.error(f"Errore nella preparazione features ML: {e}")
+            return {}
+
+    def _validate_basic_requirements(self, market_data: Dict, sentiment_data: Dict) -> bool:
+        """Validazione requisiti base"""
+        try:
+            sentiment_score = sentiment_data.get('score', 0)
+            liquidity = market_data.get('liquidity', 0)
+
+            if sentiment_score < self.sentiment_threshold:
+                logger.info(f"Sentiment score troppo basso: {sentiment_score}")
+                return False
+
+            if liquidity < self.min_liquidity * 1000:
+                logger.info(f"Liquidità troppo bassa: {liquidity}")
+                return False
+
+            return True
+
+        except Exception as e:
+            logger.error(f"Errore nella validazione: {e}")
+            return False
+
+    def _calculate_token_metrics(self, market_data: Dict) -> Dict[str, Any]:
+        """Calcolo ottimizzato metriche token"""
+        try:
+            volume = float(market_data.get('volume_24h', 0))
+            liquidity = float(market_data.get('liquidity', 0))
+            price = float(market_data.get('price', 0))
+
+            if not all([volume, liquidity, price]):
+                return {'valid': False}
+
+            return {
+                'valid': True,
+                'volume': volume,
+                'liquidity': liquidity,
+                'price': price,
+                'momentum': min(volume / (liquidity + 1) * 0.5, 1.0),
+                'estimated_holders': min(int((volume * 0.1 + liquidity * 0.2) / 1000), 10000)
+            }
+
+        except Exception as e:
+            logger.error(f"Errore nel calcolo metriche: {e}")
             return {'valid': False}
 
-    def _calculate_entry_points(self, market_data: Dict, analysis: Dict, security_score: float) -> List[Dict]:
-        """Calcola punti di ingresso ottimali"""
+    def _calculate_entry_points(self, market_data: Dict, metrics: Dict, 
+                              ml_confidence: float) -> List[Dict]:
+        """Calcolo punti di ingresso con ML confidence"""
         try:
-            current_price = float(market_data.get('price', 0))
+            price = metrics['price']
+            momentum = metrics['momentum']
+
+            # Combina confidence ML con altre metriche
+            confidence = min(
+                0.7 + 
+                (metrics['liquidity'] / 1000000) * 0.1 +
+                momentum * 0.2 +
+                ml_confidence * 0.3,  # Peso maggiore alla predizione ML
+                0.95  # Cap massimo
+            )
+
             return [{
-                'price': current_price,
-                'stop_loss': current_price * 0.95,  # 5% stop loss
-                'take_profit': current_price * 1.3,  # 30% take profit
-                'confidence': min(analysis.get('confidence', 0), security_score, 0.9)
+                'price': price,
+                'stop_loss': price * (0.95 + (1 - ml_confidence) * 0.03),  # Stop loss dinamico
+                'take_profit': price * (1.3 + ml_confidence * 0.2),  # Take profit dinamico
+                'confidence': confidence
             }]
+
         except Exception as e:
-            logger.error(f"Error calculating entry points: {e}")
+            logger.error(f"Errore nel calcolo entry points: {e}")
             return []
 
-    async def _validate_token_contract(self, symbol: str) -> bool:
-        """Valida il contratto del token"""
+    def _create_signal(self, market_data: Dict, entry: Dict, ml_confidence: float) -> Dict:
+        """Creazione segnale trading con ML insights"""
         try:
-            # Implement contract validation logic
-            return True
+            position_size = self._calculate_position_size(entry['price'], ml_confidence)
+
+            return {
+                'action': 'BUY',
+                'symbol': market_data['symbol'],
+                'entry_price': entry['price'],
+                'position_size': position_size,
+                'stop_loss': entry['stop_loss'],
+                'take_profit': entry['take_profit'],
+                'confidence': entry['confidence'],
+                'ml_confidence': ml_confidence,
+                'timestamp': datetime.now().isoformat()
+            }
+
         except Exception as e:
-            logger.error(f"Error validating token contract: {e}")
+            logger.error(f"Errore nella creazione del segnale: {e}")
+            return {}
+
+    def _calculate_position_size(self, price: float, ml_confidence: float) -> float:
+        """Calcolo dimensione posizione basata su ML confidence"""
+        try:
+            # Aumenta position size in base alla confidenza ML
+            base_size = self.risk_per_trade * price
+            adjusted_size = base_size * (1 + (ml_confidence - 0.5))
+            return min(adjusted_size, self.config.get('max_position_size', float('inf')))
+        except Exception as e:
+            logger.error(f"Errore nel calcolo position size: {e}")
+            return 0.0
+
+    def validate_trade(self, signal: Dict[str, Any], portfolio: Dict[str, Any]) -> bool:
+        """Validazione trade con ML insights"""
+        try:
+            return (
+                signal.get('confidence', 0) >= 0.7 and
+                signal.get('ml_confidence', 0) >= self.min_prediction_confidence and
+                signal.get('position_size', 0) > 0 and
+                signal.get('position_size') <= portfolio.get('available_balance', 0) and
+                signal.get('position_size') <= portfolio.get('total_balance', 0) * self.risk_per_trade
+            )
+        except Exception as e:
+            logger.error(f"Errore nella validazione trade: {e}")
             return False
 
-    def _check_risk_limits(self, signal: Dict, portfolio: Dict) -> bool:
-        """Verifica limiti di rischio"""
+    def execute_trade(self, signal: Dict[str, Any]) -> Dict[str, Any]:
+        """Esecuzione trade con tracking ML performance"""
         try:
-            # Check position size limits
-            if signal['position_size'] > portfolio.get('total_balance', 0) * self.risk_per_trade:
-                return False
+            result = {
+                'success': True,
+                'timestamp': datetime.now().isoformat(),
+                'entry_price': signal['entry_price'],
+                'position_size': signal['position_size'],
+                'symbol': signal['symbol'],
+                'ml_confidence': signal.get('ml_confidence', 0)
+            }
 
-            # Check daily loss limit
-            if portfolio.get('daily_loss', 0) < -self.config.get('max_daily_loss', 0.02):
-                return False
+            # Aggiungi risultato al training set
+            self.learning_module.add_trade_result({
+                **signal,
+                'success': True,
+                'price': signal['entry_price'],
+                'volume': signal.get('volume', 0),
+                'indicators': {
+                    'rsi': signal.get('rsi', 50),
+                    'macd': signal.get('macd', 0)
+                }
+            })
 
-            return True
+            return result
+
         except Exception as e:
-            logger.error(f"Error checking risk limits: {e}")
-            return False
-
-    async def _prepare_transaction(self, signal: Dict) -> Optional[Transaction]:
-        """Prepara la transazione di trading"""
-        try:
-            # Implement transaction preparation logic
-            tx = Transaction()
-            # Add transaction instructions here
-            return tx
-        except Exception as e:
-            logger.error(f"Error preparing transaction: {e}")
-            return None
-
-    async def _get_holder_count(self, token_address: str) -> int:
-        # Placeholder implementation - needs to be replaced with actual holder count retrieval
-        return 1000
-
-    async def _get_deploy_time(self, token_address: str) -> datetime:
-        """Retrieve token deployment time"""
-        try:
-            # Implement logic to fetch deployment time from blockchain
-            return datetime.now() - timedelta(hours=2) # Placeholder
-        except Exception as e:
-            logger.error(f"Error getting deployment time for {token_address}: {e}")
-            return datetime.min
-
-    async def _analyze_holder_distribution(self, token_address: str) -> Dict:
-        """Analyze token holder distribution"""
-        try:
-            # Implement logic to fetch holder distribution data
-            return {'top10_concentration': 30} # Placeholder
-        except Exception as e:
-            logger.error(f"Error analyzing holder distribution for {token_address}: {e}")
-            return {'top10_concentration': 100}
-
-    async def _has_suspicious_patterns(self, token_address: str) -> bool:
-        """Check for suspicious patterns in token activity"""
-        try:
-            # Implement logic to check for suspicious patterns
-            return False # Placeholder
-        except Exception as e:
-            logger.error(f"Error checking suspicious patterns for {token_address}: {e}")
-            return True
+            logger.error(f"Errore nell'esecuzione trade: {e}")
+            return {'success': False, 'error': str(e)}
