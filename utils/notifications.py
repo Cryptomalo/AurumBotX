@@ -1,201 +1,244 @@
 import os
-from twilio.rest import Client
-from datetime import datetime
+from datetime import datetime, timedelta
 import logging
-from typing import Optional
+from typing import Optional, Dict, List, Any
+from enum import Enum
+import json
+import asyncio
+from collections import defaultdict
+from twilio.rest import Client
+from queue import PriorityQueue
+import time
 
 logger = logging.getLogger(__name__)
 
-class TradingNotifier:
+class NotificationPriority(Enum):
+    LOW = 1
+    MEDIUM = 2
+    HIGH = 3
+    CRITICAL = 4
+
+class NotificationCategory(Enum):
+    TRADE = "trade"
+    MARKET = "market"
+    SYSTEM = "system"
+    SECURITY = "security"
+    PORTFOLIO = "portfolio"
+
+class NotificationManager:
     def __init__(self):
-        self.client = None
-        self.phone_number = None
+        self.twilio_client = None
+        self.from_phone = None
+        self.to_phone = None
         self.setup_complete = False
+        self.notification_history = defaultdict(list)
+        self.rate_limits = {
+            NotificationPriority.LOW: 3600,  # 1 hour
+            NotificationPriority.MEDIUM: 1800,  # 30 minutes
+            NotificationPriority.HIGH: 300,  # 5 minutes
+            NotificationPriority.CRITICAL: 0  # No delay for critical
+        }
+        self.notification_queue = PriorityQueue()
+        self.is_processing = False
 
     def setup(self, to_phone_number: str) -> bool:
-        """
-        Configura il notificatore con le credenziali Twilio
-        """
+        """Initialize notification channels"""
         try:
             account_sid = os.getenv('TWILIO_ACCOUNT_SID')
             auth_token = os.getenv('TWILIO_AUTH_TOKEN')
-            self.phone_number = os.getenv('TWILIO_PHONE_NUMBER')
+            self.from_phone = os.getenv('TWILIO_PHONE_NUMBER')
 
-            if not all([account_sid, auth_token, self.phone_number]):
+            if not all([account_sid, auth_token, self.from_phone]):
                 logger.error("Missing Twilio credentials")
                 return False
 
-            self.client = Client(account_sid, auth_token)
-            self.to_phone_number = to_phone_number
-            self.setup_complete = True
-            logger.info("Twilio notifier setup completed successfully")
-            return True
+            self.twilio_client = Client(account_sid, auth_token)
+            self.to_phone = self._validate_and_format_phone_number(to_phone_number)
+            self.setup_complete = bool(self.to_phone)
+
+            # Start notification processor
+            asyncio.create_task(self._process_notification_queue())
+
+            logger.info("Notification manager setup completed")
+            return self.setup_complete
 
         except Exception as e:
-            logger.error(f"Error setting up Twilio: {str(e)}")
+            logger.error(f"Error setting up notification manager: {str(e)}")
             return False
 
     def _validate_and_format_phone_number(self, phone_number: str) -> Optional[str]:
         """Validate and format phone number to E.164 format"""
         try:
-            # Remove any non-digit characters
             cleaned = ''.join(filter(str.isdigit, phone_number))
-
-            # Add country code if missing
             if len(cleaned) == 10:  # US number without country code
                 cleaned = '1' + cleaned
-
             if not cleaned.startswith('+'):
                 cleaned = '+' + cleaned
-
             if len(cleaned) < 10 or len(cleaned) > 15:
                 logger.error(f"Invalid phone number length: {cleaned}")
                 return None
-
             return cleaned
-
         except Exception as e:
             logger.error(f"Error formatting phone number: {str(e)}")
             return None
 
-    def send_trade_notification(self, action: str, symbol: str, price: float, quantity: float, 
-                            ml_confidence: Optional[float] = None, profit_loss: Optional[float] = None) -> bool:
-        """
-        Invia una notifica per un'operazione di trading con informazioni ML
-        """
-        if not self.setup_complete:
-            logger.warning("Notifier not setup, skipping notification")
-            return False
+    async def _process_notification_queue(self):
+        """Process queued notifications"""
+        self.is_processing = True
+        while self.is_processing:
+            try:
+                if not self.notification_queue.empty():
+                    priority, timestamp, notification = self.notification_queue.get()
+                    category = notification.get('category', NotificationCategory.SYSTEM)
 
+                    # Check rate limiting
+                    if self._should_send_notification(category, priority):
+                        await self._send_notification(notification)
+                        self.notification_history[category].append({
+                            'timestamp': datetime.now(),
+                            'priority': priority,
+                            'content': notification
+                        })
+
+                await asyncio.sleep(1)  # Prevent CPU overuse
+            except Exception as e:
+                logger.error(f"Error processing notification queue: {str(e)}")
+                await asyncio.sleep(5)  # Back off on error
+
+    def _should_send_notification(self, category: NotificationCategory, 
+                                priority: NotificationPriority) -> bool:
+        """Check if notification should be sent based on rate limits"""
+        if not self.notification_history[category]:
+            return True
+
+        last_notification = self.notification_history[category][-1]['timestamp']
+        time_since_last = (datetime.now() - last_notification).total_seconds()
+        return time_since_last >= self.rate_limits[priority]
+
+    async def _send_notification(self, notification: Dict[str, Any]) -> bool:
+        """Send notification through configured channels"""
         try:
-            message = f"🤖 Trading Bot Alert - {symbol}\n"
-            message += f"📊 Action: {action}\n"
-            message += f"💰 Price: ${price:.8f}\n"
-            message += f"📈 Quantity: {quantity:.6f}\n"
-
-            if ml_confidence is not None:
-                message += f"🎯 ML Confidence: {ml_confidence:.2%}\n"
-
-            if profit_loss is not None:
-                message += f"💸 P/L: ${profit_loss:.2f}\n"
-
-            message += f"⏰ Time: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}"
-
-            # Validate phone number before sending
-            formatted_number = self._validate_and_format_phone_number(self.to_phone_number)
-            if not formatted_number:
-                logger.error("Invalid phone number format")
+            if not self.setup_complete:
+                logger.warning("Notification manager not setup")
                 return False
 
-            self.client.messages.create(
-                body=message,
-                from_=self.phone_number,
-                to=formatted_number
-            )
+            message = self._format_notification_message(notification)
 
-            logger.info(f"Trade notification sent successfully for {symbol}")
+            # Send via SMS
+            if self.twilio_client and self.to_phone:
+                self.twilio_client.messages.create(
+                    body=message,
+                    from_=self.from_phone,
+                    to=self.to_phone
+                )
+
+            logger.info(f"Notification sent successfully: {notification.get('type', 'unknown')}")
             return True
 
         except Exception as e:
             logger.error(f"Error sending notification: {str(e)}")
             return False
 
-    def send_error_notification(self, symbol: str, error_message: str) -> bool:
-        """
-        Invia una notifica in caso di errore
-        """
-        if not self.setup_complete:
-            logger.warning("Notifier not setup, skipping error notification")
-            return False
-
+    def _format_notification_message(self, notification: Dict[str, Any]) -> str:
+        """Format notification message based on type and content"""
         try:
-            message = f"❌ Trading Bot Error - {symbol}\n"
-            message += f"⚠️ Error: {error_message}\n"
-            message += f"⏰ Time: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}"
+            message_type = notification.get('type', 'general')
+            priority = notification.get('priority', NotificationPriority.MEDIUM)
 
-            formatted_number = self._validate_and_format_phone_number(self.to_phone_number)
-            if not formatted_number:
-                logger.error("Invalid phone number format")
-                return False
+            prefix = "🚨" if priority == NotificationPriority.CRITICAL else "ℹ️"
 
-            self.client.messages.create(
-                body=message,
-                from_=self.phone_number,
-                to=formatted_number
-            )
-
-            logger.info(f"Error notification sent successfully for {symbol}")
-            return True
+            if message_type == 'trade':
+                return self._format_trade_notification(notification, prefix)
+            elif message_type == 'market':
+                return self._format_market_notification(notification, prefix)
+            elif message_type == 'system':
+                return self._format_system_notification(notification, prefix)
+            else:
+                return f"{prefix} {notification.get('message', 'No message content')}"
 
         except Exception as e:
-            logger.error(f"Error sending notification: {str(e)}")
-            return False
+            logger.error(f"Error formatting notification: {str(e)}")
+            return "Error formatting notification"
 
-    def send_analysis_alert(self, symbol: str, analysis: dict) -> bool:
-        """
-        Invia un alert per analisi di mercato significative
-        """
-        if not self.setup_complete:
-            logger.warning("Notifier not setup, skipping analysis alert")
-            return False
+    def _format_trade_notification(self, notification: Dict[str, Any], prefix: str) -> str:
+        """Format trade-specific notification"""
+        action = notification.get('action', 'UNKNOWN')
+        symbol = notification.get('symbol', 'UNKNOWN')
+        price = notification.get('price', 0.0)
+        quantity = notification.get('quantity', 0.0)
+        profit_loss = notification.get('profit_loss')
 
+        message = f"{prefix} Trade Alert - {symbol}\n"
+        message += f"📊 Action: {action}\n"
+        message += f"💰 Price: ${price:.8f}\n"
+        message += f"📈 Quantity: {quantity:.6f}\n"
+
+        if profit_loss is not None:
+            message += f"💸 P/L: ${profit_loss:.2f}\n"
+
+        message += f"⏰ {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}"
+        return message
+
+    def _format_market_notification(self, notification: Dict[str, Any], prefix: str) -> str:
+        """Format market-specific notification"""
+        symbol = notification.get('symbol', 'UNKNOWN')
+        event = notification.get('event', 'UNKNOWN')
+        details = notification.get('details', {})
+
+        message = f"{prefix} Market Alert - {symbol}\n"
+        message += f"📊 Event: {event}\n"
+
+        for key, value in details.items():
+            message += f"{key}: {value}\n"
+
+        message += f"⏰ {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}"
+        return message
+
+    def _format_system_notification(self, notification: Dict[str, Any], prefix: str) -> str:
+        """Format system-specific notification"""
+        event = notification.get('event', 'UNKNOWN')
+        status = notification.get('status', 'UNKNOWN')
+        details = notification.get('details', 'No additional details')
+
+        message = f"{prefix} System Alert\n"
+        message += f"🔧 Event: {event}\n"
+        message += f"📊 Status: {status}\n"
+        message += f"ℹ️ Details: {details}\n"
+        message += f"⏰ {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}"
+        return message
+
+    async def queue_notification(self, notification: Dict[str, Any], 
+                               priority: NotificationPriority = NotificationPriority.MEDIUM):
+        """Queue a notification for processing"""
         try:
-            message = f"📊 Market Analysis Alert - {symbol}\n"
-            message += f"🎯 ML Confidence: {analysis.get('ml_confidence', 0):.2%}\n"
-            message += f"📈 Technical Score: {analysis.get('technical_score', 0):.2f}\n"
-            message += f"🌐 Sentiment Score: {analysis.get('sentiment_score', 0):.2f}\n"
-            message += f"🚀 Viral Coefficient: {analysis.get('viral_score', 0):.2f}\n"
-            message += f"⏰ Time: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}"
-
-            formatted_number = self._validate_and_format_phone_number(self.to_phone_number)
-            if not formatted_number:
-                logger.error("Invalid phone number format")
-                return False
-
-            self.client.messages.create(
-                body=message,
-                from_=self.phone_number,
-                to=formatted_number
-            )
-
-            logger.info(f"Analysis alert sent successfully for {symbol}")
+            timestamp = time.time()
+            self.notification_queue.put((priority.value, timestamp, notification))
+            logger.debug(f"Notification queued with priority {priority}")
             return True
-
         except Exception as e:
-            logger.error(f"Error sending analysis alert: {str(e)}")
+            logger.error(f"Error queuing notification: {str(e)}")
             return False
 
-    def send_portfolio_update(self, portfolio_value: float, daily_pnl: float, 
-                          active_positions: int) -> bool:
-        """
-        Invia un aggiornamento giornaliero del portfolio
-        """
-        if not self.setup_complete:
-            logger.warning("Notifier not setup, skipping portfolio update")
-            return False
-
+    def get_notification_history(self, category: Optional[NotificationCategory] = None,
+                               limit: int = 100) -> List[Dict[str, Any]]:
+        """Get notification history for a category"""
         try:
-            message = "📊 Daily Portfolio Update\n"
-            message += f"💰 Total Value: ${portfolio_value:,.2f}\n"
-            message += f"📈 Daily P/L: ${daily_pnl:,.2f} "
-            message += f"({(daily_pnl/portfolio_value)*100:.2f}%)\n"
-            message += f"🔄 Active Positions: {active_positions}\n"
-            message += f"⏰ Time: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}"
+            if category:
+                history = self.notification_history[category]
+            else:
+                history = []
+                for cat_history in self.notification_history.values():
+                    history.extend(cat_history)
 
-            formatted_number = self._validate_and_format_phone_number(self.to_phone_number)
-            if not formatted_number:
-                logger.error("Invalid phone number format")
-                return False
-
-            self.client.messages.create(
-                body=message,
-                from_=self.phone_number,
-                to=formatted_number
-            )
-
-            logger.info("Portfolio update sent successfully")
-            return True
-
+            # Sort by timestamp and limit
+            return sorted(history, 
+                        key=lambda x: x['timestamp'],
+                        reverse=True)[:limit]
         except Exception as e:
-            logger.error(f"Error sending portfolio update: {str(e)}")
-            return False
+            logger.error(f"Error getting notification history: {str(e)}")
+            return []
+
+    async def stop(self):
+        """Stop notification processing"""
+        self.is_processing = False
+        logger.info("Notification manager stopped")

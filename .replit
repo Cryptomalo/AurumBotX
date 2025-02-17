@@ -49,6 +49,10 @@ args = "Test Meme Strategy"
 task = "workflow.run"
 args = "Streamlit Dashboard"
 
+[[workflows.workflow.tasks]]
+task = "workflow.run"
+args = "Test Notifications"
+
 [[workflows.workflow]]
 name = "Test WebSocket"
 author = 39294082
@@ -101,6 +105,20 @@ task = "packager.installForAll"
 task = "shell.exec"
 args = "streamlit run app.py --server.port 5000 --server.address 0.0.0.0"
 waitForPort = 5000
+
+[[workflows.workflow]]
+name = "Test Notifications"
+author = "agent"
+
+[workflows.workflow.metadata]
+agentRequireRestartOnSave = false
+
+[[workflows.workflow.tasks]]
+task = "packager.installForAll"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "python utils/test_notifications.py"
 
 [[ports]]
 localPort = 5000

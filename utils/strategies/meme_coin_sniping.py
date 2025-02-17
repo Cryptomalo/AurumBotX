@@ -3,7 +3,7 @@ from typing import Dict, Any, List, Optional
 from datetime import datetime, timedelta
 import logging
 from utils.learning_module import LearningModule
-from utils.notifications import TradingNotifier
+from utils.notifications import NotificationManager, NotificationPriority, NotificationCategory
 
 logger = logging.getLogger(__name__)
 
@@ -24,11 +24,11 @@ class MemeCoinStrategy:
 
         # Inizializza il modulo di machine learning e notifiche
         self.learning_module = LearningModule()
-        self.notifier = TradingNotifier()
+        self.notifier = NotificationManager()
         self.min_prediction_confidence = config.get('min_prediction_confidence', 0.7)
         self.logger = logging.getLogger(__name__)
 
-        # Setup notifiche se il numero di telefono è configurato
+        # Setup notifiche
         if config.get('phone_number'):
             self.notifier.setup(config['phone_number'])
 
@@ -68,14 +68,23 @@ class MemeCoinStrategy:
             signals = [self._create_signal(market_data, entry, success_probability)
                       for entry in entry_points]
 
-            # Notifica analisi significativa
+            # Notifica analisi significativa usando la nuova API
             if signals:
-                self.notifier.send_analysis_alert(market_data.get('symbol', 'Unknown'), {
-                    'ml_confidence': success_probability,
-                    'technical_score': token_metrics.get('momentum', 0),
-                    'sentiment_score': sentiment_data.get('score', 0),
-                    'viral_score': sentiment_data.get('viral_coefficient', 0)
-                })
+                notification_content = {
+                    'type': 'analysis',
+                    'symbol': market_data.get('symbol', 'Unknown'),
+                    'data': {
+                        'ml_confidence': success_probability,
+                        'technical_score': token_metrics.get('momentum', 0),
+                        'sentiment_score': sentiment_data.get('score', 0),
+                        'viral_score': sentiment_data.get('viral_coefficient', 0)
+                    }
+                }
+                self.notifier.send_notification(
+                    notification_content,
+                    priority=NotificationPriority.HIGH,
+                    category=NotificationCategory.MARKET
+                )
 
             self.logger.info(f"Generati {len(signals)} segnali di trading")
             return signals
@@ -306,13 +315,19 @@ class MemeCoinStrategy:
                 'confidence': signal.get('confidence', 0.5)
             })
 
-            # Invia notifica del trade
-            self.notifier.send_trade_notification(
-                action='BUY',
-                symbol=signal['symbol'],
-                price=signal['entry_price'],
-                quantity=signal['position_size'],
-                ml_confidence=signal['ml_confidence']
+            # Invia notifica del trade usando la nuova API
+            trade_notification = {
+                'type': 'trade',
+                'action': 'BUY',
+                'symbol': signal['symbol'],
+                'price': signal['entry_price'],
+                'quantity': signal['position_size'],
+                'ml_confidence': signal['ml_confidence']
+            }
+            self.notifier.send_notification(
+                trade_notification,
+                priority=NotificationPriority.HIGH,
+                category=NotificationCategory.TRADE
             )
 
             return result
@@ -320,5 +335,17 @@ class MemeCoinStrategy:
         except Exception as e:
             error_msg = f"Errore nell'esecuzione trade: {str(e)}"
             self.logger.error(error_msg)
-            self.notifier.send_error_notification(signal['symbol'], error_msg)
+
+            # Invia notifica di errore usando la nuova API
+            error_notification = {
+                'type': 'error',
+                'symbol': signal['symbol'],
+                'message': error_msg
+            }
+            self.notifier.send_notification(
+                error_notification,
+                priority=NotificationPriority.CRITICAL,
+                category=NotificationCategory.SYSTEM
+            )
+
             return {'success': False, 'error': error_msg}
