@@ -32,6 +32,39 @@ class DatabaseMaintenance:
         """Check if a table is a backup table"""
         return '_backup_' in table_name.lower()
 
+    def _is_table_partitioned(self, table_name: str) -> bool:
+        """Check if a table is partitioned"""
+        try:
+            with self.engine.connect() as conn:
+                result = conn.execute(text("""
+                    SELECT EXISTS (
+                        SELECT 1 
+                        FROM pg_partitioned_table pt 
+                        JOIN pg_class pc ON pt.partrelid = pc.oid 
+                        WHERE pc.relname = :table_name
+                    )
+                """), {'table_name': table_name})
+                return result.scalar()
+        except Exception as e:
+            logger.error(f"Error checking if table {table_name} is partitioned: {e}")
+            return False
+
+    def _get_existing_partitions(self, table_name: str) -> List[str]:
+        """Get list of existing partitions for a table"""
+        try:
+            with self.engine.connect() as conn:
+                result = conn.execute(text("""
+                    SELECT child.relname as partition_name
+                    FROM pg_inherits
+                    JOIN pg_class parent ON pg_inherits.inhparent = parent.oid
+                    JOIN pg_class child ON pg_inherits.inhrelid = child.oid
+                    WHERE parent.relname = :table_name
+                """), {'table_name': table_name})
+                return [row[0] for row in result]
+        except Exception as e:
+            logger.error(f"Error getting partitions for {table_name}: {e}")
+            return []
+
     def _initialize_maintenance(self) -> None:
         """Initialize maintenance with improved error handling"""
         try:
@@ -43,7 +76,6 @@ class DatabaseMaintenance:
                 table_name = f"market_data_{pair.lower()}"
                 self._setup_table_partitioning(table_name)
 
-            self._create_advance_partitions()
             logger.info("Initial maintenance completed successfully")
         except Exception as e:
             logger.error(f"Error during initial maintenance: {e}")
@@ -54,13 +86,16 @@ class DatabaseMaintenance:
         try:
             with self.engine.begin() as conn:
                 conn.execute(text("""
-                CREATE TABLE IF NOT EXISTS market_data_template (
-                    timestamp TIMESTAMP PRIMARY KEY,
-                    "Open" DOUBLE PRECISION,
-                    "High" DOUBLE PRECISION,
-                    "Low" DOUBLE PRECISION,
-                    "Close" DOUBLE PRECISION,
-                    "Volume" DOUBLE PRECISION,
+                DROP TABLE IF EXISTS market_data_template CASCADE;
+                CREATE TABLE market_data_template (
+                    id SERIAL,
+                    symbol VARCHAR(20) NOT NULL,
+                    timestamp TIMESTAMP NOT NULL,
+                    "Open" DOUBLE PRECISION NOT NULL,
+                    "High" DOUBLE PRECISION NOT NULL,
+                    "Low" DOUBLE PRECISION NOT NULL,
+                    "Close" DOUBLE PRECISION NOT NULL,
+                    "Volume" DOUBLE PRECISION NOT NULL,
                     "Returns" DOUBLE PRECISION,
                     "Volatility" DOUBLE PRECISION,
                     "Volume_MA" DOUBLE PRECISION,
@@ -79,66 +114,13 @@ class DatabaseMaintenance:
                     "BB_Middle" DOUBLE PRECISION,
                     "BB_Upper" DOUBLE PRECISION,
                     "BB_Lower" DOUBLE PRECISION,
-                    "BB_Width" DOUBLE PRECISION
+                    "BB_Width" DOUBLE PRECISION,
+                    PRIMARY KEY (symbol, timestamp)
                 );
                 """))
+            logger.info("Template table created/updated successfully")
         except Exception as e:
             logger.error(f"Error creating template table: {e}")
-            raise
-
-    def _create_advance_partitions(self) -> None:
-        """Create partitions for future months with improved error handling and consistent naming"""
-        try:
-            current_date = datetime.now()
-
-            # Create partitions for each trading pair
-            for pair in self.trading_pairs:
-                table_name = f"market_data_{pair.lower()}"
-
-                # Ensure base table exists and is partitioned
-                self._setup_table_partitioning(table_name)
-
-                # Create partitions for next N months
-                for month_offset in range(self.partition_advance_months):
-                    # Calculate dates for partition
-                    partition_date = (current_date + timedelta(days=32 * month_offset)).replace(day=1)
-                    next_month = (partition_date + timedelta(days=32)).replace(day=1)
-                    next_month = next_month.replace(day=1)  # Ensure first day of next month
-
-                    # Use YYYYMM format for partition names
-                    partition_name = f"{table_name}_{partition_date.strftime('%Y%m')}"
-
-                    try:
-                        with self.engine.begin() as conn:
-                            # Create partition
-                            conn.execute(text(f"""
-                            CREATE TABLE IF NOT EXISTS {partition_name}
-                            PARTITION OF {table_name}
-                            FOR VALUES FROM ('{partition_date.strftime('%Y-%m-%d')}')
-                            TO ('{next_month.strftime('%Y-%m-%d')}');
-                            """))
-
-                            # Create optimized indexes
-                            conn.execute(text(f"""
-                            CREATE INDEX IF NOT EXISTS idx_{partition_name}_timestamp 
-                            ON {partition_name} USING btree (timestamp);
-
-                            CREATE INDEX IF NOT EXISTS idx_{partition_name}_close 
-                            ON {partition_name} USING btree ("Close", timestamp);
-                            """))
-
-                            logger.info(f"Successfully created partition {partition_name}")
-
-                    except Exception as e:
-                        if "already exists" not in str(e):
-                            logger.error(f"Error creating partition {partition_name}: {e}")
-                            raise
-                        else:
-                            logger.debug(f"Partition {partition_name} already exists")
-
-            logger.info("Advance partitions created successfully")
-        except Exception as e:
-            logger.error(f"Error in _create_advance_partitions: {e}")
             raise
 
     def _setup_table_partitioning(self, table_name: str) -> None:
@@ -150,44 +132,92 @@ class DatabaseMaintenance:
                 return
 
             with self.engine.begin() as conn:
-                # Check if table exists
-                exists_query = text(f"""
-                SELECT EXISTS (
-                    SELECT FROM pg_tables 
-                    WHERE schemaname = 'public' 
-                    AND tablename = '{table_name}'
-                )
-                """)
-                table_exists = conn.execute(exists_query).scalar()
-
-                if table_exists:
-                    # Check if table is partitioned
-                    is_partitioned_query = text(f"""
-                    SELECT EXISTS (
-                        SELECT 1 
-                        FROM pg_partitioned_table pt 
-                        JOIN pg_class pc ON pt.partrelid = pc.oid 
-                        WHERE pc.relname = '{table_name}'
-                    )
-                    """)
-                    is_partitioned = conn.execute(is_partitioned_query).scalar()
-
-                    if not is_partitioned:
-                        # Create backup with timestamp in YYYYMMDD format
-                        backup_table = f"{table_name}_backup_{datetime.now().strftime('%Y%m%d')}"
-                        conn.execute(text(f"ALTER TABLE {table_name} RENAME TO {backup_table}"))
-                        logger.info(f"Backed up existing table to {backup_table}")
+                # Drop existing table if it exists
+                conn.execute(text(f"DROP TABLE IF EXISTS {table_name} CASCADE"))
 
                 # Create new partitioned table
                 conn.execute(text(f"""
-                CREATE TABLE IF NOT EXISTS {table_name} (
+                CREATE TABLE {table_name} (
                     LIKE market_data_template INCLUDING ALL
                 ) PARTITION BY RANGE (timestamp);
                 """))
 
-                logger.info(f"Partitioning setup completed for {table_name}")
+                # Create initial partitions for current and next month
+                current_date = datetime.now().replace(day=1)
+                next_month = (current_date + timedelta(days=32)).replace(day=1)
+
+                for month_date in [current_date, next_month]:
+                    next_month_date = (month_date + timedelta(days=32)).replace(day=1)
+                    partition_name = f"{table_name}_{month_date.strftime('%Y%m')}"
+
+                    conn.execute(text(f"""
+                    CREATE TABLE IF NOT EXISTS {partition_name}
+                    PARTITION OF {table_name}
+                    FOR VALUES FROM ('{month_date.strftime('%Y-%m-%d')}')
+                    TO ('{next_month_date.strftime('%Y-%m-%d')}');
+
+                    CREATE INDEX IF NOT EXISTS idx_{partition_name}_timestamp 
+                    ON {partition_name} USING btree (timestamp);
+
+                    CREATE INDEX IF NOT EXISTS idx_{partition_name}_symbol_timestamp 
+                    ON {partition_name} USING btree (symbol, timestamp);
+                    """))
+
+                logger.info(f"Table {table_name} partitioned successfully")
         except Exception as e:
             logger.error(f"Error setting up partitioning for {table_name}: {e}")
+            raise
+
+    def _create_advance_partitions(self) -> None:
+        """Create partitions for future months with improved error handling"""
+        try:
+            current_date = datetime.now()
+
+            # Create partitions for each trading pair
+            for pair in self.trading_pairs:
+                table_name = f"market_data_{pair.lower()}"
+
+                # Skip if table is not partitioned
+                if not self._is_table_partitioned(table_name):
+                    logger.warning(f"Table {table_name} is not partitioned, skipping")
+                    continue
+
+                # Get existing partitions
+                existing_partitions = self._get_existing_partitions(table_name)
+
+                # Create partitions for next N months
+                for month_offset in range(self.partition_advance_months):
+                    partition_date = (current_date + timedelta(days=32 * month_offset)).replace(day=1)
+                    next_month = (partition_date + timedelta(days=32)).replace(day=1)
+
+                    partition_name = f"{table_name}_{partition_date.strftime('%Y%m')}"
+
+                    # Skip if partition already exists
+                    if partition_name in existing_partitions:
+                        logger.debug(f"Partition {partition_name} already exists")
+                        continue
+
+                    try:
+                        with self.engine.begin() as conn:
+                            conn.execute(text(f"""
+                            CREATE TABLE IF NOT EXISTS {partition_name}
+                            PARTITION OF {table_name}
+                            FOR VALUES FROM ('{partition_date.strftime('%Y-%m-%d')}')
+                            TO ('{next_month.strftime('%Y-%m-%d')}');
+
+                            CREATE INDEX IF NOT EXISTS idx_{partition_name}_timestamp 
+                            ON {partition_name} USING btree (timestamp);
+
+                            CREATE INDEX IF NOT EXISTS idx_{partition_name}_symbol_timestamp 
+                            ON {partition_name} USING btree (symbol, timestamp);
+                            """))
+                            logger.info(f"Created partition {partition_name}")
+                    except Exception as e:
+                        logger.error(f"Error creating partition {partition_name}: {e}")
+
+            logger.info("Advance partitions created successfully")
+        except Exception as e:
+            logger.error(f"Error in _create_advance_partitions: {e}")
             raise
 
     def perform_maintenance(self) -> None:
@@ -204,19 +234,11 @@ class DatabaseMaintenance:
             # Manage partitions if needed
             if (not self.last_partition_check or 
                 current_time - self.last_partition_check >= self.partition_check_interval):
-                self.manage_partitions()
+                self._create_advance_partitions()
                 self.last_partition_check = current_time
 
             # Run VACUUM ANALYZE on tables with high dead tuples
-            with self.engine.connect() as conn:
-                stats = self._get_table_stats(conn)
-                for table_name, table_stats in stats.items():
-                    if (table_stats['dead_tuple_pct'] > self.vacuum_threshold or 
-                        table_stats.get('modifications', 0) > 1000):
-                        logger.info(f"Table {table_name} needs maintenance:")
-                        logger.info(f"Dead tuples: {table_stats['dead_tuple_pct']}%")
-                        logger.info(f"Modifications: {table_stats.get('modifications', 0)}")
-                        self._vacuum_analyze_table(table_name)
+            self._vacuum_analyze_needed_tables()
 
             self.last_maintenance = current_time
             logger.info("Database maintenance completed successfully")

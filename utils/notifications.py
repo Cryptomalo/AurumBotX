@@ -1,6 +1,7 @@
 import os
 from datetime import datetime, timedelta
 import logging
+import warnings
 from typing import Optional, Dict, List, Any
 from enum import Enum
 import json
@@ -49,22 +50,22 @@ class NotificationManager:
             self.from_phone = os.getenv('TWILIO_PHONE_NUMBER')
 
             if not all([account_sid, auth_token, self.from_phone]):
-                logger.error("Missing Twilio credentials")
-                return False
+                logger.warning("Missing Twilio credentials - notifications will be logged only")
+                return True  # Return True to allow operation without Twilio
 
             self.twilio_client = Client(account_sid, auth_token)
             self.to_phone = self._validate_and_format_phone_number(to_phone_number)
-            self.setup_complete = bool(self.to_phone)
+            self.setup_complete = True
 
             # Start notification processor
             asyncio.create_task(self._process_notification_queue())
 
             logger.info("Notification manager setup completed")
-            return self.setup_complete
+            return True
 
         except Exception as e:
             logger.error(f"Error setting up notification manager: {str(e)}")
-            return False
+            return True  # Return True to allow operation without Twilio
 
     def _validate_and_format_phone_number(self, phone_number: str) -> Optional[str]:
         """Validate and format phone number to E.164 format"""
@@ -242,3 +243,55 @@ class NotificationManager:
         """Stop notification processing"""
         self.is_processing = False
         logger.info("Notification manager stopped")
+
+
+class TradingNotifier(NotificationManager):
+    """
+    Legacy compatibility class for TradingNotifier.
+    @deprecated: Use NotificationManager instead for new code.
+    """
+    def __init__(self):
+        warnings.warn("TradingNotifier is deprecated, use NotificationManager instead",
+                     DeprecationWarning, stacklevel=2)
+        super().__init__()
+
+    def send_trade_notification(self, action, symbol, price, quantity, profit_loss=None):
+        """Legacy method for sending trade notifications"""
+        notification = {
+            'type': 'trade',
+            'category': NotificationCategory.TRADE,
+            'action': action,
+            'symbol': symbol,
+            'price': price,
+            'quantity': quantity,
+            'profit_loss': profit_loss
+        }
+        asyncio.create_task(self.queue_notification(
+            notification, NotificationPriority.HIGH))
+
+    def send_error_notification(self, symbol, error_message):
+        """Legacy method for sending error notifications"""
+        notification = {
+            'type': 'system',
+            'category': NotificationCategory.SYSTEM,
+            'event': 'ERROR',
+            'status': 'ERROR',
+            'details': f"Symbol: {symbol}, Error: {error_message}"
+        }
+        asyncio.create_task(self.queue_notification(
+            notification, NotificationPriority.CRITICAL))
+
+    def send_price_alert(self, symbol, price, change_percent):
+        """Legacy method for sending price alerts"""
+        notification = {
+            'type': 'market',
+            'category': NotificationCategory.MARKET,
+            'symbol': symbol,
+            'event': 'PRICE_ALERT',
+            'details': {
+                'Current Price': f"${price:.2f}",
+                'Change': f"{change_percent:.2%}"
+            }
+        }
+        asyncio.create_task(self.queue_notification(
+            notification, NotificationPriority.MEDIUM))

@@ -547,15 +547,12 @@ class CryptoDataLoader:
             query = """
             SELECT timestamp, open, high, low, close, volume
             FROM market_data_optimized
-            WHERE symbol = :symbol
-            AND timestamp >= :start_time
+            WHERE symbol = %s
+            AND timestamp >= %s
             ORDER BY timestamp DESC
             """
 
-            params = {
-                'symbol': symbol,
-                'start_time': datetime.fromtimestamp(start_time/1000) if start_time else None
-            }
+            params = [symbol, datetime.fromtimestamp(start_time/1000) if start_time else None]
 
             try:
                 with self.engine.begin() as conn:
