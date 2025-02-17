@@ -1,9 +1,12 @@
 import logging
 import asyncio
+import concurrent.futures
 from typing import Dict, List, Optional, Union, Any
 from datetime import datetime
 import json
 import os
+import numpy as np
+import pandas as pd
 from openai import OpenAI, RateLimitError, APIError
 
 logger = logging.getLogger(__name__)
@@ -46,7 +49,7 @@ class SentimentAnalyzer:
             self.twitter = None
             logger.warning("Twitter integration temporarily disabled")
 
-            # Telegram setup (temporarily disabled)
+            # Telegram setup (temporarily disabled) 
             self.telegram = None
             logger.info("Telegram integration temporarily disabled")
 
@@ -75,8 +78,8 @@ class SentimentAnalyzer:
                 }
 
             try:
-                # Analyze with GPT-4 if available
-                analysis = await self._analyze_with_ai(social_data) if self.openai_client else None
+                # Analyze with GPT-3.5-turbo
+                analysis = await self.analyze_with_ai(social_data) if self.openai_client else None
 
                 if analysis:
                     score = self._calculate_sentiment_score(analysis)
@@ -124,7 +127,7 @@ class SentimentAnalyzer:
 
             for subreddit in subreddits:
                 try:
-                    async def fetch_subreddit_posts():
+                    def fetch_subreddit_posts():
                         try:
                             # Use a more specific subreddit search format
                             sub = self.reddit.subreddit(subreddit)
@@ -139,7 +142,9 @@ class SentimentAnalyzer:
                     # Get posts with retry mechanism
                     for attempt in range(3):  # 3 retries
                         try:
-                            subreddit_posts = await asyncio.to_thread(fetch_subreddit_posts)
+                            # Execute synchronously since PRAW is not async-compatible
+                            subreddit_posts = await asyncio.get_event_loop().run_in_executor(None, fetch_subreddit_posts)
+
                             for post in subreddit_posts:
                                 if post and hasattr(post, 'title'):  # Verify post object is valid
                                     posts.append({
@@ -169,7 +174,7 @@ class SentimentAnalyzer:
             logger.error(f"Error getting Reddit data: {e}")
             return []
 
-    async def _analyze_with_ai(self, data: Dict[str, Any]) -> Optional[Dict[str, Any]]:
+    async def analyze_with_ai(self, data: Dict[str, Any]) -> Optional[Dict[str, Any]]:
         """Analyze social data with AI"""
         try:
             if not self.openai_client:
@@ -178,33 +183,40 @@ class SentimentAnalyzer:
             prompt = self._create_analysis_prompt(data)
 
             try:
-                completion = await asyncio.to_thread(
-                    self.openai_client.chat.completions.create,
-                    model="gpt-4",
-                    messages=[
-                        {
-                            "role": "system",
-                            "content": """You are an expert crypto market analyst. 
-                            Analyze social media data and provide market insights."""
-                        },
-                        {
-                            "role": "user",
-                            "content": prompt
-                        }
-                    ],
-                    response_format={"type": "json_object"}
-                )
+                loop = asyncio.get_event_loop()
+                with concurrent.futures.ThreadPoolExecutor() as executor:
+                    completion = await loop.run_in_executor(
+                        executor,
+                        lambda: self.openai_client.chat.completions.create(
+                            model="gpt-3.5-turbo",  # Using available model
+                            messages=[
+                                {
+                                    "role": "system",
+                                    "content": """You are an expert crypto market analyst. 
+                                    Analyze social media data and provide market insights."""
+                                },
+                                {
+                                    "role": "user",
+                                    "content": prompt
+                                }
+                            ],
+                            response_format={"type": "json_object"}
+                        )
+                    )
 
                 if completion and completion.choices:
                     result = json.loads(completion.choices[0].message.content)
                     if self._validate_ai_response(result):
                         return result
 
-            except (RateLimitError, APIError) as e:
-                logger.warning(f"OpenAI API error: {e}")
+            except RateLimitError as e:
+                logger.warning(f"OpenAI rate limit exceeded: {e}")
+                return None
+            except APIError as e:
+                logger.error(f"OpenAI API error: {e}")
                 return None
             except Exception as e:
-                logger.error(f"Error in OpenAI analysis: {e}")
+                logger.error(f"Error in AI analysis: {e}")
                 return None
 
             return None
@@ -222,7 +234,7 @@ class SentimentAnalyzer:
         }
 
         return f"""
-        Analyze the following social media data metrics:
+        Analyze the following social media metrics:
 
         Reddit Activity:
         - Total Posts: {reddit_stats['posts']}
@@ -262,9 +274,9 @@ class SentimentAnalyzer:
             base_score = sentiment_map.get(analysis.get('sentiment', 'neutral'), 0.5)
 
             # Adjust by confidence
-            confidence = analysis.get('confidence', 0.5)
+            confidence = min(max(analysis.get('confidence', 0.5), 0.0), 1.0)
 
-            # Calculate final score
+            # Calculate final score with neutral bias
             final_score = (base_score * confidence + 0.5 * (1 - confidence))
 
             return max(0.0, min(1.0, final_score))
