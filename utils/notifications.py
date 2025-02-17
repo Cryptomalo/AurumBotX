@@ -45,14 +45,16 @@ class NotificationManager:
     def setup(self, to_phone_number: str) -> bool:
         """Initialize notification channels"""
         try:
-            account_sid = os.getenv('TWILIO_ACCOUNT_SID')
-            auth_token = os.getenv('TWILIO_AUTH_TOKEN')
-            self.from_phone = os.getenv('TWILIO_PHONE_NUMBER')
+            # Get and clean credentials
+            account_sid = os.getenv('TWILIO_ACCOUNT_SID', '').strip()
+            auth_token = os.getenv('TWILIO_AUTH_TOKEN', '').strip()
+            self.from_phone = os.getenv('TWILIO_PHONE_NUMBER', '').strip()
 
             if not all([account_sid, auth_token, self.from_phone]):
                 logger.warning("Missing Twilio credentials - notifications will be logged only")
                 return True  # Return True to allow operation without Twilio
 
+            # Initialize Twilio client with cleaned credentials
             self.twilio_client = Client(account_sid, auth_token)
             self.to_phone = self._validate_and_format_phone_number(to_phone_number)
             self.setup_complete = True

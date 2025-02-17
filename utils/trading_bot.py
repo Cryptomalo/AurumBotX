@@ -33,9 +33,9 @@ class WebSocketHandler:
         self._message_buffer: List[Dict] = []
         self.buffer_size: int = 1000
         self.batch_interval: float = 1.0  # seconds
+        self.testnet: bool = True  # Add testnet attribute
 
         # OpenAI setup for error correction
-        # the newest OpenAI model is "gpt-4o" which was released May 13, 2024.
         self.openai_client = openai.OpenAI()
 
     def _initialize_db(self) -> None:
@@ -97,7 +97,6 @@ class WebSocketHandler:
                 }
             )
             await self._subscribe_channels()
-            return True
             self.connected = True
             self.last_heartbeat = time.time()
 
@@ -204,7 +203,7 @@ class WebSocketHandler:
                 self._message_buffer.append(data)
 
             current_time = time.time()
-            if (len(self._message_buffer) >= 10 or 
+            if (len(self._message_buffer) >= 10 or
                 (current_time - self.last_batch_process) > self.batch_interval):
                 await self._process_message_batch(self._message_buffer)
                 self._message_buffer = []
@@ -221,10 +220,14 @@ class WebSocketHandler:
         """Process messages in batches with optimized handling"""
         try:
             # Process messages in parallel
-            processed_data = []
+            processed_data: List[Dict] = []
             tasks = [self._preprocess_message(msg) for msg in messages]
             processed_msgs = await asyncio.gather(*tasks, return_exceptions=True)
-            processed_data = [msg for msg in processed_msgs if msg and not isinstance(msg, Exception)]
+
+            # Filter out exceptions and None values
+            for msg in processed_msgs:
+                if msg is not None and not isinstance(msg, Exception):
+                    processed_data.append(msg)
 
             if processed_data:
                 df = pd.DataFrame(processed_data)
@@ -254,6 +257,27 @@ class WebSocketHandler:
                 await self.db.insert_many(processed_data)
         except Exception as e:
             self.logger.error(f"Database insertion error: {e}")
+
+    async def _subscribe_channels(self) -> None:
+        """Subscribe to required WebSocket channels"""
+        try:
+            channels = [
+                "!ticker@arr",  # All market tickers
+                "!miniTicker@arr"  # All market mini tickers
+            ]
+
+            for channel in channels:
+                subscribe_message = {
+                    "method": "SUBSCRIBE",
+                    "params": [channel],
+                    "id": int(time.time() * 1000)
+                }
+                await self.ws.send(json.dumps(subscribe_message))
+                self.logger.info(f"Subscribed to channel: {channel}")
+
+        except Exception as e:
+            self.logger.error(f"Error subscribing to channels: {str(e)}")
+            raise
 
     def check_connection(self) -> bool:
         """Verify connection status"""

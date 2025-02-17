@@ -8,7 +8,7 @@ import concurrent.futures
 import pandas as pd
 import numpy as np
 import ccxt
-from sqlalchemy import create_engine, text
+from sqlalchemy import create_engine, text, Table, MetaData, Column, Float, DateTime
 from sqlalchemy.orm import Session
 
 logger = logging.getLogger(__name__)
@@ -233,13 +233,47 @@ class CryptoDataLoader:
 
         try:
             table_name = f"market_data_{symbol.lower().replace('/', '_')}"
-            df.to_sql(
-                table_name,
-                self.engine,
-                if_exists='append',
-                index=True
-            )
-            logger.debug(f"Saved {len(df)} rows to database for {symbol}")
+
+            # Convert timestamp index to column
+            df_to_save = df.reset_index()
+
+            # Convert all numpy/pandas types to Python native types
+            records = []
+            for record in df_to_save.to_dict('records'):
+                cleaned_record = {}
+                for key, value in record.items():
+                    if pd.isna(value):
+                        cleaned_record[key] = None
+                    elif isinstance(value, (np.integer, np.floating)):
+                        cleaned_record[key] = float(value)
+                    elif isinstance(value, pd.Timestamp):
+                        cleaned_record[key] = value.to_pydatetime()
+                    else:
+                        cleaned_record[key] = value
+                records.append(cleaned_record)
+
+            # Use SQLAlchemy core for bulk insert
+            from sqlalchemy import Table, MetaData
+            metadata = MetaData()
+            if not self.engine.dialect.has_table(self.engine, table_name):
+                # Create table if it doesn't exist
+                Table(table_name, metadata,
+                      *[Column(name, Float if name not in ['timestamp'] else DateTime)
+                        for name in df_to_save.columns],
+                      extend_existing=True)
+                metadata.create_all(self.engine)
+
+            # Bulk insert with proper data types
+            with self.engine.begin() as connection:
+                connection.execute(
+                    text(f"""
+                        INSERT INTO {table_name} ({', '.join(df_to_save.columns)})
+                        VALUES ({', '.join([':' + col for col in df_to_save.columns])})
+                    """),
+                    records
+                )
+
+            logger.debug(f"Saved {len(records)} rows to database for {symbol}")
         except Exception as e:
             logger.error(f"Database error for {symbol}: {e}", exc_info=True)
 
