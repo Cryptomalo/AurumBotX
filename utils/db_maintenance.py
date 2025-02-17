@@ -187,8 +187,8 @@ class DatabaseMaintenance:
                     partition_date = (current_date + timedelta(days=32 * month_offset)).replace(day=1)
                     next_month = (partition_date + timedelta(days=32)).replace(day=1)
 
-                    # Use standardized partition naming format
-                    partition_name = f"{table_name}_y{partition_date.year}m{partition_date.month:02d}"
+                    # Use consistent partition naming format YYYYMM
+                    partition_name = f"{table_name}_{partition_date.strftime('%Y%m')}"
 
                     # Skip if partition already exists
                     if partition_name in existing_partitions:
@@ -216,6 +216,41 @@ class DatabaseMaintenance:
             logger.info("Advance partitions created successfully")
         except Exception as e:
             logger.error(f"Error in _create_advance_partitions: {e}")
+            raise
+
+    def _create_historical_partitions(self, table_name: str, start_date: datetime, end_date: datetime = None) -> None:
+        """Create partitions for historical data"""
+        try:
+            if end_date is None:
+                end_date = datetime.now()
+
+            current_date = start_date.replace(day=1)
+            while current_date <= end_date:
+                next_month = (current_date + timedelta(days=32)).replace(day=1)
+                partition_name = f"{table_name}_{current_date.strftime('%Y%m')}"
+
+                try:
+                    with self.engine.begin() as conn:
+                        conn.execute(text(f"""
+                        CREATE TABLE IF NOT EXISTS {partition_name}
+                        PARTITION OF {table_name}
+                        FOR VALUES FROM ('{current_date.strftime('%Y-%m-%d')}')
+                        TO ('{next_month.strftime('%Y-%m-%d')}');
+
+                        CREATE INDEX IF NOT EXISTS idx_{partition_name}_timestamp 
+                        ON {partition_name} USING btree (timestamp);
+
+                        CREATE INDEX IF NOT EXISTS idx_{partition_name}_symbol_timestamp 
+                        ON {partition_name} USING btree (symbol, timestamp);
+                        """))
+                        logger.info(f"Created historical partition {partition_name}")
+                except Exception as e:
+                    logger.error(f"Error creating partition {partition_name}: {e}")
+
+                current_date = next_month
+
+        except Exception as e:
+            logger.error(f"Error in _create_historical_partitions: {e}")
             raise
 
     def perform_maintenance(self) -> None:
@@ -527,41 +562,6 @@ class DatabaseMaintenance:
         except Exception as e:
             logger.error(f"Error cleaning up old data: {str(e)}")
 
-    def _create_historical_partitions(self, table_name: str, start_date: datetime, end_date: datetime = None) -> None:
-        """Create partitions for historical data"""
-        try:
-            if end_date is None:
-                end_date = datetime.now()
-
-            current_date = start_date.replace(day=1)
-            while current_date <= end_date:
-                next_month = (current_date + timedelta(days=32)).replace(day=1)
-                partition_name = f"{table_name}_{current_date.strftime('%Y%m')}"
-
-                try:
-                    with self.engine.begin() as conn:
-                        conn.execute(text(f"""
-                        CREATE TABLE IF NOT EXISTS {partition_name}
-                        PARTITION OF {table_name}
-                        FOR VALUES FROM ('{current_date.strftime('%Y-%m-%d')}')
-                        TO ('{next_month.strftime('%Y-%m-%d')}');
-
-                        CREATE INDEX IF NOT EXISTS idx_{partition_name}_timestamp 
-                        ON {partition_name} USING btree (timestamp);
-
-                        CREATE INDEX IF NOT EXISTS idx_{partition_name}_symbol_timestamp 
-                        ON {partition_name} USING btree (symbol, timestamp);
-                        """))
-                        logger.info(f"Created historical partition {partition_name}")
-                except Exception as e:
-                    logger.error(f"Error creating partition {partition_name}: {e}")
-
-                current_date = next_month
-
-        except Exception as e:
-            logger.error(f"Error in _create_historical_partitions: {e}")
-            raise
-
     def restore_from_backup(self, backup_table: str, target_symbol: str) -> None:
         """Restore data from backup table with proper partition handling"""
         try:
@@ -612,7 +612,6 @@ class DatabaseMaintenance:
         except Exception as e:
             logger.error(f"Error restoring from backup: {e}")
             raise
-
 
 
 def setup_maintenance(db_url: Optional[str] = None) -> DatabaseMaintenance:
