@@ -11,9 +11,11 @@ import re
 logger = logging.getLogger(__name__)
 
 class TelegramScanner:
-    def __init__(self):
+    def __init__(self, api_id=None, api_hash=None):
         """Initialize TelegramScanner with session management"""
         self.session_file = "aurum_bot.session"
+        self.api_id = api_id
+        self.api_hash = api_hash
         self.client = None
         self.scanning = False
         self.detected_coins = {}
@@ -37,15 +39,21 @@ class TelegramScanner:
                 await self.client.disconnect()
                 self.client = None
 
-            # Initialize client with placeholder API credentials
+            # Initialize client with API credentials if provided, otherwise use QR
             self.client = TelegramClient(
                 self.session_file,
-                api_id=1,  # Placeholder
-                api_hash="placeholder",  # Placeholder
+                api_id=self.api_id if self.api_id else 1,
+                api_hash=self.api_hash if self.api_hash else "placeholder",
                 system_version="Windows 10",
                 device_model="Desktop",
                 app_version="1.0",
             )
+            
+            # Use API key authentication if credentials provided
+            if self.api_id and self.api_hash:
+                await self.client.start()
+            else:
+                # Use QR login as fallback
 
             # Generate QR login widget
             self.qr_login = await self.client.qr_login()
