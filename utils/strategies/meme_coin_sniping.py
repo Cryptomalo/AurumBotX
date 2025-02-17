@@ -2,6 +2,7 @@ from typing import Dict, Any, List, Optional
 from datetime import datetime, timedelta
 import logging
 from utils.learning_module import LearningModule
+from utils.notifications import TradingNotifier # Assuming TradingNotifier is here
 
 logger = logging.getLogger(__name__)
 
@@ -20,24 +21,30 @@ class MemeCoinStrategy:
         self._token_cache = {}
         self._cache_duration = timedelta(minutes=5)
 
-        # Inizializza il modulo di machine learning
+        # Inizializza il modulo di machine learning e notifiche
         self.learning_module = LearningModule()
+        self.notifier = TradingNotifier()
         self.min_prediction_confidence = config.get('min_prediction_confidence', 0.7)
+        self.logger = logging.getLogger(__name__) #Added logger to self
+
+        # Setup notifiche se il numero di telefono è configurato
+        if config.get('phone_number'):
+            self.notifier.setup(config['phone_number'])
 
     def analyze_market(self, market_data: Dict, sentiment_data: Optional[Dict] = None) -> List[Dict]:
         """Analisi ottimizzata del mercato per meme coin con predizioni ML"""
         try:
             if not market_data or not sentiment_data:
-                logger.info("Dati di mercato o sentiment mancanti")
+                self.logger.info("Dati di mercato o sentiment mancanti")
                 return []
 
             if not self._validate_basic_requirements(market_data, sentiment_data):
-                logger.info("Requisiti base non soddisfatti")
+                self.logger.info("Requisiti base non soddisfatti")
                 return []
 
             token_metrics = self._calculate_token_metrics(market_data)
             if not token_metrics['valid']:
-                logger.info("Metriche token non valide")
+                self.logger.info("Metriche token non valide")
                 return []
 
             # Prepara features per predizione ML
@@ -45,21 +52,21 @@ class MemeCoinStrategy:
             success_probability = self.learning_module.predict_success_probability(ml_features)
 
             if success_probability < self.min_prediction_confidence:
-                logger.info(f"Probabilità di successo troppo bassa: {success_probability:.2f}")
+                self.logger.info(f"Probabilità di successo troppo bassa: {success_probability:.2f}")
                 return []
 
             entry_points = self._calculate_entry_points(market_data, token_metrics, success_probability)
-            signals = [self._create_signal(market_data, entry, success_probability) 
+            signals = [self._create_signal(market_data, entry, success_probability)
                       for entry in entry_points]
 
-            logger.info(f"Generati {len(signals)} segnali di trading")
+            self.logger.info(f"Generati {len(signals)} segnali di trading")
             return signals
 
         except Exception as e:
-            logger.error(f"Errore nell'analisi del mercato: {e}")
+            self.logger.error(f"Errore nell'analisi del mercato: {e}")
             return []
 
-    def _prepare_ml_features(self, market_data: Dict, sentiment_data: Dict, 
+    def _prepare_ml_features(self, market_data: Dict, sentiment_data: Dict,
                            token_metrics: Dict) -> Dict[str, float]:
         """Prepara features per il modello ML"""
         try:
@@ -80,7 +87,7 @@ class MemeCoinStrategy:
                 )
             }
         except Exception as e:
-            logger.error(f"Errore nella preparazione features ML: {e}")
+            self.logger.error(f"Errore nella preparazione features ML: {e}")
             return {}
 
     def _validate_basic_requirements(self, market_data: Dict, sentiment_data: Dict) -> bool:
@@ -90,17 +97,17 @@ class MemeCoinStrategy:
             liquidity = market_data.get('liquidity', 0)
 
             if sentiment_score < self.sentiment_threshold:
-                logger.info(f"Sentiment score troppo basso: {sentiment_score}")
+                self.logger.info(f"Sentiment score troppo basso: {sentiment_score}")
                 return False
 
             if liquidity < self.min_liquidity * 1000:
-                logger.info(f"Liquidità troppo bassa: {liquidity}")
+                self.logger.info(f"Liquidità troppo bassa: {liquidity}")
                 return False
 
             return True
 
         except Exception as e:
-            logger.error(f"Errore nella validazione: {e}")
+            self.logger.error(f"Errore nella validazione: {e}")
             return False
 
     def _calculate_token_metrics(self, market_data: Dict) -> Dict[str, Any]:
@@ -123,11 +130,11 @@ class MemeCoinStrategy:
             }
 
         except Exception as e:
-            logger.error(f"Errore nel calcolo metriche: {e}")
+            self.logger.error(f"Errore nel calcolo metriche: {e}")
             return {'valid': False}
 
-    def _calculate_entry_points(self, market_data: Dict, metrics: Dict, 
-                              ml_confidence: float) -> List[Dict]:
+    def _calculate_entry_points(self, market_data: Dict, metrics: Dict,
+                               ml_confidence: float) -> List[Dict]:
         """Calcolo punti di ingresso con ML confidence"""
         try:
             price = metrics['price']
@@ -135,7 +142,7 @@ class MemeCoinStrategy:
 
             # Combina confidence ML con altre metriche
             confidence = min(
-                0.7 + 
+                0.7 +
                 (metrics['liquidity'] / 1000000) * 0.1 +
                 momentum * 0.2 +
                 ml_confidence * 0.3,  # Peso maggiore alla predizione ML
@@ -150,7 +157,7 @@ class MemeCoinStrategy:
             }]
 
         except Exception as e:
-            logger.error(f"Errore nel calcolo entry points: {e}")
+            self.logger.error(f"Errore nel calcolo entry points: {e}")
             return []
 
     def _create_signal(self, market_data: Dict, entry: Dict, ml_confidence: float) -> Dict:
@@ -171,7 +178,7 @@ class MemeCoinStrategy:
             }
 
         except Exception as e:
-            logger.error(f"Errore nella creazione del segnale: {e}")
+            self.logger.error(f"Errore nella creazione del segnale: {e}")
             return {}
 
     def _calculate_position_size(self, price: float, ml_confidence: float) -> float:
@@ -182,7 +189,7 @@ class MemeCoinStrategy:
             adjusted_size = base_size * (1 + (ml_confidence - 0.5))
             return min(adjusted_size, self.config.get('max_position_size', float('inf')))
         except Exception as e:
-            logger.error(f"Errore nel calcolo position size: {e}")
+            self.logger.error(f"Errore nel calcolo position size: {e}")
             return 0.0
 
     def validate_trade(self, signal: Dict[str, Any], portfolio: Dict[str, Any]) -> bool:
@@ -196,11 +203,11 @@ class MemeCoinStrategy:
                 signal.get('position_size') <= portfolio.get('total_balance', 0) * self.risk_per_trade
             )
         except Exception as e:
-            logger.error(f"Errore nella validazione trade: {e}")
+            self.logger.error(f"Errore nella validazione trade: {e}")
             return False
 
     def execute_trade(self, signal: Dict[str, Any]) -> Dict[str, Any]:
-        """Esecuzione trade con tracking ML performance"""
+        """Esecuzione trade con tracking ML performance e notifiche"""
         try:
             result = {
                 'success': True,
@@ -223,8 +230,19 @@ class MemeCoinStrategy:
                 }
             })
 
+            # Invia notifica del trade
+            self.notifier.send_trade_notification(
+                action='BUY',
+                symbol=signal['symbol'],
+                price=signal['entry_price'],
+                quantity=signal['position_size'],
+                ml_confidence=signal['ml_confidence']
+            )
+
             return result
 
         except Exception as e:
-            logger.error(f"Errore nell'esecuzione trade: {e}")
-            return {'success': False, 'error': str(e)}
+            error_msg = f"Errore nell'esecuzione trade: {str(e)}"
+            self.logger.error(error_msg)
+            self.notifier.send_error_notification(signal['symbol'], error_msg)
+            return {'success': False, 'error': error_msg}
