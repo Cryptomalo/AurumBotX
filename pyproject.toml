@@ -75,3 +75,7 @@ url = "https://download.pytorch.org/whl/cpu"
 [tool.uv.sources]
 torch = [{ index = "pytorch-cpu", marker = "platform_system == 'Linux'" }]
 torchvision = [{ index = "pytorch-cpu", marker = "platform_system == 'Linux'" }]
+
+[tool.pytest.ini_options]
+asyncio_mode = "strict"
+asyncio_default_fixture_loop_scope = "function"

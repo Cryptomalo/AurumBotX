@@ -1,14 +1,19 @@
 import pandas as pd
 import numpy as np
 import logging
-from typing import Optional, Dict, Union, List, Tuple
+from typing import Optional, Dict, Union, List, Tuple, Any
 from dataclasses import dataclass
 
-# Configure logging
+# Configure logging with proper format
 logger = logging.getLogger(__name__)
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+)
 
 @dataclass
 class MarketCondition:
+    """Data class for market conditions with type hints"""
     trend: str  # 'bullish', 'bearish', 'sideways'
     strength: float  # 0-1
     volatility: float
@@ -21,20 +26,21 @@ class TechnicalIndicators:
 
     STANDARD_COLUMNS = ['Open', 'High', 'Low', 'Close', 'Volume']
 
-    def __init__(self):
+    def __init__(self) -> None:
+        """Initialize the TechnicalIndicators class with required attributes"""
         self.logger = logging.getLogger(__name__)
-        self.cache = {}
-        self.trend_indicators = ['SMA', 'EMA', 'MACD']
-        self.momentum_indicators = ['RSI', 'Stochastic', 'MFI']
-        self.volatility_indicators = ['BB', 'ATR', 'KC']
-        self.volume_indicators = ['OBV', 'Volume_MA', 'Volume_Ratio']
+        self.cache: Dict[str, Any] = {}
+        self.trend_indicators: List[str] = ['SMA', 'EMA', 'MACD']
+        self.momentum_indicators: List[str] = ['RSI', 'Stochastic', 'MFI']
+        self.volatility_indicators: List[str] = ['BB', 'ATR', 'KC']
+        self.volume_indicators: List[str] = ['OBV', 'Volume_MA', 'Volume_Ratio']
 
     def add_sma(self, df: pd.DataFrame, period: int = 20) -> pd.DataFrame:
-        """Add Simple Moving Average"""
+        """Add Simple Moving Average with proper error handling"""
         try:
-            df = df.copy()
-            df[f'SMA_{period}'] = df['Close'].rolling(window=period).mean()
-            return df
+            df_copy = df.copy()
+            df_copy[f'SMA_{period}'] = df_copy['Close'].rolling(window=period).mean()
+            return df_copy
         except Exception as e:
             self.logger.error(f"Error adding SMA: {str(e)}")
             return df

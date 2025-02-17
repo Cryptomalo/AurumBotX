@@ -138,18 +138,6 @@ class CryptoDataLoader:
             df = df.copy()
             df = df.reset_index()
             df['timestamp'] = pd.to_datetime(df['timestamp'])
-            df['symbol'] = symbol
-
-            # Required columns with correct order and types
-            required_columns = [
-                'symbol', 'timestamp', 'Open', 'High', 'Low', 'Close', 'Volume'
-            ]
-
-            # Select only required columns in correct order
-            df = df[required_columns]
-
-            # Rename columns to match database schema
-            df.columns = ['symbol', 'timestamp', 'open', 'high', 'low', 'close', 'volume']
 
             # Process in optimized batches
             batch_size = self.BATCH_SIZE
@@ -165,65 +153,80 @@ class CryptoDataLoader:
                     for _, row in batch_df.iterrows():
                         try:
                             # Validate data types before insertion
-                            numeric_cols = ['open', 'high', 'low', 'close', 'volume']
-                            if not all(isinstance(float(row[col]), float) for col in numeric_cols):
-                                self.logger.warning(f"Invalid numeric data in row, skipping: {row}")
+                            if any(pd.isna(row[col]) for col in ['Open', 'High', 'Low', 'Close', 'Volume']):
+                                logger.warning(f"Invalid numeric data in row, skipping: {row}")
                                 continue
 
                             record = {
-                                'symbol': str(row['symbol']),
+                                'symbol': str(symbol),
                                 'timestamp': row['timestamp'].to_pydatetime(),
-                                'open': float(row['open']),
-                                'high': float(row['high']),
-                                'low': float(row['low']),
-                                'close': float(row['close']),
-                                'volume': float(row['volume'])
+                                'open': float(row['Open']),
+                                'high': float(row['High']),
+                                'low': float(row['Low']),
+                                'close': float(row['Close']),
+                                'volume': float(row['Volume'])
                             }
                             records.append(record)
                         except (ValueError, TypeError) as e:
-                            self.logger.error(f"Error converting row data: {row}, Error: {str(e)}")
+                            logger.error(f"Error converting row data: {row}, Error: {str(e)}")
                             continue
 
                     if not records:
-                        self.logger.warning(f"No valid records in batch {start_idx}-{end_idx} for {symbol}")
+                        logger.warning(f"No valid records in batch {start_idx}-{end_idx} for {symbol}")
                         continue
 
-                    # Use parameterized query with proper parameter style
-                    insert_sql = """
-                    INSERT INTO market_data (symbol, timestamp, open, high, low, close, volume)
-                    VALUES (:symbol, :timestamp, :open, :high, :low, :close, :volume)
-                    ON CONFLICT (symbol, timestamp) 
-                    DO UPDATE SET
-                        open = EXCLUDED.open,
-                        high = EXCLUDED.high,
-                        low = EXCLUDED.low,
-                        close = EXCLUDED.close,
-                        volume = EXCLUDED.volume;
+                    # Create monthly partition if it doesn't exist
+                    current_time = datetime.now()
+                    partition_date = current_time.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+                    create_partition_sql = f"""
+                    DO $$ 
+                    BEGIN
+                        IF NOT EXISTS (
+                            SELECT 1 FROM pg_class c
+                            JOIN pg_namespace n ON n.oid = c.relnamespace
+                            WHERE c.relname = 'market_data_{partition_date.strftime("%Y_%m")}'
+                        ) THEN
+                            CREATE TABLE market_data_{partition_date.strftime('%Y_%m')} 
+                            PARTITION OF market_data
+                            FOR VALUES FROM ('{partition_date}') 
+                            TO ('{(partition_date + timedelta(days=32)).replace(day=1)}');
+                        END IF;
+                    END $$;
                     """
 
                     # Execute batch insert with proper transaction handling
-                    if self.engine is not None:
-                        with self.engine.connect() as conn:
-                            with conn.begin():
-                                conn.execute(
-                                    text(insert_sql),
-                                    records
-                                )
-                    else:
-                        self.logger.error("Database engine not initialized")
-                        return
+                    with self.engine.begin() as conn:
+                        # First ensure the partition exists
+                        conn.execute(text(create_partition_sql))
 
-                    self.logger.info(f"Successfully saved batch {start_idx}-{end_idx} for {symbol}")
+                        # Then execute the insert
+                        conn.execute(
+                            text("""
+                                INSERT INTO market_data 
+                                (symbol, timestamp, open, high, low, close, volume)
+                                VALUES 
+                                (:symbol, :timestamp, :open, :high, :low, :close, :volume)
+                                ON CONFLICT (symbol, timestamp) DO UPDATE SET
+                                open = EXCLUDED.open,
+                                high = EXCLUDED.high,
+                                low = EXCLUDED.low,
+                                close = EXCLUDED.close,
+                                volume = EXCLUDED.volume
+                            """),
+                            records
+                        )
 
-                except Exception as e:
-                    self.logger.error(f"Error processing batch for {symbol}: {str(e)}")
+                    logger.info(f"Successfully saved batch {start_idx}-{end_idx} for {symbol}")
+
+                except SQLAlchemyError as e:
+                    logger.error(f"Database error processing batch for {symbol}: {str(e)}")
                     continue
 
-            self.logger.info(f"Successfully saved all {total_rows} rows for {symbol}")
+            logger.info(f"Successfully saved all {total_rows} rows for {symbol}")
 
         except Exception as e:
             error_msg = f"Database error for {symbol}: {str(e)}"
-            self.logger.error(error_msg, exc_info=True)
+            logger.error(error_msg, exc_info=True)
             raise DatabaseError(error_msg)
 
     def _process_klines_data(self, klines: List) -> pd.DataFrame:
@@ -568,37 +571,95 @@ class CryptoDataLoader:
             if cached_data is not None:
                 return cached_data
 
-            start_time = self._get_start_time(period)
+            if self.use_live_data and self.client:
+                try:
+                    # Convert period to interval if needed
+                    interval_map = {
+                        '1d': '1d',
+                        '7d': '1d',
+                        '30d': '1d',
+                        'default': '1m'
+                    }
+                    actual_interval = interval_map.get(period, interval)
 
-            # Optimize query using indexes
-            query = """
-            SELECT timestamp, open, high, low, close, volume
-            FROM market_data
-            WHERE symbol = %s
-            AND timestamp >= %s
-            ORDER BY timestamp DESC
-            """
+                    # Get klines data from Binance
+                    klines = self.client.get_klines(
+                        symbol=symbol,
+                        interval=actual_interval,
+                        limit=1000
+                    )
 
-            params = [symbol, datetime.fromtimestamp(start_time/1000) if start_time else None]
+                    if not klines:
+                        logger.warning(f"No klines data received for {symbol}")
+                        return self._get_mock_data(symbol, period, interval)
 
-            try:
-                with self.engine.begin() as conn:
-                    df = pd.read_sql(query, conn, params=params, index_col='timestamp')
+                    # Process klines data
+                    df = self._process_klines_data(klines)
+                    df = self._add_technical_indicators(df)
 
-                if df.empty:
-                    logger.warning(f"No data found for {symbol}, using mock data")
+                    # Save to database only recent data (last 90 days)
+                    if self.engine:
+                        current_time = datetime.now()
+                        cutoff_date = current_time - timedelta(days=90)
+
+                        records = []
+                        for idx, row in df.iterrows():
+                            if idx.to_pydatetime() >= cutoff_date:
+                                record = {
+                                    'symbol': symbol,
+                                    'timestamp': idx.to_pydatetime(),
+                                    'open': float(row['Open']),
+                                    'high': float(row['High']),
+                                    'low': float(row['Low']),
+                                    'close': float(row['Close']),
+                                    'volume': float(row['Volume'])
+                                }
+                                records.append(record)
+
+                        if records:
+                            try:
+                                with self.engine.begin() as conn:
+                                    # First ensure the partition exists
+                                    partition_date = current_time.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+                                    create_partition_sql = f"""
+                                    CREATE TABLE IF NOT EXISTS market_data_{partition_date.strftime('%Y_%m')} 
+                                    PARTITION OF market_data
+                                    FOR VALUES FROM ('{partition_date}') 
+                                    TO ('{(partition_date + timedelta(days=32)).replace(day=1)}');
+                                    """
+                                    conn.execute(text(create_partition_sql))
+
+                                    # Then insert the data
+                                    conn.execute(
+                                        text("""
+                                            INSERT INTO market_data 
+                                            (symbol, timestamp, open, high, low, close, volume)
+                                            VALUES 
+                                            (:symbol, :timestamp, :open, :high, :low, :close, :volume)
+                                            ON CONFLICT (symbol, timestamp) DO UPDATE SET
+                                            open = EXCLUDED.open,
+                                            high = EXCLUDED.high,
+                                            low = EXCLUDED.low,
+                                            close = EXCLUDED.close,
+                                            volume = EXCLUDED.volume
+                                        """),
+                                        records
+                                    )
+                                logger.info(f"Successfully saved {len(records)} records for {symbol}")
+                            except SQLAlchemyError as e:
+                                logger.error(f"Database error for {symbol}: {str(e)}")
+
+                    self._add_to_cache(cache_key, df)
+                    return df
+
+                except Exception as e:
+                    logger.error(f"Error fetching live data for {symbol}: {str(e)}")
                     return self._get_mock_data(symbol, period, interval)
 
-                df = self._add_technical_indicators(df)
-                self._add_to_cache(cache_key, df)
-                return df
-
-            except SQLAlchemyError as e:
-                logger.error(f"Database error for {symbol}: {str(e)}")
-                return self._get_mock_data(symbol, period, interval)
+            return self._get_mock_data(symbol, period, interval)
 
         except Exception as e:
-            logger.error(f"Error fetching data for {symbol}: {str(e)}")
+            logger.error(f"Error in get_historical_data for {symbol}: {str(e)}")
             return self._get_mock_data(symbol, period, interval)
 
     def _cleanup_old_data(self):
@@ -651,25 +712,17 @@ class CryptoDataLoader:
             # Create tasks for each symbol
             tasks = []
             for symbol in symbols:
-                tasks.append(
-                    self.get_historical_data_async(
-                        symbol=symbol,
-                        period=period,
-                        interval='1m'
-                    )
+                data = self.get_historical_data(
+                    symbol=symbol,
+                    period=period,
+                    interval='1m'
                 )
+                if isinstance(data, pd.DataFrame):
+                    logger.info(f"Successfully preloaded data for {symbol}")
+                else:
+                    logger.warning(f"Failed to preload data for {symbol}")
 
-            # Execute all tasks concurrently
-            if tasks:
-                results = await asyncio.gather(*tasks, return_exceptions=True)
-
-                # Check results
-                success_count = sum(1 for r in results if isinstance(r, pd.DataFrame))
-                logger.info(f"Successfully preloaded data for {success_count}/{len(tasks)} symbols")
-
-                return success_count >0
-
-            return False
+            return True
 
         except Exception as e:
             logger.error(f"Error preloading data: {e}", exc_info=True)
