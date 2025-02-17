@@ -7,6 +7,7 @@ from datetime import datetime, timedelta
 from telethon import TelegramClient, events
 from telethon.tl.types import Message, Channel, User, Dialog
 import re
+import os
 
 logger = logging.getLogger(__name__)
 
@@ -20,102 +21,75 @@ class TelegramScanner:
         self.scanning = False
         self.detected_coins = {}
         self.monitored_channels: Set[int] = set()
-        self.coin_patterns = [
-            r'(\$[A-Z]+)',  # Match $SYMBOL
-            r'([A-Z]{3,10})/(?:USD|USDT|ETH|BTC)\b',  # Match trading pairs
-            r'([A-Z]+) token',  # Match TOKEN token
-            r'([A-Z]+) coin',   # Match COIN coin
-            r'#([A-Z]+)\b',     # Match #SYMBOL
-            r'([A-Z]{3,10})(?:\s+(?:address|contract))',  # Match contract addresses
-            r'0x[a-fA-F0-9]{40}',  # Match Ethereum contract addresses
-        ]
-        self.qr_login = None
         self.connection_state = "disconnected"
+        self.setup_instructions = self._generate_setup_instructions()
+
+    def _generate_setup_instructions(self) -> Dict[str, str]:
+        """Generate setup instructions for the user"""
+        return {
+            "title": "🔧 Configurazione Bot Telegram",
+            "steps": [
+                "1. Vai su https://my.telegram.org/auth e accedi",
+                "2. Clicca su 'API Development Tools'",
+                "3. Crea una nuova applicazione con questi dati:",
+                "   - App title: AurumBot",
+                "   - Short name: aurum_bot",
+                "   - Platform: Desktop",
+                "   - Description: Crypto trading bot for monitoring and analysis",
+                "4. Copia l'api_id (numero) e api_hash (stringa) che ricevi",
+                "5. Inserisci questi valori nelle variabili d'ambiente:"
+                "   TELEGRAM_API_ID e TELEGRAM_API_HASH"
+            ],
+            "bot_username": "@aurum_crypto_bot",
+            "channel_link": "https://t.me/aurum_signals"
+        }
+
+    def get_setup_status(self) -> Dict[str, Union[str, Dict]]:
+        """Get current setup status and instructions"""
+        has_api_id = bool(os.getenv("TELEGRAM_API_ID"))
+        has_api_hash = bool(os.getenv("TELEGRAM_API_HASH"))
+
+        return {
+            "status": "ready" if (has_api_id and has_api_hash) else "needs_setup",
+            "connection_state": self.connection_state,
+            "credentials_status": {
+                "api_id": "configurato" if has_api_id else "mancante",
+                "api_hash": "configurato" if has_api_hash else "mancante"
+            },
+            "instructions": self.setup_instructions
+        }
 
     async def start(self) -> bool:
-        """Start Telegram client with QR login"""
+        """Start Telegram client"""
+        if not os.getenv("TELEGRAM_API_ID") or not os.getenv("TELEGRAM_API_HASH"):
+            logger.warning("Telegram API credentials not configured")
+            self.connection_state = "needs_setup"
+            return False
+
         try:
             if self.client and self.client.is_connected():
                 await self.client.disconnect()
                 self.client = None
 
-            # Initialize client with API credentials if provided, otherwise use QR
             self.client = TelegramClient(
                 self.session_file,
-                api_id=self.api_id if self.api_id else 1,
-                api_hash=self.api_hash if self.api_hash else "placeholder",
+                api_id=int(os.getenv("TELEGRAM_API_ID")),
+                api_hash=os.getenv("TELEGRAM_API_HASH"),
                 system_version="Windows 10",
                 device_model="Desktop",
                 app_version="1.0",
             )
-            
-            # Use API key authentication if credentials provided
-            if self.api_id and self.api_hash:
-                await self.client.start()
+
+            await self.client.connect()
+
+            if await self.client.is_user_authorized():
+                me = await self.client.get_me()
+                logger.info(f"Successfully logged in as {me.username if me.username else me.id}")
+                self.connection_state = "connected"
+                return True
             else:
-                # Use QR login as fallback
-
-            # Generate QR login with token
-            self.qr_login = await self.client.qr_login()
-            
-            # Generate QR code with enhanced error correction
-            qr = qrcode.QRCode(
-                version=1,
-                error_correction=qrcode.constants.ERROR_CORRECT_H,  # Higher error correction
-                box_size=10,
-                border=4
-            )
-            
-            # Add login URL to QR
-            qr.add_data(self.qr_login.url)
-            qr.make(fit=True)
-
-            # Create QR image with enhanced visibility
-            img = qr.make_image(fill_color="black", back_color="white")
-
-            # Save QR to buffer with high quality
-            buffer = io.BytesIO()
-            img.save(buffer, format='PNG', quality=95)
-            buffer.seek(0)
-
-            # Start token refresh background task
-            asyncio.create_task(self._refresh_qr_token())
-
-    async def _refresh_qr_token(self):
-        """Refresh QR token periodically to maintain login validity"""
-        while not await self.client.is_user_authorized():
-            try:
-                await asyncio.sleep(30)  # Check every 30 seconds
-                if self.qr_login and not self.qr_login.expired():
-                    await self.qr_login.refresh()
-            except Exception as e:
-                logger.error(f"Error refreshing QR token: {e}")
-                break
-
-            self.connection_state = "awaiting_qr_scan"
-            logger.info("Waiting for QR code scan...")
-
-            # Wait for user to scan QR
-            try:
-                await asyncio.wait_for(self.qr_login.wait(), timeout=120)
-                self.connection_state = "connecting"
-
-                # Start client
-                await self.client.connect()
-
-                if await self.client.is_user_authorized():
-                    me = await self.client.get_me()
-                    logger.info(f"Successfully logged in as {me.username if me.username else me.id}")
-                    self.connection_state = "connected"
-                    return True
-                else:
-                    logger.error("Failed to authorize with Telegram")
-                    self.connection_state = "unauthorized"
-                    return False
-
-            except asyncio.TimeoutError:
-                logger.error("QR code scan timeout")
-                self.connection_state = "timeout"
+                logger.error("Failed to authorize with Telegram")
+                self.connection_state = "unauthorized"
                 return False
 
         except Exception as e:
@@ -132,10 +106,8 @@ class TelegramScanner:
         if not self.client or not await self.client.is_user_authorized():
             logger.error("Client not connected or not authorized")
             return
-
         self.scanning = True
         try:
-            # Get all dialogs (channels, groups, etc.)
             all_dialogs = await self.client.get_dialogs(limit=scan_limit)
             channels = [d for d in all_dialogs if isinstance(d.entity, (Channel, User)) 
                        and d.entity.id not in self.monitored_channels]
@@ -150,7 +122,6 @@ class TelegramScanner:
                     channel_name = getattr(dialog, 'name', f"Channel {dialog.id}")
                     logger.info(f"Scanning channel: {channel_name}")
 
-                    # Get recent messages
                     messages = await self.client.get_messages(dialog.entity, limit=100)
 
                     for message in messages:
@@ -158,7 +129,6 @@ class TelegramScanner:
                             break
                         await self._process_message(message, channel_name)
 
-                    # Add to monitored channels
                     self.monitored_channels.add(dialog.entity.id)
 
                 except Exception as e:
@@ -175,18 +145,16 @@ class TelegramScanner:
         if not message.text:
             return
 
-        # Find potential coin mentions
         detected = set()
-        text = message.text.upper()  # Convert to uppercase for better matching
+        text = message.text.upper()
 
         for pattern in self.coin_patterns:
             matches = re.finditer(pattern, text, re.IGNORECASE)
             for match in matches:
                 symbol = match.group(1).upper() if len(match.groups()) > 0 else match.group(0).upper()
-                if len(symbol) >= 3 and symbol.isalnum():  # Filter valid symbols
+                if len(symbol) >= 3 and symbol.isalnum():
                     detected.add(symbol)
 
-        # Update coin tracking
         timestamp = message.date
         for symbol in detected:
             if symbol not in self.detected_coins:
@@ -195,7 +163,7 @@ class TelegramScanner:
                     'channels': {channel_name},
                     'mention_count': 1,
                     'recent_mentions': [(timestamp, channel_name)],
-                    'latest_message': message.text[:200]  # Store truncated message
+                    'latest_message': message.text[:200]
                 }
             else:
                 self.detected_coins[symbol]['mention_count'] += 1
@@ -203,7 +171,6 @@ class TelegramScanner:
                 self.detected_coins[symbol]['recent_mentions'].append(
                     (timestamp, channel_name)
                 )
-                # Keep only recent mentions (last 24 hours)
                 self.detected_coins[symbol]['recent_mentions'] = [
                     m for m in self.detected_coins[symbol]['recent_mentions']
                     if m[0] > datetime.now() - timedelta(hours=24)
@@ -215,16 +182,13 @@ class TelegramScanner:
         cutoff_time = datetime.now() - timedelta(hours=hours)
 
         for symbol, data in self.detected_coins.items():
-            # Filter recent mentions
             recent_mentions = [m for m in data['recent_mentions'] if m[0] > cutoff_time]
             recent_count = len(recent_mentions)
 
             if recent_count >= min_mentions:
-                # Calculate trending score
                 time_weights = [(datetime.now() - m[0]).total_seconds() / 3600 for m, _ in recent_mentions]
-                trending_score = sum(1 / (1 + w) for w in time_weights)  # Higher score for recent mentions
+                trending_score = sum(1 / (1 + w) for w in time_weights)
 
-                # Calculate velocity (mentions per hour)
                 if recent_mentions:
                     time_span = (max(m[0] for m, _ in recent_mentions) - min(m[0] for m, _ in recent_mentions)).total_seconds() / 3600
                     velocity = recent_count / (time_span if time_span > 0 else 1)
@@ -242,7 +206,6 @@ class TelegramScanner:
                     'latest_message': data.get('latest_message', '')
                 })
 
-        # Sort by trending score and velocity
         return sorted(trending, key=lambda x: (x['trending_score'], x['velocity']), reverse=True)
 
     async def stop(self):
@@ -258,3 +221,13 @@ class TelegramScanner:
         self.monitored_channels.clear()
         self.detected_coins.clear()
         logger.info("Monitoring state reset")
+
+    coin_patterns = [
+        r'(\$[A-Z]+)',  # Match $SYMBOL
+        r'([A-Z]{3,10})/(?:USD|USDT|ETH|BTC)\b',  # Match trading pairs
+        r'([A-Z]+) token',  # Match TOKEN token
+        r'([A-Z]+) coin',   # Match COIN coin
+        r'#([A-Z]+)\b',     # Match #SYMBOL
+        r'([A-Z]{3,10})(?:\s+(?:address|contract))',  # Match contract addresses
+        r'0x[a-fA-F0-9]{40}',  # Match Ethereum contract addresses
+    ]

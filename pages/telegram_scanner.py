@@ -1,8 +1,5 @@
 import streamlit as st
 import asyncio
-import qrcode
-import io
-from PIL import Image
 from utils.telegram_scanner import TelegramScanner
 
 async def render_telegram_scanner():
@@ -11,33 +8,42 @@ async def render_telegram_scanner():
     # Initialize scanner in session state
     if 'telegram_scanner' not in st.session_state:
         st.session_state.telegram_scanner = TelegramScanner()
-        st.session_state.scanning = False
-        st.session_state.qr_shown = False
-        st.session_state.connection_state = "disconnected"
 
     scanner = st.session_state.telegram_scanner
+    setup_status = scanner.get_setup_status()
 
-    # Login section
-    if scanner.get_connection_state() != "connected":
-        st.info("Per utilizzare lo scanner, effettua l'accesso con il tuo account Telegram")
-        st.write("Scansiona il codice QR qui sotto con l'app Telegram:")
+    # Show setup instructions
+    st.header(setup_status['instructions']['title'])
 
-        if st.button("Genera QR per Login") or st.session_state.qr_shown:
-            st.session_state.qr_shown = True
-            with st.spinner("Generazione codice QR in corso..."):
-                success = await scanner.start()
-                if success:
-                    st.success("Login effettuato con successo!")
-                    st.experimental_rerun()
-                elif scanner.get_connection_state() == "timeout":
-                    st.error("Timeout scansione QR. Riprova.")
-                    st.session_state.qr_shown = False
-                elif scanner.get_connection_state() == "error":
-                    st.error("Errore durante il login. Riprova.")
-                    st.session_state.qr_shown = False
-                else:
-                    st.warning("Login non riuscito. Assicurati di scansionare il QR con l'app Telegram.")
+    # Display credentials status
+    st.subheader("📱 Status Configurazione")
+    col1, col2 = st.columns(2)
+    with col1:
+        st.info(f"API ID: {setup_status['credentials_status']['api_id']}")
+    with col2:
+        st.info(f"API Hash: {setup_status['credentials_status']['api_hash']}")
+
+    # Show bot information
+    st.subheader("🤖 Informazioni Bot")
+    st.write(f"Username Bot: `{setup_status['instructions']['bot_username']}`")
+    st.write(f"Canale Segnali: {setup_status['instructions']['channel_link']}")
+
+    # Detailed setup instructions
+    with st.expander("📋 Istruzioni Configurazione"):
+        for step in setup_status['instructions']['steps']:
+            st.write(step)
+
+    # Connection status
+    st.subheader("🔌 Stato Connessione")
+    if setup_status['status'] == 'needs_setup':
+        st.warning("⚠️ Configurazione necessaria - Segui le istruzioni sopra per configurare le credenziali API")
+    elif setup_status['connection_state'] == 'connected':
+        st.success("✅ Bot connesso e funzionante")
     else:
+        st.error("❌ Bot non connesso - Verifica le credenziali e riprova")
+
+    # Start scanning button (only show if properly configured)
+    if setup_status['status'] == 'ready':
         # Scanning controls
         col1, col2 = st.columns(2)
         with col1:
