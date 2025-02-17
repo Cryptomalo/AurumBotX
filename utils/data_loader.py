@@ -173,35 +173,40 @@ class CryptoDataLoader:
             raise DataLoadError(error_msg)
 
     def _setup_database(self):
-        """Setup database connection with retry mechanism"""
-        for attempt in range(self.RETRY_ATTEMPTS):
-            try:
-                database_url = os.getenv('DATABASE_URL')
-                if not database_url:
-                    logger.warning("DATABASE_URL not found, running without persistent storage")
-                    self.engine = None
-                    return
-
-                # Convert URL to async format if needed
-                if not database_url.startswith('postgresql+asyncpg://'):
-                    database_url = database_url.replace('postgresql://', 'postgresql+asyncpg://')
-
-                self.engine = create_async_engine(database_url)
-                self.async_session = async_sessionmaker(
-                    self.engine, 
-                    expire_on_commit=False,
-                    class_=AsyncSession
-                )
-
-                logger.info("Database connection established successfully")
+        """Setup database connection for persistent storage"""
+        try:
+            database_url = os.getenv('DATABASE_URL')
+            if not database_url:
+                logger.warning("DATABASE_URL not found, running without persistent storage")
+                self.engine = None
                 return
 
-            except SQLAlchemyError as e:
-                error_msg = f"Database connection error (attempt {attempt + 1}/{self.RETRY_ATTEMPTS}): {str(e)}"
-                logger.error(error_msg)
-                if attempt == self.RETRY_ATTEMPTS - 1:
-                    raise DatabaseError(error_msg)
-                time.sleep(self.RETRY_DELAY)
+            # Remove sslmode from connection string if present
+            if 'sslmode=' in database_url:
+                database_url = database_url.split('?')[0]
+
+            # Convert URL to async format if needed
+            if not database_url.startswith('postgresql+asyncpg://'):
+                database_url = database_url.replace('postgresql://', 'postgresql+asyncpg://')
+
+            self.engine = create_async_engine(
+                database_url,
+                pool_pre_ping=True,
+                pool_size=5,
+                max_overflow=10
+            )
+            self.async_session = async_sessionmaker(
+                self.engine,
+                expire_on_commit=False,
+                class_=AsyncSession
+            )
+
+            logger.info("Database connection established successfully")
+            return
+
+        except Exception as e:
+            logger.error(f"Database setup error: {e}", exc_info=True)
+            self.engine = None
 
     async def _save_to_database(self, symbol: str, df: pd.DataFrame) -> None:
         """Save market data to database with optimized batch processing and retry"""
@@ -589,11 +594,11 @@ class CryptoDataLoader:
             logger.error(f"Errore in get_historical_data per {symbol}: {str(e)}")
             return None
 
-    def get_market_summary(self, symbol: str) -> Dict[str, Union[float, str]]:
+    async def get_market_summary(self, symbol: str) -> Dict[str, Union[float, str]]:
         """Get comprehensive market summary with standardized column names"""
         try:
             symbol = self._normalize_symbol(symbol)
-            df = self.get_historical_data(symbol, period='1d')
+            df = await self.get_historical_data_async(symbol, period='1d')
             if df is None or df.empty:
                 return {
                     'current_price': 0.0,
@@ -616,8 +621,8 @@ class CryptoDataLoader:
                 'volume_24h': float(df['Volume'].sum()),
                 'high_24h': float(df['High'].max()),
                 'low_24h': float(df['Low'].min()),
-                'volatility': float(df['Returns'].std() * 100) if 'Returns' in df else 0.0,
-                'rsi': float(df['RSI'].iloc[-1]) if 'RSI' in df else 0.0,
+                'volatility': float(df['Returns'].std() * 100) if 'Returns' in df.columns else 0.0,
+                'rsi': float(df['RSI'].iloc[-1]) if 'RSI' in df.columns else 0.0,
                 'trend': 'Bullish' if current_price > df['SMA_20'].iloc[-1] else 'Bearish'
             }
 
@@ -707,8 +712,7 @@ class CryptoDataLoader:
     ) -> Optional[pd.DataFrame]:
         """Async wrapper for get_historical_data with error handling"""
         try:
-            return await asyncio.to_thread(
-                self.get_historical_data,
+            return await self.get_historical_data(
                 symbol,
                 period,
                 interval,
@@ -735,12 +739,13 @@ class CryptoDataLoader:
             success_count = 0
             for symbol in symbols:
                 try:
-                    data = await asyncio.to_thread(
-                        self.get_historical_data,
+                    # Use get_historical_data directly since it's already async
+                    data = await self.get_historical_data_async(
                         symbol=symbol,
                         period=period,
                         interval='1m'
                     )
+
                     if isinstance(data, pd.DataFrame):
                         logger.info(f"Successfully preloaded data for {symbol}")
                         success_count += 1

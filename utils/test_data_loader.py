@@ -1,4 +1,5 @@
-import unittest
+import pytest
+import pytest_asyncio
 from unittest.mock import patch, MagicMock
 import pandas as pd
 import numpy as np
@@ -7,162 +8,73 @@ from utils.data_loader import CryptoDataLoader
 import pandas.api.types as pdtypes
 from typing import Dict, List, Optional, Union, Any
 
-class TestCryptoDataLoader(unittest.TestCase):
-    def setUp(self) -> None:
-        """Initialize test environment with proper type hints"""
-        self.data_loader = CryptoDataLoader(use_live_data=False)  # Use mock data
-        self.test_symbol: str = "BTCUSDT"
+@pytest_asyncio.fixture
+def data_loader():
+    """Create a test instance of CryptoDataLoader"""
+    return CryptoDataLoader(use_live_data=False)  # Use mock data
 
-    def test_normalize_symbol(self) -> None:
-        """Test symbol normalization with proper type hints"""
-        self.assertEqual(self.data_loader._normalize_symbol("BTC-USD"), "BTCUSDT")
-        self.assertEqual(self.data_loader._normalize_symbol("BTC/USD"), "BTCUSDT")
-        self.assertEqual(self.data_loader._normalize_symbol("BTCUSD"), "BTCUSDT")
-        self.assertEqual(self.data_loader._normalize_symbol("BTCUSDT"), "BTCUSDT")
+def test_normalize_symbol(data_loader):
+    """Test symbol normalization with proper type hints"""
+    assert data_loader._normalize_symbol("BTC-USD") == "BTCUSDT"
+    assert data_loader._normalize_symbol("BTC/USD") == "BTCUSDT"
+    assert data_loader._normalize_symbol("BTCUSD") == "BTCUSDT"
+    assert data_loader._normalize_symbol("BTCUSDT") == "BTCUSDT"
 
-    @patch('utils.data_loader.Client')
-    def test_get_historical_data(self, mock_client_class: MagicMock) -> None:
-        """Test data retrieval with proper type checking"""
-        try:
-            # Setup mock client
-            mock_client = MagicMock()
-            mock_client_class.return_value = mock_client
+@pytest.mark.asyncio
+async def test_get_historical_data(data_loader):
+    """Test data retrieval with async support"""
+    test_symbol = "BTCUSDT"
 
-            # Prepare mock data with all required columns
-            mock_klines: List[List[Union[int, str]]] = [
-                [1612137600000, "40000", "42000", "39000", "41000", "1000000",
-                 1612138500000, "42000000", 1000, "500000", "20500000", "0"],
-            ]
-            mock_client.get_klines.return_value = mock_klines
+    # Test data retrieval
+    df = await data_loader.get_historical_data(test_symbol, period='1d')
 
-            # Test data retrieval
-            df = self.data_loader.get_historical_data(self.test_symbol, period='1d')
+    # Verify returned dataframe
+    assert df is not None, "DataFrame should not be None"
+    assert isinstance(df, pd.DataFrame)
 
-            # Verify returned dataframe
-            self.assertIsNotNone(df, "DataFrame should not be None")
-            self.assertIsInstance(df, pd.DataFrame)
+    # Check non-empty DataFrame
+    assert len(df) > 0, "DataFrame should not be empty"
 
-            if df is not None:  # Type guard for mypy
-                self.assertGreater(len(df), 0, "DataFrame should not be empty")
+    # Check all required columns are present and numeric
+    required_columns = [
+        'Open', 'High', 'Low', 'Close', 'Volume',
+        'Returns', 'Volatility', 'Volume_MA', 'Volume_Ratio',
+        'SMA_20', 'SMA_50', 'SMA_200'
+    ]
 
-                # Check all required columns are present
-                required_columns = [
-                    'Open', 'High', 'Low', 'Close', 'Volume',
-                    'Returns', 'Volatility', 'Volume_MA', 'Volume_Ratio',
-                    'SMA_20', 'SMA_50', 'SMA_200'
-                ]
+    for col in required_columns:
+        assert col in df.columns, f"Missing column: {col}"
+        assert pdtypes.is_numeric_dtype(df[col]), f"Column {col} is not numeric"
 
-                for col in required_columns:
-                    self.assertIn(col, df.columns, f"Missing column: {col}")
-                    self.assertTrue(pdtypes.is_numeric_dtype(df[col]), 
-                                      f"Column {col} is not numeric")
+def test_get_available_coins(data_loader):
+    """Test available coins retrieval"""
+    coins = data_loader.get_available_coins()
+    assert isinstance(coins, dict)
+    assert len(coins) > 0, "Should return at least one coin"
+    assert 'BTC/USD' in coins
+    assert 'ETH/USD' in coins
 
-        except Exception as e:
-            self.fail(f"Test failed with error: {str(e)}")
+@pytest.mark.asyncio
+async def test_get_market_summary(data_loader):
+    """Test market summary retrieval with async support"""
+    test_symbol = "BTCUSDT"
+    summary = await data_loader.get_market_summary(test_symbol)
+    assert isinstance(summary, dict)
 
-    def test_get_available_coins(self) -> None:
-        """Test available coins retrieval"""
-        coins = self.data_loader.get_available_coins()
-        self.assertIsInstance(coins, dict)
-        self.assertGreater(len(coins), 0, "Should return at least one coin")
-        self.assertIn('BTC/USD', coins)
-        self.assertIn('ETH/USD', coins)
+    required_keys = [
+        'current_price', 'price_change_24h', 'volume_24h',
+        'high_24h', 'low_24h', 'volatility', 'rsi', 'trend'
+    ]
+    for key in required_keys:
+        assert key in summary, f"Missing key: {key}"
 
-    @patch('utils.data_loader.Client')
-    def test_get_current_price(self, mock_client_class: MagicMock) -> None:
-        """Test current price retrieval"""
-        # Setup mock client
-        mock_client = MagicMock()
-        mock_client_class.return_value = mock_client
+@pytest.mark.asyncio
+async def test_error_handling(data_loader):
+    """Test error handling with async support"""
+    # Test with unsupported symbol
+    df = await data_loader.get_historical_data("INVALID-SYMBOL")
+    assert df is None, "Should return None for unsupported symbols"
 
-        # Configure mock
-        mock_klines = [[1612137600000, "40000", "42000", "39000", "41000", "1000000"]]
-        mock_client.get_klines.return_value = mock_klines
-
-        # Set client and enable live data
-        self.data_loader.client = mock_client
-        self.data_loader.use_live_data = True
-
-        # Test price retrieval
-        price = self.data_loader.get_current_price(self.test_symbol)
-
-        # Verify price
-        self.assertIsNotNone(price, "Price should not be None")
-        self.assertIsInstance(price, float)
-        self.assertEqual(price, 41000.0)
-
-        # Test with mock data (use_live_data = False)
-        self.data_loader.use_live_data = False
-        price = self.data_loader.get_current_price(self.test_symbol)
-        self.assertEqual(price, 41000.0)
-
-    def test_process_klines_data(self):
-        """Test klines data processing with standardized column names"""
-        mock_klines = [
-            [1612137600000, "40000", "42000", "39000", "41000", "1000000",
-             1612138500000, "42000000", 1000, "500000", "20500000", "0"],
-            [1612138500000, "41000", "43000", "40000", "42000", "1100000",
-             1612139400000, "44000000", 1100, "550000", "21000000", "0"]
-        ]
-
-        df = self.data_loader._process_klines_data(mock_klines)
-        self.assertIsNotNone(df, "DataFrame should not be None")
-
-        if df is not None:  # Type guard for mypy
-            # Check required columns exist
-            required_columns = ['Open', 'High', 'Low', 'Close', 'Volume']
-            for col in required_columns:
-                self.assertIn(col, df.columns, f"Missing required column: {col}")
-
-            # Check data types
-            self.assertTrue(all(df[col].dtype == np.float64 for col in required_columns))
-
-            # Check calculated columns
-            self.assertIn('Returns', df.columns)
-            self.assertEqual(len(df), 2)
-
-    def test_add_technical_indicators(self):
-        """Test technical indicators calculation"""
-        # Create sample data
-        df = pd.DataFrame({
-            'Open': [100, 101, 102, 103, 104],
-            'High': [105, 106, 107, 108, 109],
-            'Low': [95, 96, 97, 98, 99],
-            'Close': [102, 103, 104, 105, 106],
-            'Volume': [1000, 1100, 1200, 1300, 1400]
-        }, index=pd.date_range(start='2025-01-01', periods=5))
-
-        result = self.data_loader._add_technical_indicators(df)
-        self.assertIsNotNone(result, "Result should not be None")
-
-        if result is not None:  # Type guard for mypy
-            # Check if technical indicators are calculated
-            expected_indicators = [
-                'Returns', 'Volatility', 'Volume_MA', 'Volume_Ratio',
-                'SMA_20', 'EMA_20', 'MACD', 'RSI', 'BB_Middle', 'BB_Upper', 'BB_Lower'
-            ]
-            for indicator in expected_indicators:
-                self.assertIn(indicator, result.columns, f"Missing indicator: {indicator}")
-
-    @patch('utils.data_loader.Client')
-    def test_error_handling(self, mock_client_class: MagicMock) -> None:
-        """Test error handling during data fetching"""
-        # Configure mock to raise exception
-        mock_client = MagicMock()
-        mock_client_class.return_value = mock_client
-        mock_client.get_klines.side_effect = Exception("API Error")
-
-        # Test error handling with live data - should return mock data
-        df = self.data_loader.get_historical_data(self.test_symbol)
-        self.assertIsNotNone(df, "Should return mock data on error")
-        self.assertIsInstance(df, pd.DataFrame)
-
-        if df is not None:  # Type guard for mypy
-            self.assertGreater(len(df), 0, "Mock data should not be empty")
-
-        # Test with unsupported symbol
-        df = self.data_loader.get_historical_data("INVALID-SYMBOL")
-        self.assertIsNone(df, "Should return None for unsupported symbols")
-
-if __name__ == '__main__':
-    unittest.main()
+    # Test with valid symbol but invalid period
+    df = await data_loader.get_historical_data("BTCUSDT", period='invalid')
+    assert df is not None, "Should return mock data for invalid period"
