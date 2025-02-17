@@ -2,7 +2,7 @@ import os
 import time
 import logging
 import asyncio
-from typing import Dict, Optional, List, Union, Tuple
+from typing import Dict, Optional, List, Union, Tuple, Callable, Any
 from datetime import datetime, timedelta
 import concurrent.futures
 
@@ -10,9 +10,10 @@ import pandas as pd
 import numpy as np
 from binance.client import Client
 from binance.exceptions import BinanceAPIException
-from sqlalchemy import create_engine, text
+from sqlalchemy import text
 from sqlalchemy.exc import SQLAlchemyError
-from sqlalchemy.orm import Session
+from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession
+from sqlalchemy.ext.asyncio import async_sessionmaker
 
 logger = logging.getLogger(__name__)
 
@@ -24,18 +25,87 @@ class DatabaseError(Exception):
     """Custom exception for database operations"""
     pass
 
+class RetryHandler:
+    """Gestisce i tentativi di retry per le operazioni critiche"""
+
+    def __init__(self, max_retries: int = 3, delay: float = 1.0, backoff: float = 2.0):
+        self.max_retries = max_retries
+        self.delay = delay
+        self.backoff = backoff
+        self.logger = logging.getLogger(__name__)
+
+    async def execute(self, operation: Callable, *args, **kwargs) -> Any:
+        """Esegue un'operazione con retry in caso di errore"""
+        last_error = None
+        current_delay = self.delay
+
+        for attempt in range(self.max_retries):
+            try:
+                if asyncio.iscoroutinefunction(operation):
+                    result = await operation(*args, **kwargs)
+                else:
+                    result = operation(*args, **kwargs)
+                return result
+            except Exception as e:
+                last_error = e
+                self.logger.warning(
+                    f"Tentativo {attempt + 1}/{self.max_retries} fallito: {str(e)}"
+                )
+                if attempt < self.max_retries - 1:
+                    await asyncio.sleep(current_delay)
+                    current_delay *= self.backoff
+
+        self.logger.error(f"Tutti i tentativi falliti: {str(last_error)}")
+        raise last_error
+
+class DataValidator:
+    """Valida i dati di mercato"""
+
+    @staticmethod
+    def validate_market_data(df: pd.DataFrame) -> bool:
+        """Verifica che il DataFrame contenga tutti i campi necessari e i tipi corretti"""
+        required_columns = {
+            'Open': np.float64,
+            'High': np.float64,
+            'Low': np.float64,
+            'Close': np.float64,
+            'Volume': np.float64
+        }
+
+        # Verifica presenza colonne
+        missing_cols = [col for col in required_columns if col not in df.columns]
+        if missing_cols:
+            logging.error(f"Colonne mancanti: {missing_cols}")
+            return False
+
+        # Verifica tipi di dati
+        for col, dtype in required_columns.items():
+            if df[col].dtype != dtype:
+                logging.error(f"Tipo non valido per {col}: {df[col].dtype} invece di {dtype}")
+                return False
+
+        # Verifica valori nulli
+        null_counts = df[required_columns.keys()].isnull().sum()
+        if null_counts.any():
+            logging.error(f"Valori nulli trovati: {null_counts[null_counts > 0]}")
+            return False
+
+        return True
+
 class CryptoDataLoader:
-    """Enhanced data loader with improved error handling and standardization"""
+    """Enhanced data loader with improved error handling"""
 
     RETRY_ATTEMPTS = 3
     RETRY_DELAY = 1  # seconds
     BATCH_SIZE = 500
 
     def __init__(self, use_live_data: bool = True, testnet: bool = True):
-        """Initialize the data loader with supported coins and advanced caching"""
+        """Initialize the data loader with retry handler and validation"""
         self.use_live_data = use_live_data
         self.testnet = testnet
-        self.client = None  # Initialize client as None
+        self.retry_handler = RetryHandler()
+        self.data_validator = DataValidator()
+        self.client = None
         self.supported_coins = {
             'BTCUSDT': 'Bitcoin',
             'ETHUSDT': 'Ethereum',
@@ -62,10 +132,10 @@ class CryptoDataLoader:
         if self.use_live_data:
             try:
                 self._setup_client()
-                logger.info("Live data client setup completed successfully")
             except Exception as e:
-                logger.warning(f"Failed to setup live data client: {e}. Falling back to mock data.")
+                logger.error(f"Errore setup client: {e}")
                 self.use_live_data = False
+
         self._setup_database()
         self.logger = logger # Added for logger access in _save_to_database
 
@@ -112,11 +182,16 @@ class CryptoDataLoader:
                     self.engine = None
                     return
 
-                self.engine = create_engine(database_url)
+                # Convert URL to async format if needed
+                if not database_url.startswith('postgresql+asyncpg://'):
+                    database_url = database_url.replace('postgresql://', 'postgresql+asyncpg://')
 
-                # Test connection
-                with self.engine.connect() as conn:
-                    conn.execute(text('SELECT 1'))
+                self.engine = create_async_engine(database_url)
+                self.async_session = async_sessionmaker(
+                    self.engine, 
+                    expire_on_commit=False,
+                    class_=AsyncSession
+                )
 
                 logger.info("Database connection established successfully")
                 return
@@ -128,14 +203,13 @@ class CryptoDataLoader:
                     raise DatabaseError(error_msg)
                 time.sleep(self.RETRY_DELAY)
 
-    def _save_to_database(self, symbol: str, df: pd.DataFrame):
-        """Save market data to database with optimized batch processing"""
+    async def _save_to_database(self, symbol: str, df: pd.DataFrame) -> None:
+        """Save market data to database with optimized batch processing and retry"""
         if not self.engine:
-            logger.warning("No database engine available, skipping save operation")
+            logger.warning("Database engine non disponibile")
             return
 
         try:
-            # Prepare DataFrame
             df = df.copy()
             df = df.reset_index()
             df['timestamp'] = pd.to_datetime(df['timestamp'])
@@ -152,7 +226,6 @@ class CryptoDataLoader:
                     records = []
                     for _, row in batch_df.iterrows():
                         try:
-                            # Validate data types before insertion
                             if any(pd.isna(row[col]) for col in ['Open', 'High', 'Low', 'Close', 'Volume']):
                                 logger.warning(f"Invalid numeric data in row, skipping: {row}")
                                 continue
@@ -175,11 +248,11 @@ class CryptoDataLoader:
                         logger.warning(f"No valid records in batch {start_idx}-{end_idx} for {symbol}")
                         continue
 
-                    # Create monthly partition if it doesn't exist
+                    # Create monthly partition if not exists
                     current_time = datetime.now()
                     try:
-                        with self.engine.begin() as conn:
-                            # First ensure the partition exists using standardized format
+                        async with self.async_session() as session:
+                            # Create partition using standardized format
                             partition_date = current_time.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
                             partition_name = f"market_data_y{partition_date.year}m{partition_date.month:02d}"
 
@@ -198,10 +271,10 @@ class CryptoDataLoader:
                                 END IF;
                             END $$;
                             """
-                            conn.execute(text(create_partition_sql))
+                            await session.execute(text(create_partition_sql))
 
-                            # Then insert the data
-                            conn.execute(
+                            # Insert data
+                            await session.execute(
                                 text("""
                                     INSERT INTO market_data 
                                     (symbol, timestamp, open, high, low, close, volume)
@@ -216,18 +289,19 @@ class CryptoDataLoader:
                                 """),
                                 records
                             )
+                            await session.commit()
 
                     except SQLAlchemyError as e:
-                        logger.error(f"Database error processing batch for {symbol}: {str(e)}")
+                        logger.error(f"Database error for batch of {symbol}: {str(e)}")
                         continue
 
-                    logger.info(f"Successfully saved batch {start_idx}-{end_idx} for {symbol}")
+                    logger.info(f"Batch {start_idx}-{end_idx} saved successfully for {symbol}")
 
                 except SQLAlchemyError as e:
-                    logger.error(f"Database error processing batch for {symbol}: {str(e)}")
+                    logger.error(f"Database error for batch of {symbol}: {str(e)}")
                     continue
 
-            logger.info(f"Successfully saved all {total_rows} rows for {symbol}")
+            logger.info(f"Successfully saved {total_rows} rows for {symbol}")
 
         except Exception as e:
             error_msg = f"Database error for {symbol}: {str(e)}"
@@ -431,6 +505,90 @@ class CryptoDataLoader:
 
         return df
 
+    async def get_historical_data(
+        self,
+        symbol: str,
+        period: str = '1d',
+        interval: str = '1m',
+        start_date: Optional[str] = None,
+        end_date: Optional[str] = None
+    ) -> Optional[pd.DataFrame]:
+        """Get historical data with improved error handling and validation"""
+        try:
+            symbol = self._normalize_symbol(symbol)
+            if symbol not in self.supported_coins:
+                logger.warning(f"Symbol non supportato: {symbol}")
+                return None
+
+            # Chiave cache che include il range di date
+            cache_key = f"{symbol}_{period}_{interval}"
+            if start_date:
+                cache_key += f"_from_{start_date}"
+            if end_date:
+                cache_key += f"_to_{end_date}"
+
+            # Prova prima dalla cache
+            cached_data = self._get_from_cache(cache_key, interval)
+            if cached_data is not None and self.data_validator.validate_market_data(cached_data):
+                return cached_data
+
+            if self.use_live_data and self.client:
+                try:
+                    # Calcola il timestamp di inizio
+                    since = None
+                    if start_date:
+                        since = int(pd.Timestamp(start_date).timestamp() * 1000)
+                    elif period:
+                        period_delta = {
+                            '1d': timedelta(days=1),
+                            '7d': timedelta(days=7),
+                            '30d': timedelta(days=30)
+                        }.get(period)
+                        if period_delta:
+                            since = int((datetime.now() - period_delta).timestamp() * 1000)
+
+                    # Recupera i dati con retry
+                    klines = await self.retry_handler.execute(
+                        self.client.get_klines,
+                        symbol=symbol,
+                        interval=interval,
+                        limit=1000,
+                        startTime=since
+                    )
+
+                    if not klines:
+                        logger.warning(f"Nessun dato ricevuto per {symbol}")
+                        return self._get_mock_data(symbol, period, interval)
+
+                    # Processa e valida i dati
+                    df = self._process_klines_data(klines)
+                    if not self.data_validator.validate_market_data(df):
+                        raise ValueError("Validazione dati fallita")
+
+                    # Filtra per data di fine se specificata
+                    if end_date:
+                        end_timestamp = pd.Timestamp(end_date)
+                        df = df[df.index <= end_timestamp]
+
+                    # Aggiungi indicatori tecnici
+                    df = self._add_technical_indicators(df)
+
+                    # Salva in cache e database
+                    self._add_to_cache(cache_key, df)
+                    await self.retry_handler.execute(self._save_to_database, symbol, df)
+
+                    return df
+
+                except Exception as e:
+                    logger.error(f"Errore nel recupero dati live per {symbol}: {str(e)}")
+                    return self._get_mock_data(symbol, period, interval)
+
+            return self._get_mock_data(symbol, period, interval)
+
+        except Exception as e:
+            logger.error(f"Errore in get_historical_data per {symbol}: {str(e)}")
+            return None
+
     def get_market_summary(self, symbol: str) -> Dict[str, Union[float, str]]:
         """Get comprehensive market summary with standardized column names"""
         try:
@@ -561,121 +719,6 @@ class CryptoDataLoader:
             error_msg = f"Error in async historical data fetch: {str(e)}"
             logger.error(error_msg, exc_info=True)
             raise DataLoadError(error_msg)
-
-    def get_historical_data(
-        self,
-        symbol: str,
-        period: str = '1d',
-        interval: str = '1m',
-        start_date: Optional[str] = None,
-        end_date: Optional[str] = None
-    ) -> Optional[pd.DataFrame]:
-        """Get historical data using optimized queries"""
-        try:
-            symbol = self._normalize_symbol(symbol)
-            if symbol not in self.supported_coins:
-                logger.warning(f"Unsupported symbol: {symbol}")
-                return None
-
-            # Update cache key to include date range
-            cache_key = f"{symbol}_{period}_{interval}"
-            if start_date:
-                cache_key += f"_from_{start_date}"
-            if end_date:
-                cache_key += f"_to_{end_date}"
-
-            cached_data = self._get_from_cache(cache_key, interval)
-            if cached_data is not None:
-                return cached_data
-
-            if self.use_live_data and self.client:
-                try:
-                    # Convert period to interval if needed
-                    actual_interval = interval
-
-                    # Convert dates to timestamp if provided
-                    since = None
-                    if start_date:
-                        since = int(pd.Timestamp(start_date).timestamp() * 1000)
-                    elif period == '1d':
-                        since = int((datetime.now() - timedelta(days=1)).timestamp() * 1000)
-                    elif period == '7d':
-                        since = int((datetime.now() - timedelta(days=7)).timestamp() * 1000)
-                    elif period == '30d':
-                        since = int((datetime.now() - timedelta(days=30)).timestamp() * 1000)
-
-                    # Get klines data from Binance
-                    klines = self.client.get_klines(
-                        symbol=symbol,
-                        interval=actual_interval,
-                        limit=1000,
-                        startTime=since
-                    )
-
-                    if not klines:
-                        logger.warning(f"No klines data received for {symbol}")
-                        return self._get_mock_data(symbol, period, interval)
-
-                    # Process klines data
-                    df = self._process_klines_data(klines)
-
-                    # Filter by end date if provided
-                    if end_date:
-                        end_timestamp = pd.Timestamp(end_date)
-                        df = df[df.index <= end_timestamp]
-
-                    df = self._add_technical_indicators(df)
-
-                    # Save to database and cache
-                    self._add_to_cache(cache_key, df)
-                    self._save_to_database(symbol, df)
-
-                    return df
-
-                except Exception as e:
-                    logger.error(f"Error fetching live data for {symbol}: {str(e)}")
-                    return self._get_mock_data(symbol, period, interval)
-
-            return self._get_mock_data(symbol, period, interval)
-
-        except Exception as e:
-            logger.error(f"Error in get_historical_data for {symbol}: {str(e)}")
-            return self._get_mock_data(symbol, period, interval)
-
-    def _cleanup_old_data(self):
-        """Clean up old market data to maintain performance"""
-        try:
-            cleanup_sql = """
-            DELETE FROM market_data_optimized 
-            WHERE timestamp < CURRENT_TIMESTAMP - INTERVAL '90 days'
-            AND id NOT IN (
-                SELECT id FROM market_data_optimized
-                WHERE timestamp >= CURRENT_TIMESTAMP - INTERVAL '90 days'
-                ORDER BY timestamp DESC
-                LIMIT 1000000
-            );
-            """
-
-            with self.engine.begin() as conn:
-                conn.execute(text(cleanup_sql))
-                logger.info("Successfully cleaned up old market data")
-
-        except SQLAlchemyError as e:
-            logger.error(f"Error cleaning up old data: {str(e)}")
-
-    def _optimize_table_stats(self):
-        """Update table statistics for query optimization"""
-        try:
-            analyze_sql = """
-            ANALYZE market_data_optimized;
-            """
-
-            with self.engine.begin() as conn:
-                conn.execute(text(analyze_sql))
-                logger.info("Successfully updated table statistics")
-
-        except SQLAlchemyError as e:
-            logger.error(f"Error updating table statistics: {str(e)}")
 
     async def preload_data(self, period: str = '30d') -> bool:
         """

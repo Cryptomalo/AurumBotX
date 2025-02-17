@@ -27,7 +27,7 @@ class SwingTradingStrategy(BaseStrategy):
 
     async def analyze_market(
         self, 
-        market_data: pd.DataFrame, 
+        market_data: pd.DataFrame,
         sentiment_data: Optional[Dict] = None
     ) -> List[Dict[str, Any]]:
         """Analyze market for swing trading opportunities"""
@@ -62,11 +62,7 @@ class SwingTradingStrategy(BaseStrategy):
             volume_ratio = df['Volume'].iloc[-1] / volume_trend
 
             # Sentiment analysis with fallback
-            sentiment_score = (
-                await self._analyze_market_sentiment()
-                if self.has_sentiment
-                else await self._technical_sentiment(df)
-            )
+            sentiment_score = await self._analyze_market_sentiment() if self.has_sentiment else await self._technical_sentiment(df)
 
             # Generate signals based on analysis
             signal = self.generate_signals({
@@ -241,7 +237,7 @@ class SwingTradingStrategy(BaseStrategy):
         except Exception as e:
             logger.error(f"Trade execution error: {str(e)}")
             return {
-                'success': False,
+                'success': False, 
                 'error': str(e),
                 'timestamp': pd.Timestamp.now().isoformat()
             }
