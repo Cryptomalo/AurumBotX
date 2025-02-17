@@ -512,15 +512,29 @@ class StrategyManager:
         return self.strategy_performance
 
     def optimize_strategies(self, market_conditions: Dict) -> None:
-        """Ottimizza strategie con reinforcement learning"""
+        """Ottimizza strategie con dynamic learning"""
         try:
             for strategy_name, strategy in self.active_strategies.items():
                 # Analisi performance
                 perf = self.strategy_performance[strategy_name]
                 
-                # Reinforcement learning per ottimizzazione parametri
+                # Dynamic learning per ottimizzazione parametri
                 if perf['sharpe_ratio'] < 1.5:
-                    self._optimize_with_rl(strategy, market_conditions)
+                    self._optimize_dynamic(strategy, market_conditions)
+                    
+                # Adatta strategia in base al mercato
+                if market_conditions['volatility'] > 0.02:
+                    strategy.config.update({
+                        'volume_threshold': strategy.config.get('volume_threshold', 1000000) * 1.2,
+                        'min_profit': strategy.config.get('min_profit', 0.005) * 1.3,
+                        'stop_loss': strategy.config.get('stop_loss', 0.003) * 1.2
+                    })
+                else:
+                    strategy.config.update({
+                        'volume_threshold': strategy.config.get('volume_threshold', 1000000) * 0.8,
+                        'min_profit': strategy.config.get('min_profit', 0.005) * 0.8,
+                        'stop_loss': strategy.config.get('stop_loss', 0.003) * 0.9
+                    })
                     
                 # Adatta aggressività alla volatilità
                 volatility = market_conditions.get('volatility', 0)
