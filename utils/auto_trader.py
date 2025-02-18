@@ -279,12 +279,17 @@ class AutoTrader:
                 }
                 self.last_action_time = current_time
 
-                if self.notifier:
+                if self.notifier and not self.testnet:
                     try:
-                        await self.notifier.send_trade_notification('BUY', self.symbol, price, position_size)
+                        notification = {
+                            'action': 'BUY',
+                            'symbol': self.symbol,
+                            'price': price,
+                            'size': position_size
+                        }
+                        await self.notifier.send_notification(notification)
                     except Exception as e:
                         self.logger.error(f"Notification error (non-critical): {str(e)}")
-                        # Continue execution even if notification fails
 
                 return {'success': True, 'action': 'buy', 'price': price, 'size': position_size}
 
@@ -304,14 +309,18 @@ class AutoTrader:
                         f"Balance={self.balance:.2f}"
                     )
 
-                    if self.notifier:
+                    if self.notifier and not self.testnet:
                         try:
-                            await self.notifier.send_trade_notification(
-                                'SELL', self.symbol, price, position_size, profit_loss
-                            )
+                            notification = {
+                                'action': 'SELL',
+                                'symbol': self.symbol,
+                                'price': price,
+                                'size': position_size,
+                                'profit_loss': profit_loss
+                            }
+                            await self.notifier.send_notification(notification)
                         except Exception as e:
                             self.logger.error(f"Notification error (non-critical): {str(e)}")
-                            # Continue execution even if notification fails
 
                     self.is_in_position = False
                     self.current_position = None
@@ -322,12 +331,16 @@ class AutoTrader:
 
         except Exception as e:
             self.logger.error(f"Trade execution error: {str(e)}")
-            if self.notifier:
+            if self.notifier and not self.testnet:
                 try:
-                    await self.notifier.send_error_notification(self.symbol, str(e))
+                    error_notification = {
+                        'type': 'error',
+                        'symbol': self.symbol,
+                        'error': str(e)
+                    }
+                    await self.notifier.send_notification(error_notification)
                 except Exception as notify_error:
                     self.logger.error(f"Error notification failed: {str(notify_error)}")
-                    # Continue execution even if notification fails
             return {'success': False, 'error': str(e)}
 
     async def run(self, interval: int = 3600):
@@ -356,7 +369,6 @@ class AutoTrader:
                     await self.notifier.send_error_notification(self.symbol, str(e))
                 except Exception as notify_error:
                     self.logger.error(f"Error notification failed: {str(notify_error)}")
-                    # Continue execution even if notification fails
             self.stop()
         finally:
             self.logger.info(f"Bot stopped. Final balance: {self.balance}")

@@ -12,6 +12,7 @@ import time
 from datetime import datetime
 from typing import Dict, Any, List, Optional
 from utils.indicators import TechnicalIndicators
+import random
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -139,9 +140,9 @@ class PredictionModel:
             self.logger.error(f"Error preparing data: {str(e)}")
             raise
 
-    def train(self, data: Any, target_column: str = 'Close',
-              prediction_horizon: int = 5) -> Optional[Dict[str, Any]]:
-        """Train ensemble models with improved error handling"""
+    async def train_async(self, data: Any, target_column: str = 'Close',
+                         prediction_horizon: int = 5) -> Optional[Dict[str, Any]]:
+        """Asynchronous version of train method"""
         try:
             X, y = self.prepare_data(data, target_column, prediction_horizon)
 
@@ -158,14 +159,15 @@ class PredictionModel:
             tscv = TimeSeriesSplit(n_splits=5)
             cv_scores = {name: [] for name in self.models.keys()}
 
-            # Train and evaluate
+            # Train and evaluate asynchronously
             for train_idx, val_idx in tscv.split(X_scaled):
                 X_train, X_val = X_scaled[train_idx], X_scaled[val_idx]
                 y_train, y_val = y.iloc[train_idx], y.iloc[val_idx]
 
                 for name, model in self.models.items():
-                    model.fit(X_train, y_train)
-                    pred = model.predict(X_val)
+                    # Train model asynchronously
+                    await asyncio.to_thread(model.fit, X_train, y_train)
+                    pred = await asyncio.to_thread(model.predict, X_val)
                     score = r2_score(y_val, pred)
                     cv_scores[name].append(score)
 
@@ -183,16 +185,16 @@ class PredictionModel:
             return self.metrics
 
         except Exception as e:
-            self.logger.error(f"Training error: {str(e)}")
+            self.logger.error(f"Async training error: {str(e)}")
             return None
 
-    def predict(self, data: Any, target_column: str = 'Close',
-               prediction_horizon: int = 5) -> Optional[Dict[str, Any]]:
-        """Generate predictions with comprehensive error handling"""
+    async def predict_async(self, data: Any, target_column: str = 'Close',
+                          prediction_horizon: int = 5) -> Optional[Dict[str, Any]]:
+        """Asynchronous version of predict method"""
         try:
             if not self.models:
                 self.logger.warning("Models not trained. Training now...")
-                if self.train(data, target_column, prediction_horizon) is None:
+                if await self.train_async(data, target_column, prediction_horizon) is None:
                     raise ValueError("Model training failed")
 
             # Convert dict to DataFrame if necessary
@@ -209,9 +211,9 @@ class PredictionModel:
             predictions = {}
             weights = {'rf': 0.6, 'gb': 0.4}
 
-            # Get predictions
+            # Get predictions asynchronously
             for name, model in self.models.items():
-                predictions[name] = model.predict(X_scaled)
+                predictions[name] = await asyncio.to_thread(model.predict, X_scaled)
 
             # Weighted ensemble
             weighted_pred = np.zeros(len(X))
@@ -231,7 +233,7 @@ class PredictionModel:
             }
 
         except Exception as e:
-            self.logger.error(f"Prediction error: {str(e)}")
+            self.logger.error(f"Async prediction error: {str(e)}")
             return None
 
     def save_model(self, path: str):
@@ -363,7 +365,7 @@ class PredictionModel:
             technical_prediction = None
             for attempt in range(3):
                 try:
-                    technical_prediction = self.predict(market_features)
+                    technical_prediction = await self.predict_async(market_features)
                     if technical_prediction is not None:
                         break
                 except Exception as e:
@@ -522,62 +524,76 @@ class PredictionModel:
         )
 
     async def _get_openai_analysis(self, market_context: str) -> Dict[str, Any]:
-        """Get market analysis from OpenAI with improved error handling"""
-        try:
-            if not self.openai_client:
-                return {
-                    'signal': 'hold',
-                    'confidence': 0.5,
-                    'sentiment': 0.5,
-                    'reasoning': 'OpenAI client not configured'
-                }
+        """Get market analysis from OpenAI with improved error handling and rate limiting"""
+        if not self.openai_client:
+            return {
+                'signal': 'hold',
+                'confidence': 0.5,
+                'sentiment': 0.5,
+                'reasoning': 'OpenAI client not configured'
+            }
 
-            retries = 3
-            for attempt in range(retries):
-                try:
-                    response = await asyncio.to_thread(
-                        self.openai_client.chat.completions.create,
-                        model="gpt-4o",  # the newest OpenAI model is "gpt-4o" which was released May 13, 2024
-                        messages=[
-                            {
-                                "role": "system",
-                                "content": (
-                                    "You are an expert crypto market analyst. Analyze the given market data "
-                                    "and provide a trading signal with confidence score. Respond in JSON format."
-                                )
-                            },
-                            {
-                                "role": "user",
-                                "content": f"Analyze this market data and provide trading signals:\n{market_context}"
-                            }
-                        ],
-                        response_format={"type": "json_object"}
-                    )
+        max_retries = 5
+        base_delay = 1.0
 
+        for attempt in range(max_retries):
+            try:
+                # Calculate exponential backoff delay
+                delay = base_delay * (2 ** attempt)
+
+                # Add jitter to avoid thundering herd
+                jitter = random.uniform(0, 0.1)
+                total_delay = delay + jitter
+
+                if attempt > 0:
+                    self.logger.info(f"Retrying OpenAI request in {total_delay:.2f} seconds (attempt {attempt + 1})")
+                    await asyncio.sleep(total_delay)
+
+                response = await asyncio.to_thread(
+                    self.openai_client.chat.completions.create,
+                    model="gpt-4",
+                    messages=[
+                        {
+                            "role": "system",
+                            "content": (
+                                "You are an expert crypto market analyst. Analyze the given market data "
+                                "and provide a trading signal with confidence score. Respond in JSON format."
+                            )
+                        },
+                        {
+                            "role": "user",
+                            "content": f"Analyze this market data and provide trading signals:\n{market_context}"
+                        }
+                    ],
+                    response_format={"type": "json_object"}
+                )
+
+                if response and response.choices:
                     return json.loads(response.choices[0].message.content)
 
-                except Exception as e:
-                    self.logger.warning(f"OpenAI analysis attempt {attempt + 1} failed: {e}")
-                    if attempt == retries - 1:
-                        raise
-                    await asyncio.sleep(1 * (attempt + 1))  # Exponential backoff
+            except Exception as e:
+                error_msg = str(e).lower()
+                if "rate limit" in error_msg:
+                    if attempt == max_retries - 1:
+                        self.logger.error("OpenAI rate limit exceeded after all retries")
+                        break
+                    continue
+                elif "timeout" in error_msg or "connection" in error_msg:
+                    if attempt == max_retries - 1:
+                        self.logger.error(f"OpenAI request failed after {max_retries} retries: {e}")
+                        break
+                    continue
+                else:
+                    self.logger.error(f"Unexpected OpenAI error: {e}")
+                    break
 
-            # If all retries failed, return a fallback response
-            return {
-                'signal': 'hold',
-                'confidence': 0.5,
-                'sentiment': 0.5,
-                'reasoning': 'Analysis failed after all retries'
-            }
-
-        except Exception as e:
-            self.logger.error(f"OpenAI analysis error: {str(e)}")
-            return {
-                'signal': 'hold',
-                'confidence': 0.5,
-                'sentiment': 0.5,
-                'reasoning': 'Analysis failed, defaulting to neutral position'
-            }
+        # Fallback response if all retries failed
+        return {
+            'signal': 'hold',
+            'confidence': 0.5,
+            'sentiment': 0.5,
+            'reasoning': 'Analysis failed, using technical signals only'
+        }
 
     def _calculate_confidence(self, technical_pred: Dict[str, Any], ai_analysis: Dict[str, Any]) -> float:
         """Calculate overall confidence score"""

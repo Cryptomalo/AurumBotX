@@ -5,11 +5,13 @@ import os
 import signal
 import sys
 from typing import Optional, Dict, Any
+from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession
+from sqlalchemy.ext.asyncio import async_sessionmaker
 from sqlalchemy import text
+from utils.database import Database
 from utils.trading_bot import WebSocketHandler
 from utils.strategies.strategy_manager import StrategyManager
 from utils.sentiment_analyzer import SentimentAnalyzer
-from utils.database import Database, get_db
 from utils.data_loader import CryptoDataLoader
 from utils.auto_optimizer import AutoOptimizer
 from utils.backup_manager import BackupManager
@@ -18,6 +20,7 @@ from utils.risk_management import RiskManager
 from utils.learning_module import LearningModule
 from utils.ai_trading import AITrading
 from utils.dashboard import TradingDashboard
+from utils.database_manager import DatabaseManager
 
 def setup_test_environment():
     """Setup test environment variables if not present"""
@@ -34,7 +37,7 @@ def setup_test_environment():
             os.environ[key] = value
             logging.info(f"Set test environment variable: {key}")
 
-# Setup logging with more verbose output
+# Setup logging
 log_filename = f'test_bot_{datetime.now().strftime("%Y%m%d_%H%M%S")}.log'
 logging.basicConfig(
     level=logging.DEBUG,
@@ -49,21 +52,21 @@ logger = logging.getLogger(__name__)
 class TestBot:
     def __init__(self):
         logger.info("Initializing TestBot...")
-        self.db: Optional[Database] = None
-        self.websocket_handler: Optional[WebSocketHandler] = None
-        self.strategy_manager: Optional[StrategyManager] = None
-        self.sentiment_analyzer: Optional[SentimentAnalyzer] = None
-        self.data_loader: Optional[CryptoDataLoader] = None
-        self.auto_optimizer: Optional[AutoOptimizer] = None
-        self.backup_manager: Optional[BackupManager] = None
-        self.dex_sniper: Optional[DexSniper] = None
-        self.risk_manager: Optional[RiskManager] = None
-        self.learning_module: Optional[LearningModule] = None
-        self.ai_trading: Optional[AITrading] = None
-        self.dashboard: Optional[TradingDashboard] = None
-        self.should_run: bool = True
-        self.test_duration: timedelta = timedelta(minutes=10)  # Reduced for testing
-        self.start_time: datetime = datetime.now()
+        self.db_manager = DatabaseManager()
+        self.websocket_handler = None
+        self.strategy_manager = None
+        self.sentiment_analyzer = None
+        self.data_loader = None
+        self.auto_optimizer = None
+        self.backup_manager = None
+        self.dex_sniper = None
+        self.risk_manager = None
+        self.learning_module = None
+        self.ai_trading = None
+        self.dashboard = None
+        self.should_run = True
+        self.test_duration = timedelta(minutes=10)
+        self.start_time = datetime.now()
         self.trade_results = []
         setup_test_environment()
         self.setup_signal_handlers()
@@ -78,41 +81,28 @@ class TestBot:
         signal.signal(signal.SIGINT, handle_signal)
         signal.signal(signal.SIGTERM, handle_signal)
 
+    async def initialize_database(self) -> bool:
+        """Initialize database connection with proper async support"""
+        try:
+            logger.info("Initializing database connection...")
+            db_url = os.environ.get('DATABASE_URL')
+            if not db_url:
+                logger.error("DATABASE_URL not set")
+                return False
+
+            return await self.db_manager.initialize(db_url)
+
+        except Exception as e:
+            logger.error(f"Database initialization error: {str(e)}")
+            return False
+
     async def db_health_check(self) -> bool:
-        """Verify database health with proper session handling"""
-        if not self.db:
-            logger.error("Database not initialized during health check")
-            raise ValueError("Database not initialized")
-
-        max_attempts = 3
-        retry_delay = 5
-
-        for attempt in range(max_attempts):
-            try:
-                logger.info(f"Database health check attempt {attempt + 1}")
-                db_session = self.db.get_session()
-                try:
-                    logger.debug("Executing test query...")
-                    db_session.execute(text("SELECT 1"))
-                    db_session.commit()
-                    logger.info("Database health check passed")
-                    return True
-                except Exception as e:
-                    logger.error(f"Test query failed: {str(e)}")
-                    db_session.rollback()
-                    raise
-                finally:
-                    db_session.close()
-
-            except Exception as e:
-                logger.error(f"Database health check attempt {attempt + 1} failed: {str(e)}")
-                if attempt < max_attempts - 1:
-                    logger.info(f"Waiting {retry_delay}s before next attempt...")
-                    await asyncio.sleep(retry_delay)
-                    retry_delay *= 2
-
-        logger.error("Database health check failed after all attempts")
-        return False
+        """Verify database health"""
+        try:
+            return await self.db_manager.verify_connection()
+        except Exception as e:
+            logger.error(f"Database health check failed: {str(e)}")
+            return False
 
     async def initialize_components(self) -> bool:
         """Initialize all components with proper error handling"""
@@ -120,21 +110,8 @@ class TestBot:
             logger.info("Initializing components...")
 
             # Initialize database first
-            db_url = os.environ.get('DATABASE_URL')
-            if not db_url:
-                logger.error("DATABASE_URL not set")
-                return False
-
-            try:
-                self.db = Database(db_url)
-                if not self.db.connect():  # Use new connect method
-                    logger.error("Database connection failed")
-                    return False
-                if not await self.db_health_check():
-                    return False
-                logger.info("Database initialized successfully")
-            except Exception as e:
-                logger.error(f"Database connection error: {str(e)}")
+            if not await self.initialize_database():
+                logger.error("Database initialization failed")
                 return False
 
             # Initialize other components
@@ -142,13 +119,13 @@ class TestBot:
                 self.data_loader = CryptoDataLoader(use_live_data=False)
                 await self.data_loader.preload_data()
 
-                self.websocket_handler = WebSocketHandler(logger, self.db)
+                self.websocket_handler = WebSocketHandler(logger, self.db_manager.engine) #Modified this line
                 self.strategy_manager = StrategyManager()
                 await self.strategy_manager.configure_for_live_testing()
 
                 self.sentiment_analyzer = SentimentAnalyzer()
                 self.backup_manager = BackupManager()
-                self.auto_optimizer = AutoOptimizer(self.db, self.strategy_manager)
+                self.auto_optimizer = AutoOptimizer(self.db_manager.engine, self.strategy_manager) #Modified this line
                 self.dex_sniper = DexSniper(testnet=True)
                 self.risk_manager = RiskManager()
                 self.learning_module = LearningModule()
@@ -257,8 +234,34 @@ class TestBot:
         except Exception as e:
             logger.error(f"Error generating test report: {e}")
 
+    async def cleanup(self):
+        """Cleanup resources"""
+        try:
+            logger.info("Starting cleanup process...")
+
+            if self.db_manager:
+                await self.db_manager.cleanup()
+
+            if self.websocket_handler:
+                await self.websocket_handler.cleanup()
+
+            if self.strategy_manager:
+                await self.strategy_manager.cleanup()
+
+            logger.info("Cleanup completed successfully")
+
+        except Exception as e:
+            logger.error(f"Error during cleanup: {str(e)}")
+
 if __name__ == "__main__":
     logger.info("Starting AI testnet simulation...")
     bot = TestBot()
-    success = asyncio.run(bot.run_ai_testnet_simulation())
-    sys.exit(0 if success else 1)
+    try:
+        asyncio.run(bot.run_ai_testnet_simulation())
+    except KeyboardInterrupt:
+        logger.info("Test interrupted by user")
+        asyncio.run(bot.cleanup())
+    except Exception as e:
+        logger.error(f"Test failed: {str(e)}")
+        asyncio.run(bot.cleanup())
+    sys.exit(0)
