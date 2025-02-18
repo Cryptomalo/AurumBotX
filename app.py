@@ -205,7 +205,7 @@ def render_header():
         col1, col2, col3 = st.columns([1,2,1])
 
         with col1:
-            st.image("assets/logo.png", width=100)
+            st.markdown("🌟", help="AurumBot")
 
         with col2:
             st.title("🌟 AurumBot Trading Platform")
