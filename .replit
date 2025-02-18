@@ -17,10 +17,10 @@ mode = "parallel"
 
 [[workflows.workflow.tasks]]
 task = "workflow.run"
-args = "Streamlit Dashboard"
+args = "Start application"
 
 [[workflows.workflow]]
-name = "Streamlit Dashboard"
+name = "Start application"
 mode = "parallel"
 author = "agent"
 
@@ -33,7 +33,7 @@ task = "packager.installForAll"
 [[workflows.workflow.tasks]]
 task = "shell.exec"
 args = "streamlit run test_streamlit.py"
-waitForPort = 5000
+waitForPort = 8501
 
 [[workflows.workflow]]
 name = "Test WebSocket"

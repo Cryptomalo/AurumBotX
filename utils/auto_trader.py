@@ -15,22 +15,16 @@ from utils.strategies.dex_sniping import DexSnipingStrategy
 from utils.database import get_db, TradingStrategy, SimulationResult
 from utils.notifications import TradingNotifier
 from utils.wallet_manager import WalletManager
-from utils.prediction_model import PredictionModel
 from utils.backup_manager import BackupManager
 from utils.exchange_manager import ExchangeManager
 
 class AutoTrader:
     def __init__(self, symbol: str, initial_balance: float = 10000, risk_per_trade: float = 0.02, testnet: bool = True):
         self.logger = logging.getLogger(__name__)
-        self.symbol = self._format_symbol(symbol)  # Convert BTC-USDT to BTCUSDT format
+        self.symbol = self._format_symbol(symbol)
         self.initial_balance = initial_balance
         self.risk_per_trade = risk_per_trade
         self.testnet = testnet
-        self.logger.info(f"Initializing bot in {'testnet' if testnet else 'mainnet'} mode")
-
-        # Initialize backup manager
-        self.backup_manager = BackupManager()
-
         self.balance = initial_balance
         self.portfolio = {
             'total_value': initial_balance,
@@ -44,11 +38,18 @@ class AutoTrader:
             }
         }
 
-        # Initialize components
-        self.setup_logging()
-        self.data_loader = CryptoDataLoader(testnet=testnet)
+        # Initialize components with basic functionality
+        self.data_loader = CryptoDataLoader()
         self.indicators = TechnicalIndicators()
-        self.prediction_model = PredictionModel()
+        self.current_position = None
+        self.is_in_position = False
+
+        # Mock prediction model for development
+        self.prediction_model = self._create_mock_prediction_model()
+
+        # Initialize backup manager
+        self.backup_manager = BackupManager()
+
 
         # Disable external services in test mode
         if self.testnet:
@@ -97,9 +98,6 @@ class AutoTrader:
                 })
             })
 
-        # Trading state
-        self.is_in_position = False
-        self.current_position = None
         self.last_action_time = None
         self.active_strategy = None
 
@@ -113,6 +111,30 @@ class AutoTrader:
 
         # Start automatic backup
         self._start_config_backup()
+
+    def _create_mock_prediction_model(self):
+        """Create a mock prediction model for development"""
+        return type('MockPredictionModel', (), {
+            'analyze_market_with_ai': lambda self, df, social_data: {
+                'technical_score': 0.6,
+                'confidence': 0.8,
+                'suggested_position_size': 1.0
+            }
+        })()
+
+    def calculate_market_volatility(self, df) -> float:
+        """Calculate market volatility using standard deviation"""
+        try:
+            if df is None or df.empty:
+                return 0.01
+
+            returns = df['Close'].pct_change().dropna()
+            volatility = returns.std()
+            self.logger.info(f"Calculated volatility: {volatility}")
+            return float(volatility)
+        except Exception as e:
+            self.logger.error(f"Error calculating volatility: {str(e)}")
+            return 0.01
 
     async def analyze_market_async(self, market_data: pd.DataFrame, sentiment_data: Optional[Dict] = None) -> Optional[Dict[str, Any]]:
         """Asynchronous version of market analysis"""
@@ -195,26 +217,9 @@ class AutoTrader:
             self.logger.error(f"Market analysis error: {str(e)}")
             return None
 
-    def calculate_market_volatility(self, df: pd.DataFrame) -> float:
-        """Calculate market volatility using standard deviation"""
-        try:
-            returns = df['Returns'].fillna(0)
-            volatility = returns.std() * np.sqrt(252)  # Annualized volatility
-            self.logger.info(f"Calculated volatility: {volatility}")
-            return volatility
-        except Exception as e:
-            self.logger.error(f"Error calculating volatility: {str(e)}")
-            return 0.01  # Default minimal volatility
-
-    def adjust_strategies_parameters(self, volatility: float):
-        """Adjust strategy parameters based on market volatility"""
-        try:
-            for strategy in self.strategies.values():
-                if hasattr(strategy, 'optimize_parameters'):
-                    strategy.optimize_parameters({'volatility': volatility})
-            self.logger.info("Strategy parameters updated based on volatility")
-        except Exception as e:
-            self.logger.error(f"Error adjusting parameters: {str(e)}")
+    def _format_symbol(self, symbol: str) -> str:
+        """Convert symbol to standard format"""
+        return symbol.replace('-', '').replace('/', '')
 
     async def _calculate_target_price_async(self, df: pd.DataFrame, ai_signal: Dict[str, Any]) -> float:
         """Calculate target price based on AI signals asynchronously"""
@@ -237,10 +242,6 @@ class AutoTrader:
         except Exception as e:
             self.logger.error(f"Error calculating stop loss: {str(e)}")
             return df['Close'].iloc[-1] * 0.98
-
-    def _format_symbol(self, symbol: str) -> str:
-        """Convert symbol to Binance format"""
-        return symbol.replace('-', '').replace('/', '')
 
     def setup_logging(self):
         """Configure logging with proper format and file output"""
@@ -313,8 +314,8 @@ class AutoTrader:
                 return {'success': True, 'action': 'buy', 'price': price, 'size': position_size, 'order': order}
 
             elif self.is_in_position and self.current_position:
-                if (action == 'sell' or 
-                    price >= self.current_position['target_price'] or 
+                if (action == 'sell' or
+                    price >= self.current_position['target_price'] or
                     price <= self.current_position['stop_loss']):
 
                     # Place sell order through exchange
@@ -399,6 +400,16 @@ class AutoTrader:
             self.stop()
         finally:
             self.logger.info(f"Bot stopped. Final balance: {self.balance}")
+
+    def adjust_strategies_parameters(self, volatility: float):
+        """Adjust strategy parameters based on market volatility"""
+        try:
+            for strategy in self.strategies.values():
+                if hasattr(strategy, 'optimize_parameters'):
+                    strategy.optimize_parameters({'volatility': volatility})
+            self.logger.info("Strategy parameters updated based on volatility")
+        except Exception as e:
+            self.logger.error(f"Error adjusting parameters: {str(e)}")
 
     def merge_timeframes(self, df_short: pd.DataFrame, df_medium: pd.DataFrame, df_long: pd.DataFrame) -> Optional[pd.DataFrame]:
         """Merge data from different timeframes"""
