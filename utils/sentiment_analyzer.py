@@ -173,7 +173,7 @@ class SentimentAnalyzer:
             except RateLimitError:
                 logger.warning(f"OpenAI rate limit hit on attempt {attempt + 1}")
                 if attempt < self.max_retries - 1:
-                    await asyncio.sleep(self.retry_delay * (attempt + 1))
+                    await asyncio.sleep(self.retry_delay * (2 ** attempt))  # Exponential backoff
             except Exception as e:
                 logger.error(f"OpenAI analysis error on attempt {attempt + 1}: {e}")
                 if attempt < self.max_retries - 1:
@@ -409,13 +409,13 @@ class SentimentAnalyzer:
                                 break  # Break retry loop if successful
 
                             if attempt < 2:  # Only sleep if we're going to retry
-                                await asyncio.sleep(1 * (attempt + 1))  # Exponential backoff
+                                await asyncio.sleep(1 * (2**attempt))  # Exponential backoff
 
                         except Exception as e:
                             logger.warning(f"Reddit fetch attempt {attempt + 1} failed: {e}")
                             if attempt == 2:  # Last attempt
                                 raise
-                            await asyncio.sleep(1 * (attempt + 1))  # Exponential backoff
+                            await asyncio.sleep(1 * (2**attempt))  # Exponential backoff
 
                 except Exception as sub_e:
                     logger.warning(f"Error fetching from subreddit {subreddit}: {sub_e}")

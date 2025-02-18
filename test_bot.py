@@ -8,7 +8,7 @@ from typing import Optional, Dict, Any
 from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession
 from sqlalchemy.ext.asyncio import async_sessionmaker
 from sqlalchemy import text
-from utils.database import Database
+from utils.database_manager import DatabaseManager
 from utils.trading_bot import WebSocketHandler
 from utils.strategies.strategy_manager import StrategyManager
 from utils.sentiment_analyzer import SentimentAnalyzer

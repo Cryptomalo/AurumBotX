@@ -35,9 +35,9 @@ if __name__ == "__main__":
 
         # Start the main application
         app.run(
-            host="0.0.0.0",
-            port=5000,
-            debug=False  # Disable debug mode in production
+            host="0.0.0.0", 
+            port=3000,  # Changed to avoid conflict with Streamlit
+            debug=False
         )
     except Exception as e:
         logger.error(f"Failed to start server: {e}")

@@ -42,7 +42,7 @@ class NotificationManager:
         self.notification_queue = PriorityQueue()
         self.is_processing = False
 
-    def setup(self, to_phone_number: str) -> bool:
+    async def setup(self, to_phone_number: str) -> bool:
         """Initialize notification channels"""
         try:
             # Get and clean credentials

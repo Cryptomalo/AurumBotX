@@ -17,10 +17,12 @@ logging.basicConfig(
     level=logging.INFO,
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
     handlers=[
-        logging.FileHandler('streamlit_app.log'),
+        logging.FileHandler('logs/system/app.log', mode='a'),
         logging.StreamHandler(sys.stdout)
     ]
 )
+logging.getLogger('werkzeug').setLevel(logging.WARNING)
+logging.getLogger('streamlit').setLevel(logging.WARNING)
 logger = logging.getLogger(__name__)
 
 def init_session_state():
