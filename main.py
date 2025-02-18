@@ -1,44 +1,44 @@
 import logging
 import sys
-from flask import Flask, jsonify
-from keep_alive import keep_alive
+import streamlit as st
 
 # Setup logging
 logging.basicConfig(
-    level=logging.INFO,
+    level=logging.DEBUG,  # Changed to DEBUG for more verbose logging
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
     handlers=[
         logging.StreamHandler(sys.stdout),
-        logging.FileHandler('app.log')
+        logging.FileHandler('streamlit_app.log')
     ]
 )
 logger = logging.getLogger(__name__)
 
-app = Flask(__name__)
+logger.debug("Starting Streamlit application initialization")
 
-@app.route("/")
-def index():
-    logger.info("Index endpoint called")
-    return jsonify({"message": "AurumBot Dashboard"})
+try:
+    # Page configuration
+    st.set_page_config(
+        page_title="AurumBot Dashboard",
+        page_icon="🤖",
+        layout="wide",
+        initial_sidebar_state="expanded"
+    )
+    logger.info("Page configuration set successfully")
 
-@app.route("/health")
-def health_check():
-    """Keep-alive endpoint"""
-    logger.info("Health check endpoint called")
-    return jsonify({"status": "healthy"})
+    # Main title
+    st.title("🤖 AurumBot Dashboard")
 
-if __name__ == "__main__":
-    try:
-        # Start the keep-alive server in a separate thread
-        keep_alive()
-        logger.info("Starting main Flask application on port 3000")
+    # Sidebar
+    with st.sidebar:
+        st.header("Navigation")
+        st.markdown("---")
+        st.info("Welcome to AurumBot Dashboard")
 
-        # Start the main application
-        app.run(
-            host="0.0.0.0", 
-            port=3000,
-            debug=False
-        )
-    except Exception as e:
-        logger.error(f"Failed to start server: {e}")
-        sys.exit(1)
+    # Main content
+    st.markdown("### System Status")
+    st.success("System is healthy and running")
+
+    logger.info("Streamlit dashboard initialized successfully")
+except Exception as e:
+    logger.error(f"Error initializing Streamlit dashboard: {e}", exc_info=True)
+    sys.exit(1)
