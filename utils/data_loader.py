@@ -632,9 +632,11 @@ class CryptoDataLoader:
                     # Aggiungi indicatori tecnici
                     df = self._add_technical_indicators(df)
 
-                    # Salva in cache e database
+                    # Salva in cache
                     self._add_to_cache(cache_key, df)
-                    await self.retry_handler.execute(self._save_to_database, symbol, df)
+
+                    # Salvataggio asincrono in database senza attendere
+                    asyncio.create_task(self._save_to_database(symbol, df))
 
                     return df
 
@@ -646,6 +648,35 @@ class CryptoDataLoader:
 
         except Exception as e:
             logger.error(f"Errore in get_historical_data per {symbol}: {str(e)}")
+            return None
+
+    def load_market_data(self, symbol: str, period: str = '1d') -> Optional[pd.DataFrame]:
+        """Load market data safely with improved error handling"""
+        try:
+            if not self.data_loader:
+                logger.warning("Data loader not initialized")
+                return None
+
+            # Use existing event loop if available
+            try:
+                loop = asyncio.get_event_loop()
+            except RuntimeError:
+                loop = asyncio.new_event_loop()
+                asyncio.set_event_loop(loop)
+
+            # Add loading message
+            logger.info(f"Loading market data for {symbol}...")
+
+            df = loop.run_until_complete(self.get_historical_data(symbol, period))
+
+            if df is not None and len(df) > 0:
+                logger.info(f"Successfully loaded {len(df)} rows of market data for {symbol}")
+                return df
+
+            logger.warning(f"No data available for {symbol}")
+            return None
+        except Exception as e:
+            logger.error(f"Error loading market data for {symbol}: {str(e)}")
             return None
 
     async def get_market_summary(self, symbol: str) -> Dict[str, Union[float, str]]:
