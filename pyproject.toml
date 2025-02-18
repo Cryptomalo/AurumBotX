@@ -67,6 +67,7 @@ dependencies = [
     "pillow>=11.1.0",
     "asyncpg>=0.30.0",
     "deepseek-ai>=0.0.1",
+    "nest-asyncio>=1.6.0",
 ]
 
 [[tool.uv.index]]

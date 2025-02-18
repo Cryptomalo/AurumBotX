@@ -11,6 +11,11 @@ from utils.backup_manager import BackupManager
 from components.login import render_login_page
 import json
 from pathlib import Path
+import asyncio
+import nest_asyncio
+
+# Enable nested event loops for Streamlit
+nest_asyncio.apply()
 
 # Configurazione logging
 logging.basicConfig(
@@ -24,6 +29,34 @@ logging.basicConfig(
 logging.getLogger('werkzeug').setLevel(logging.WARNING)
 logging.getLogger('streamlit').setLevel(logging.WARNING)
 logger = logging.getLogger(__name__)
+
+async def initialize_bot_and_loader(trading_pair: str, initial_balance: float, risk_per_trade: float, testnet_mode: bool):
+    """Inizializza il bot e il data loader in modo asincrono"""
+    try:
+        bot = AutoTrader(
+            symbol=trading_pair,
+            initial_balance=initial_balance,
+            risk_per_trade=risk_per_trade/100,
+            testnet=testnet_mode
+        )
+        data_loader = CryptoDataLoader(testnet=testnet_mode)
+        await data_loader.initialize()
+        bot.backup_manager = BackupManager()
+
+        # Carica i dati iniziali
+        df = await data_loader.get_historical_data(trading_pair, '1d')
+        if df is not None and not df.empty:
+            st.session_state.market_data = df
+            st.session_state.bot = bot
+            st.session_state.data_loader = data_loader
+            return True
+        else:
+            st.warning("Impossibile caricare i dati iniziali. Riprova tra qualche secondo.")
+            return False
+    except Exception as e:
+        logger.error(f"Errore inizializzazione: {str(e)}")
+        st.error(f"Errore avvio: {str(e)}")
+        return False
 
 def init_session_state():
     """Inizializza lo stato della sessione"""
@@ -39,11 +72,11 @@ def init_session_state():
         st.session_state.market_data = None
     if 'user' not in st.session_state:
         st.session_state.user = {'authenticated': False}
-
+    if 'initialization_running' not in st.session_state:
+        st.session_state.initialization_running = False
 
 def show_main_app():
     """Mostra l'applicazione principale"""
-    # Se l'utente non è autenticato con il wallet, mostra solo la pagina di login
     if 'user' not in st.session_state or not st.session_state['user'].get('authenticated'):
         render_login_page()
         return
@@ -53,32 +86,24 @@ def show_main_app():
     Piattaforma avanzata di trading crypto con automazione intelligente e backtesting sofisticato.
     """)
 
-    # Sidebar con controlli trading
     with st.sidebar:
         st.title("Controlli Trading")
-
-        # Selezione coppia trading
         trading_pair = st.selectbox(
             "Seleziona Coppia Trading",
             ["BTC/USDT", "ETH/USDT", "SOL/USDT", "DOGE/USDT", "SHIB/USDT"],
             index=0
         )
-
-        # Selezione strategia
         strategy = st.selectbox(
             "Strategia Trading",
             ["scalping", "swing", "meme_coin"],
             index=0
         )
-
-        # Parametri trading
         initial_balance = st.number_input(
             "Bilancio Iniziale (USDT)",
             min_value=10.0,
             value=1000.0,
             step=10.0
         )
-
         risk_per_trade = st.slider(
             "Rischio per Trade (%)",
             min_value=0.1,
@@ -86,27 +111,23 @@ def show_main_app():
             value=2.0,
             step=0.1
         )
-
         testnet_mode = st.checkbox("Modalità Testnet", value=True)
 
-        # Pulsanti Start/Stop
         col1, col2 = st.columns(2)
         with col1:
             if st.button("▶️ Avvia"):
-                try:
-                    st.session_state.bot = AutoTrader(
-                        symbol=trading_pair,
-                        initial_balance=initial_balance,
-                        risk_per_trade=risk_per_trade/100,
-                        testnet=testnet_mode
-                    )
-                    st.session_state.data_loader = CryptoDataLoader(testnet=True)
-                    st.session_state.bot.backup_manager = BackupManager()
-                    st.success(f"Bot inizializzato per {trading_pair}")
-                except Exception as e:
-                    st.error(f"Errore avvio: {str(e)}")
-                    st.session_state.error_count += 1
-                    logger.error(f"Errore inizializzazione bot: {str(e)}")
+                if not st.session_state.initialization_running:
+                    st.session_state.initialization_running = True
+                    loop = asyncio.new_event_loop()
+                    asyncio.set_event_loop(loop)
+                    success = loop.run_until_complete(initialize_bot_and_loader(
+                        trading_pair, initial_balance, risk_per_trade, testnet_mode
+                    ))
+                    loop.close()
+                    st.session_state.initialization_running = False
+                    if success:
+                        st.success(f"Bot inizializzato per {trading_pair}")
+                        st.experimental_rerun()
 
         with col2:
             if st.button("⏹️ Ferma"):
@@ -114,7 +135,6 @@ def show_main_app():
                 st.session_state.data_loader = None
                 st.info("Trading fermato")
 
-    # Main content tabs
     tab1, tab2, tab3, tab4 = st.tabs([
         "📊 Analisi Mercato",
         "🤖 Auto Trading", 
@@ -122,17 +142,13 @@ def show_main_app():
         "🔗 Social Connections"
     ])
 
-    # Tab contenuti
     with tab1:
-        if st.session_state.bot and st.session_state.data_loader:
-            df = load_market_data(st.session_state.bot.symbol)
-            if df is not None:
-                chart = create_candlestick_chart(df)
-                if chart:
-                    st.plotly_chart(chart, use_container_width=True)
-                render_market_metrics(df)
-            else:
-                st.warning("Dati di mercato non disponibili")
+        if st.session_state.bot and st.session_state.market_data is not None:
+            df = st.session_state.market_data
+            chart = create_candlestick_chart(df)
+            if chart:
+                st.plotly_chart(chart, use_container_width=True)
+            render_market_metrics(df)
         else:
             st.info("Avvia il trading per vedere l'analisi di mercato")
 
@@ -176,29 +192,6 @@ def create_candlestick_chart(df):
         return fig
     except Exception as e:
         logger.error(f"Errore creazione grafico: {str(e)}")
-        return None
-
-def load_market_data(symbol, period='1d'):
-    """Carica i dati di mercato in modo sicuro"""
-    try:
-        if not st.session_state.data_loader:
-            return None
-
-        # Run async function in sync context
-        loop = asyncio.new_event_loop()
-        asyncio.set_event_loop(loop)
-        df = loop.run_until_complete(st.session_state.data_loader.get_historical_data(symbol, period))
-        loop.close()
-        
-        if df is not None and len(df) > 0:
-            st.session_state.market_data = df
-            return df
-        return None
-    except Exception as e:
-        logger.error(f"Error loading market data: {str(e)}")
-        return None
-    except Exception as e:
-        logger.error(f"Errore caricamento dati: {str(e)}")
         return None
 
 def render_market_metrics(df):
@@ -257,19 +250,13 @@ def render_portfolio_status():
 
 def main():
     try:
-        # Configurazione pagina
         st.set_page_config(
             page_title="AurumBot Trading Platform",
             page_icon="🤖",
             layout="wide"
         )
-
-        # Inizializzazione stato
         init_session_state()
-
-        # Mostra direttamente l'app principale
         show_main_app()
-
     except Exception as e:
         st.error("Si è verificato un errore imprevisto. Ricarica la pagina.")
         logger.error(f"Errore applicazione: {str(e)}")

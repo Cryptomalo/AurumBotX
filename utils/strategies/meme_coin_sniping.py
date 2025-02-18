@@ -29,9 +29,11 @@ class MemeCoinStrategy:
         self.min_prediction_confidence = config.get('min_prediction_confidence', 0.7)
         self.logger = logging.getLogger(__name__)
 
-        # Setup notifiche
-        if config.get('phone_number'):
-            asyncio.create_task(self.notifier.setup(config['phone_number']))
+
+    async def initialize(self):
+        """Inizializza in modo asincrono la strategia"""
+        if self.config.get('phone_number'):
+            await self.notifier.setup(self.config['phone_number'])
 
     def analyze_market(self, market_data: Dict, sentiment_data: Optional[Dict] = None) -> List[Dict]:
         """Analisi ottimizzata del mercato per meme coin con predizioni ML"""
@@ -69,7 +71,7 @@ class MemeCoinStrategy:
             signals = [self._create_signal(market_data, entry, success_probability)
                       for entry in entry_points]
 
-            # Notifica analisi significativa usando la nuova API
+            # Notifica analisi significativa
             if signals:
                 notification_content = {
                     'type': 'analysis',
