@@ -1,16 +1,12 @@
+import logging
 import numpy as np
 import pandas as pd
 from sklearn.ensemble import RandomForestRegressor, GradientBoostingRegressor
 from sklearn.preprocessing import StandardScaler
 from sklearn.model_selection import TimeSeriesSplit
-from sklearn.metrics import mean_squared_error, r2_score
+from sklearn.metrics import r2_score
 import joblib
 from datetime import datetime
-import logging
-import os
-import json
-import asyncio
-from openai import OpenAI
 from typing import Dict, Any, List, Optional
 from utils.indicators import TechnicalIndicators
 
@@ -28,16 +24,240 @@ class PredictionModel:
 
         # Risk management parameters
         self.max_position_size = 0.1  # 10% of portfolio
-        self.max_risk_per_trade = 0.02  # 2% risk per trade
         self.volatility_adjustment = True
 
-        # Initialize OpenAI client if key is available
-        openai_key = os.getenv("OPENAI_API_KEY")
-        if openai_key:
-            self.openai_client = OpenAI(api_key=openai_key)
-        else:
-            self.logger.warning("OpenAI API key not found. AI analysis will be limited.")
-            self.openai_client = None
+        # Required columns for the model
+        self.required_columns = ['Open', 'High', 'Low', 'Close', 'Volume']
+
+    def _validate_dataframe(self, df: pd.DataFrame) -> bool:
+        """Validate that DataFrame has required columns"""
+        if df is None or df.empty:
+            self.logger.error("Empty DataFrame provided")
+            return False
+
+        missing_cols = [col for col in self.required_columns if col not in df.columns]
+        if missing_cols:
+            self.logger.error(f"Missing required columns: {missing_cols}")
+            return False
+
+        return True
+
+    def create_features(self, df: pd.DataFrame) -> pd.DataFrame:
+        """Create technical indicators with validation"""
+        try:
+            if not self._validate_dataframe(df):
+                raise ValueError("Invalid DataFrame structure")
+
+            df = df.copy()
+
+            # Ensure numeric type
+            for col in self.required_columns:
+                df[col] = pd.to_numeric(df[col], errors='coerce')
+
+            # Basic price features
+            df['returns'] = df['Close'].pct_change()
+            df['log_returns'] = np.log1p(df['returns'])
+
+            # Add technical indicators
+            df = self.indicators.add_all_indicators(df)
+
+            # Clean NaN values
+            df = df.fillna(method='ffill').fillna(method='bfill')
+
+            return df
+
+        except Exception as e:
+            self.logger.error(f"Error creating features: {str(e)}")
+            raise
+
+    def prepare_data(self, df: pd.DataFrame, target_column: str = 'Close', prediction_horizon: int = 5) -> tuple:
+        """Prepare data for training with validation"""
+        try:
+            if not self._validate_dataframe(df):
+                raise ValueError("Invalid DataFrame structure")
+
+            # Create features
+            df = self.create_features(df)
+
+            # Create target
+            df['target'] = df[target_column].shift(-prediction_horizon)
+            df['target_returns'] = df['target'].pct_change(prediction_horizon)
+
+            # Select features
+            feature_columns = [col for col in df.columns 
+                             if col not in ['target', 'target_returns'] + self.required_columns]
+
+            X = df[feature_columns].iloc[:-prediction_horizon]
+            y = df['target_returns'].iloc[:-prediction_horizon]
+
+            # Final validation
+            if X.empty or y.empty:
+                raise ValueError("Empty feature or target data after preparation")
+
+            return X, y
+
+        except Exception as e:
+            self.logger.error(f"Error preparing data: {str(e)}")
+            raise
+
+    def train(self, df: pd.DataFrame, target_column: str = 'Close', prediction_horizon: int = 5) -> Optional[Dict[str, Any]]:
+        """Train ensemble models with improved error handling"""
+        try:
+            X, y = self.prepare_data(df, target_column, prediction_horizon)
+
+            # Scale features
+            X_scaled = self.scaler.fit_transform(X)
+
+            # Initialize models with basic hyperparameters
+            self.models = {
+                'rf': RandomForestRegressor(n_estimators=200, max_depth=10, random_state=42),
+                'gb': GradientBoostingRegressor(n_estimators=200, learning_rate=0.1, random_state=42)
+            }
+
+            # Cross validation
+            tscv = TimeSeriesSplit(n_splits=5)
+            cv_scores = {name: [] for name in self.models.keys()}
+
+            # Train and evaluate
+            for train_idx, val_idx in tscv.split(X_scaled):
+                X_train, X_val = X_scaled[train_idx], X_scaled[val_idx]
+                y_train, y_val = y.iloc[train_idx], y.iloc[val_idx]
+
+                for name, model in self.models.items():
+                    model.fit(X_train, y_train)
+                    pred = model.predict(X_val)
+                    score = r2_score(y_val, pred)
+                    cv_scores[name].append(score)
+
+            # Store metrics
+            self.metrics = {
+                'cv_scores_mean': {name: np.mean(scores) for name, scores in cv_scores.items()},
+                'cv_scores_std': {name: np.std(scores) for name, scores in cv_scores.items()}
+            }
+
+            # Store feature importance
+            for name, model in self.models.items():
+                if hasattr(model, 'feature_importances_'):
+                    self.feature_importance[name] = dict(zip(X.columns, model.feature_importances_))
+
+            return self.metrics
+
+        except Exception as e:
+            self.logger.error(f"Training error: {str(e)}")
+            return None
+
+    def predict(self, df: pd.DataFrame, target_column: str = 'Close', 
+                prediction_horizon: int = 5) -> Optional[Dict[str, Any]]:
+        """Generate predictions with comprehensive error handling"""
+        try:
+            if not self.models:
+                self.logger.warning("Models not trained. Training now...")
+                if self.train(df, target_column, prediction_horizon) is None:
+                    raise ValueError("Model training failed")
+
+            X, _ = self.prepare_data(df, target_column, prediction_horizon)
+            X_scaled = self.scaler.transform(X)
+
+            predictions = {}
+            weights = {'rf': 0.6, 'gb': 0.4}
+
+            # Get predictions
+            for name, model in self.models.items():
+                predictions[name] = model.predict(X_scaled)
+
+            # Weighted ensemble
+            weighted_pred = np.zeros(len(X))
+            for name, pred in predictions.items():
+                weighted_pred += pred * weights[name]
+
+            # Calculate uncertainty
+            pred_std = np.std([pred for pred in predictions.values()], axis=0)
+            confidence = 1 / (1 + pred_std)
+
+            return {
+                'prediction': float(weighted_pred[-1]),  # Latest prediction
+                'confidence': float(confidence[-1]),
+                'predictions': weighted_pred.tolist(),
+                'model_predictions': {k: v.tolist() for k, v in predictions.items()},
+                'feature_importance': self.feature_importance
+            }
+
+        except Exception as e:
+            self.logger.error(f"Prediction error: {str(e)}")
+            return None
+
+    def save_model(self, path: str):
+        """Save model state"""
+        if not self.models:
+            raise ValueError("No model to save")
+        joblib.dump({
+            'models': self.models,
+            'scaler': self.scaler,
+            'metrics': self.metrics,
+            'feature_importance': self.feature_importance
+        }, path)
+
+    def load_model(self, path: str):
+        """Load model state"""
+        try:
+            saved_model = joblib.load(path)
+            self.models = saved_model['models']
+            self.scaler = saved_model['scaler']
+            self.metrics = saved_model['metrics']
+            self.feature_importance = saved_model['feature_importance']
+        except Exception as e:
+            self.logger.error(f"Error loading model: {str(e)}")
+            raise
+    
+    async def scan_twitter_sentiment(self, symbol: str) -> Dict[str, float]:
+        """Analyze Twitter sentiment for a given symbol"""
+        try:
+            # Simulate sentiment analysis for now
+            sentiment_score = 0.5 + np.random.normal(0, 0.1)
+            confidence = 0.7 + np.random.normal(0, 0.1)
+
+            return {
+                'sentiment': max(0, min(1, sentiment_score)),
+                'confidence': max(0, min(1, confidence))
+            }
+
+        except Exception as e:
+            self.logger.error(f"Error scanning Twitter sentiment: {str(e)}")
+            return {'sentiment': 0.5, 'confidence': 0.5}
+
+    def _prepare_features(self, df: pd.DataFrame) -> pd.DataFrame:
+        """Prepara features avanzate con deep learning e analisi multiframe"""
+        try:
+            features = df.copy()
+            
+            # Multi-timeframe analysis
+            timeframes = [5, 15, 30, 60]
+            for tf in timeframes:
+                features[f'price_momentum_{tf}'] = df['Close'].pct_change(tf)
+                features[f'volume_momentum_{tf}'] = df['Volume'].pct_change(tf)
+                features[f'volatility_{tf}'] = df['Close'].pct_change().rolling(tf).std()
+                
+            # Market regime detection
+            features['trend_strength'] = abs(features['SMA_20'] - features['SMA_50']) / features['SMA_50']
+            features['market_regime'] = np.where(features['trend_strength'] > 0.02, 'trending', 'ranging')
+            
+            # Deep learning features
+            for window in [5, 10, 20, 50]:
+                features[f'price_momentum_{window}'] = df['Close'].pct_change(window)
+                features[f'volume_momentum_{window}'] = df['Volume'].pct_change(window)
+                features[f'volatility_{window}'] = df['Close'].pct_change().rolling(window).std()
+            
+            # Pattern recognition
+            features['pattern_score'] = self._detect_patterns(df)
+            
+            # Orderbook analysis
+            if 'bid_volume' in df.columns and 'ask_volume' in df.columns:
+                features['order_imbalance'] = (df['bid_volume'] - df['ask_volume']) / (df['bid_volume'] + df['ask_volume'])
+            
+            return features
+        except Exception as e:
+            self.logger.error(f"Error preparing features: {str(e)}")
+            raise
 
     def optimize_strategy_parameters(self, strategy_name: str, market_data: pd.DataFrame) -> Dict[str, Any]:
         """
@@ -80,99 +300,6 @@ class PredictionModel:
         except Exception as e:
             self.logger.error(f"Error optimizing strategy parameters: {str(e)}")
             return {}
-
-    async def scan_twitter_sentiment(self, symbol: str) -> Dict[str, float]:
-        """
-        Analizza il sentiment da Twitter per un dato simbolo
-        """
-        try:
-            if not self.openai_client:
-                return {'sentiment': 0.5, 'confidence': 0.5}
-
-            # Simuliamo l'analisi del sentiment per ora
-            # TODO: Implementare l'integrazione reale con Twitter
-            sentiment_score = 0.5 + np.random.normal(0, 0.1)
-            confidence = 0.7 + np.random.normal(0, 0.1)
-
-            return {
-                'sentiment': max(0, min(1, sentiment_score)),
-                'confidence': max(0, min(1, confidence))
-            }
-
-        except Exception as e:
-            self.logger.error(f"Error scanning Twitter sentiment: {str(e)}")
-            return {'sentiment': 0.5, 'confidence': 0.5}
-
-    def _prepare_features(self, df: pd.DataFrame) -> pd.DataFrame:
-        """Prepara features avanzate con deep learning e analisi multiframe"""
-        try:
-            features = df.copy()
-            
-            # Multi-timeframe analysis
-            timeframes = [5, 15, 30, 60]
-            for tf in timeframes:
-                features[f'price_momentum_{tf}'] = df['Close'].pct_change(tf)
-                features[f'volume_momentum_{tf}'] = df['Volume'].pct_change(tf)
-                features[f'volatility_{tf}'] = df['Close'].pct_change().rolling(tf).std()
-                
-            # Market regime detection
-            features['trend_strength'] = abs(features['SMA_20'] - features['SMA_50']) / features['SMA_50']
-            features['market_regime'] = np.where(features['trend_strength'] > 0.02, 'trending', 'ranging')
-
-            # Deep learning features
-            for window in [5, 10, 20, 50]:
-                features[f'price_momentum_{window}'] = df['Close'].pct_change(window)
-                features[f'volume_momentum_{window}'] = df['Volume'].pct_change(window)
-                features[f'volatility_{window}'] = df['Close'].pct_change().rolling(window).std()
-
-            # Pattern recognition
-            features['pattern_score'] = self._detect_patterns(df)
-
-            # Orderbook analysis
-            if 'bid_volume' in df.columns and 'ask_volume' in df.columns:
-                features['order_imbalance'] = (df['bid_volume'] - df['ask_volume']) / (df['bid_volume'] + df['ask_volume'])
-
-            return features
-        except Exception as e:
-            self.logger.error(f"Error preparing features: {str(e)}")
-            raise
-
-    def create_features(self, df: pd.DataFrame) -> pd.DataFrame:
-        """Create advanced technical indicators using standardized column names"""
-        try:
-            if df.empty:
-                raise ValueError("Empty DataFrame provided")
-
-            df = df.copy()
-
-            # Ensure proper column names
-            column_mapping = {
-                'open': 'Open', 'high': 'High', 'low': 'Low',
-                'close': 'Close', 'volume': 'Volume'
-            }
-            df.rename(columns={k: v for k, v in column_mapping.items() 
-                            if k in df.columns}, inplace=True)
-
-            # Verify required columns
-            required_cols = ['Open', 'High', 'Low', 'Close', 'Volume']
-            missing_cols = [col for col in required_cols if col not in df.columns]
-            if missing_cols:
-                raise ValueError(f"Missing required columns: {missing_cols}")
-
-            # Add all technical indicators using our custom implementation
-            df = self.indicators.add_all_indicators(df)
-
-            # Add momentum indicators
-            for period in [5, 10, 20, 30]:
-                df[f'momentum_{period}'] = df['Close'].pct_change(periods=period)
-
-            # Clean NaN values using recommended methods
-            df = df.ffill().bfill().fillna(0)
-
-            return df
-        except Exception as e:
-            self.logger.error(f"Error creating features: {str(e)}")
-            raise
 
     async def analyze_market_with_ai(self, market_data: pd.DataFrame, social_data: Dict[str, Any]) -> Optional[Dict[str, Any]]:
         """Market analysis using AI and multiple data sources with enhanced risk management"""
@@ -315,124 +442,6 @@ class PredictionModel:
                 'risk_reward_ratio': 2.0
             }
 
-    def train(self, df: pd.DataFrame, target_column: str = 'Close', prediction_horizon: int = 5) -> Optional[Dict[str, Any]]:
-        """Train ensemble of models with improved error handling"""
-        try:
-            features = self._prepare_features(df)
-            X, y = self._prepare_training_data(features, target_column, prediction_horizon)
-
-            # Scale features
-            X_scaled = self.scaler.fit_transform(X)
-
-            # Initialize models with optimized parameters
-            self.models = {
-                'rf': RandomForestRegressor(
-                    n_estimators=200,
-                    max_depth=10,
-                    min_samples_split=5,
-                    random_state=42
-                ),
-                'gb': GradientBoostingRegressor(
-                    n_estimators=200,
-                    learning_rate=0.1,
-                    max_depth=5,
-                    random_state=42
-                )
-            }
-
-            # Time series cross-validation
-            tscv = TimeSeriesSplit(n_splits=5)
-            cv_scores = {name: [] for name in self.models.keys()}
-
-            # Train and evaluate each model
-            for train_idx, val_idx in tscv.split(X_scaled):
-                X_train, X_val = X_scaled[train_idx], X_scaled[val_idx]
-                y_train, y_val = y.iloc[train_idx], y.iloc[val_idx]
-
-                for name, model in self.models.items():
-                    model.fit(X_train, y_train)
-                    pred = model.predict(X_val)
-                    score = r2_score(y_val, pred)
-                    cv_scores[name].append(score)
-
-            # Store metrics and feature importance
-            self.metrics = {
-                'cv_scores_mean': {name: np.mean(scores) for name, scores in cv_scores.items()},
-                'cv_scores_std': {name: np.std(scores) for name, scores in cv_scores.items()}
-            }
-
-            for name, model in self.models.items():
-                if hasattr(model, 'feature_importances_'):
-                    self.feature_importance[name] = dict(zip(X.columns, model.feature_importances_))
-
-            return self.metrics
-
-        except Exception as e:
-            self.logger.error(f"Training error: {str(e)}")
-            return None
-
-    def _prepare_training_data(self, df: pd.DataFrame, target_column: str = 'Close', prediction_horizon: int = 5):
-        """Prepare data for training"""
-        try:
-            # Create target variable (future returns)
-            df['target'] = df[target_column].shift(-prediction_horizon)
-            df['target_returns'] = df['target'].pct_change(prediction_horizon)
-
-            # Select features
-            feature_columns = [col for col in df.columns 
-                             if col not in ['target', 'target_returns', 'Open', 'High', 'Low', 'Close', 'Volume']]
-
-            X = df[feature_columns].iloc[:-prediction_horizon]
-            y = df['target_returns'].iloc[:-prediction_horizon]
-
-            # Clean any remaining NaN values
-            X = X.fillna(0)
-            y = y.fillna(0)
-
-            return X, y
-
-        except Exception as e:
-            self.logger.error(f"Error preparing training data: {str(e)}")
-            raise
-
-    def predict(self, df: pd.DataFrame, target_column: str = 'Close', prediction_horizon: int = 5) -> Optional[Dict[str, Any]]:
-        """Generate ensemble predictions with improved error handling"""
-        try:
-            if not self.models:
-                self.logger.warning("Models not trained. Training now...")
-                self.train(df, target_column, prediction_horizon)
-
-            X, _ = self._prepare_training_data(df, target_column, prediction_horizon)
-            X_scaled = self.scaler.transform(X)
-
-            predictions = {}
-            weights = {'rf': 0.6, 'gb': 0.4}  # Random Forest has slightly more weight
-
-            # Get predictions from each model
-            for name, model in self.models.items():
-                predictions[name] = model.predict(X_scaled)
-
-            # Weighted ensemble prediction
-            weighted_pred = np.zeros(len(X))
-            for name, pred in predictions.items():
-                weighted_pred += pred * weights[name]
-
-            # Calculate prediction uncertainty
-            pred_std = np.std([pred for pred in predictions.values()], axis=0)
-            confidence = 1 / (1 + pred_std)  # Higher variance = lower confidence
-
-            return {
-                'prediction': weighted_pred[-1],  # Latest prediction
-                'confidence': float(confidence[-1]),
-                'predictions': weighted_pred,
-                'model_predictions': predictions,
-                'feature_importance': self.feature_importance
-            }
-
-        except Exception as e:
-            self.logger.error(f"Prediction error: {e}")
-            return None
-
     def _prepare_market_context(self, market_data: pd.DataFrame) -> str:
         """Prepare market context for AI analysis"""
         latest_data = market_data.iloc[-1]
@@ -517,31 +526,7 @@ class PredictionModel:
         except Exception as e:
             self.logger.error(f"Position size calculation error: {e}")
             return self.max_position_size * 0.5  # Conservative fallback
-
-    def save_model(self, path: str):
-        """Save model to disk"""
-        if not self.models:
-            raise ValueError("No model to save")
-        joblib.dump({
-            'models': self.models,
-            'scaler': self.scaler,
-            'metrics': self.metrics,
-            'feature_importance': self.feature_importance
-        }, path)
-
-    def load_model(self, path: str):
-        """Load model from disk"""
-        try:
-            saved_model = joblib.load(path)
-            self.models = saved_model['models']
-            self.scaler = saved_model['scaler']
-            self.metrics = saved_model['metrics']
-            self.feature_importance = saved_model['feature_importance']
-        except Exception as e:
-            self.logger.error(f"Error loading model: {str(e)}")
-            raise
-
+            
     def _detect_patterns(self, df: pd.DataFrame) -> np.ndarray:
-        # Placeholder for pattern recognition algorithm
-        # Replace with actual pattern detection logic using deep learning or other methods
+        """Pattern recognition placeholder"""
         return np.random.rand(len(df))

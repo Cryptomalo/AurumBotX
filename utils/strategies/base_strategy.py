@@ -21,32 +21,32 @@ class BaseStrategy(ABC):
         }
 
     @abstractmethod
-    async def analyze_market(
+    def analyze_market(
         self,
-        market_data: pd.DataFrame,
-        sentiment_data: Optional[Dict] = None
-    ) -> List[Dict[str, Any]]:
+        df: pd.DataFrame,
+        sentiment_data: Optional[Dict[str, Any]] = None
+    ) -> Dict[str, Any]:
         """
         Analyze market and generate trading signals
         Args:
-            market_data: DataFrame with market data
+            df: DataFrame with market data
             sentiment_data: Optional social media sentiment data
         Returns:
-            List of trading signals
+            Dictionary containing market analysis results
         """
         pass
 
     @abstractmethod
-    async def validate_trade(
+    def validate_trade(
         self,
         signal: Dict[str, Any],
-        portfolio: Dict[str, Any]
+        current_portfolio: Dict[str, Any]
     ) -> bool:
         """
         Validate a potential trade before execution
         Args:
             signal: Trading signal to validate
-            portfolio: Current portfolio state
+            current_portfolio: Current portfolio state
         Returns:
             bool: True if trade is valid
         """

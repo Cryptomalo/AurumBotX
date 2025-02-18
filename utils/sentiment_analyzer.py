@@ -1,23 +1,28 @@
+from typing import Dict, List, Optional, Union, Any
 import logging
 import asyncio
 import concurrent.futures
-from typing import Dict, List, Optional, Union, Any
 from datetime import datetime
 import json
 import os
 import numpy as np
 import pandas as pd
 from openai import OpenAI, RateLimitError, APIError
+from anthropic import Anthropic
 
 logger = logging.getLogger(__name__)
 
 class SentimentAnalyzer:
     def __init__(self):
-        """Initialize sentiment analyzer with OpenAI assistant"""
+        """Initialize sentiment analyzer with OpenAI and Anthropic assistants for fallback"""
         self.openai_client = OpenAI(
             api_key=os.environ.get("OPENAI_API_KEY")
         )
+        self.anthropic_client = Anthropic(
+            api_key=os.environ.get("ANTHROPIC_API_KEY")
+        )
         self.initialize_social_clients()
+        self.fallback_enabled = True
 
     def initialize_social_clients(self):
         """Initialize social media clients with improved error handling"""
@@ -58,9 +63,8 @@ class SentimentAnalyzer:
             raise
 
     async def analyze_sentiment(self, symbol: str) -> Dict[str, Any]:
-        """Analyze social media sentiment with comprehensive error handling"""
+        """Analyze social media sentiment with comprehensive error handling and fallback"""
         try:
-            # Get social data asynchronously
             social_data = {
                 "reddit": await self._get_reddit_data(symbol) if self.reddit else [],
                 "twitter": [],  # Twitter temporarily disabled
@@ -68,53 +72,128 @@ class SentimentAnalyzer:
                 "timestamp": datetime.now().isoformat()
             }
 
-            if not any(social_data.values()):
+            if not any(len(data) > 0 for data in social_data.values() if isinstance(data, list)):
                 logger.warning("No social media data available")
-                return {
-                    "error": "Insufficient data",
-                    "raw_data": social_data,
-                    "score": 0.5,  # Neutral fallback
-                    "confidence": 0.0
-                }
+                return self._get_neutral_sentiment()
 
+            # Try OpenAI first
             try:
-                # Analyze with GPT-3.5-turbo
-                analysis = await self.analyze_with_ai(social_data) if self.openai_client else None
-
+                analysis = await self._analyze_with_openai(social_data)
                 if analysis:
-                    score = self._calculate_sentiment_score(analysis)
-                    return {
-                        "raw_data": social_data,
-                        "analysis": analysis,
-                        "score": score,
-                        "confidence": analysis.get('confidence', 0.5)
-                    }
-                else:
-                    logger.warning("AI analysis failed, using fallback scoring")
-                    return {
-                        "raw_data": social_data,
-                        "score": 0.5,
-                        "confidence": 0.3,
-                        "error": "AI analysis unavailable"
-                    }
+                    return self._create_sentiment_response(social_data, analysis)
+            except (RateLimitError, APIError) as e:
+                logger.warning(f"OpenAI analysis failed, trying Anthropic fallback: {e}")
 
-            except Exception as e:
-                logger.error(f"Error in AI analysis: {e}")
-                return {
-                    "error": str(e),
-                    "raw_data": social_data,
-                    "score": 0.5,
-                    "confidence": 0.2
-                }
+            # Fallback to Anthropic if OpenAI fails
+            if self.fallback_enabled:
+                try:
+                    analysis = await self._analyze_with_anthropic(social_data)
+                    if analysis:
+                        return self._create_sentiment_response(social_data, analysis)
+                except Exception as e:
+                    logger.error(f"Anthropic fallback failed: {e}")
+
+            # Return neutral sentiment if both APIs fail
+            logger.warning("All AI analysis attempts failed, using neutral sentiment")
+            return self._get_neutral_sentiment()
 
         except Exception as e:
             logger.error(f"Error in sentiment analysis: {e}")
-            return {
-                "error": str(e),
-                "raw_data": {},
-                "score": 0.5,
-                "confidence": 0.0
-            }
+            return self._get_neutral_sentiment()
+
+    def _get_neutral_sentiment(self) -> Dict[str, Any]:
+        """Return neutral sentiment with low confidence"""
+        return {
+            "sentiment": "neutral",
+            "score": 0.5,
+            "confidence": 0.3,
+            "error": "Analysis unavailable",
+            "raw_data": {}
+        }
+
+    async def _analyze_with_openai(self, data: Dict[str, Any]) -> Optional[Dict[str, Any]]:
+        """Analyze with OpenAI with improved error handling"""
+        try:
+            prompt = self._create_analysis_prompt(data)
+
+            loop = asyncio.get_event_loop()
+            with concurrent.futures.ThreadPoolExecutor() as executor:
+                completion = await loop.run_in_executor(
+                    executor,
+                    lambda: self.openai_client.chat.completions.create(
+                        model="gpt-4o",  # Use the latest model
+                        messages=[
+                            {
+                                "role": "system",
+                                "content": "You are an expert crypto market analyst."
+                            },
+                            {
+                                "role": "user",
+                                "content": prompt
+                            }
+                        ],
+                        response_format={"type": "json_object"},
+                        temperature=0.7
+                    )
+                )
+
+            if completion and completion.choices:
+                result = json.loads(completion.choices[0].message.content)
+                if self._validate_ai_response(result):
+                    return result
+
+            logger.warning("Invalid OpenAI response format")
+            return None
+
+        except Exception as e:
+            logger.error(f"Error in OpenAI analysis: {e}")
+            return None
+
+    async def _analyze_with_anthropic(self, data: Dict[str, Any]) -> Optional[Dict[str, Any]]:
+        """Analyze with Anthropic as fallback"""
+        try:
+            prompt = self._create_analysis_prompt(data)
+
+            loop = asyncio.get_event_loop()
+            with concurrent.futures.ThreadPoolExecutor() as executor:
+                completion = await loop.run_in_executor(
+                    executor,
+                    lambda: self.anthropic_client.messages.create(
+                        model="claude-3-5-sonnet-20241022",
+                        max_tokens=1000,
+                        messages=[{
+                            "role": "user",
+                            "content": f"{prompt}\nProvide analysis in JSON format only."
+                        }]
+                    )
+                )
+
+            if completion and completion.content:
+                try:
+                    result = json.loads(completion.content[0].text)
+                    if self._validate_ai_response(result):
+                        return result
+                except json.JSONDecodeError as e:
+                    logger.error(f"Error parsing Anthropic response: {e}")
+
+            logger.warning("Invalid Anthropic response format")
+            return None
+
+        except Exception as e:
+            logger.error(f"Error in Anthropic analysis: {e}")
+            return None
+
+    def _create_sentiment_response(self, social_data: Dict[str, Any], 
+                                 analysis: Dict[str, Any]) -> Dict[str, Any]:
+        """Create standardized sentiment response"""
+        score = self._calculate_sentiment_score(analysis)
+        return {
+            "raw_data": social_data,
+            "analysis": analysis,
+            "score": score,
+            "confidence": analysis.get('confidence', 0.5),
+            "timestamp": datetime.now().isoformat()
+        }
 
     async def _get_reddit_data(self, symbol: str) -> List[Dict[str, Any]]:
         """Get Reddit data with improved error handling and retry logic"""

@@ -246,10 +246,10 @@ class AutoTrader:
 
     async def execute_trade_async(self, signal: Optional[Dict[str, Any]]) -> Dict[str, Any]:
         """Execute a trade based on the generated signal asynchronously"""
-        if not signal:
-            return {'success': False, 'reason': 'No signal provided'}
-
         try:
+            if not signal:
+                return {'success': False, 'reason': 'No signal provided'}
+
             current_time = datetime.now()
             if self.last_action_time and (current_time - self.last_action_time).seconds < 300:
                 return {'success': False, 'reason': 'Trade cooldown active'}
@@ -278,8 +278,13 @@ class AutoTrader:
                     'stop_loss': signal['stop_loss']
                 }
                 self.last_action_time = current_time
+
                 if self.notifier:
-                    await self.notifier.send_trade_notification('BUY', self.symbol, price, position_size)
+                    try:
+                        await self.notifier.send_trade_notification('BUY', self.symbol, price, position_size)
+                    except Exception as e:
+                        self.logger.error(f"Notification error (non-critical): {str(e)}")
+
                 return {'success': True, 'action': 'buy', 'price': price, 'size': position_size}
 
             elif self.is_in_position and self.current_position:
@@ -299,9 +304,12 @@ class AutoTrader:
                     )
 
                     if self.notifier:
-                        await self.notifier.send_trade_notification(
-                            'SELL', self.symbol, price, position_size, profit_loss
-                        )
+                        try:
+                            await self.notifier.send_trade_notification(
+                                'SELL', self.symbol, price, position_size, profit_loss
+                            )
+                        except Exception as e:
+                            self.logger.error(f"Notification error (non-critical): {str(e)}")
 
                     self.is_in_position = False
                     self.current_position = None
@@ -313,10 +321,11 @@ class AutoTrader:
         except Exception as e:
             self.logger.error(f"Trade execution error: {str(e)}")
             if self.notifier:
-                await self.notifier.send_error_notification(self.symbol, str(e))
+                try:
+                    await self.notifier.send_error_notification(self.symbol, str(e))
+                except Exception as notify_error:
+                    self.logger.error(f"Error notification failed: {str(notify_error)}")
             return {'success': False, 'error': str(e)}
-        finally:
-            self.logger.info("Trade execution complete (with or without errors)")
 
     async def run(self, interval: int = 3600):
         """Main trading loop"""

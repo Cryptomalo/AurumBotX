@@ -1,17 +1,45 @@
 import logging
 from typing import Dict, Any, List, Optional
 import pandas as pd
+import numpy as np
 from datetime import datetime
 import asyncio
-from utils.data_loader import CryptoDataLoader, RetryHandler
+from utils.data_loader import CryptoDataLoader
 from utils.sentiment_analyzer import SentimentAnalyzer
 from utils.prediction_model import PredictionModel
 
 logger = logging.getLogger(__name__)
 
+class RetryHandler:
+    """Gestisce i tentativi di retry per le operazioni che possono fallire"""
+    def __init__(self, max_retries: int = 3, base_delay: float = 1.0):
+        self.max_retries = max_retries
+        self.base_delay = base_delay
+
+    async def execute(self, operation, *args, **kwargs):
+        """Esegue un'operazione con retry e backoff esponenziale"""
+        retries = 0
+        last_exception = None
+
+        while retries < self.max_retries:
+            try:
+                return await operation(*args, **kwargs)
+            except Exception as e:
+                last_exception = e
+                retries += 1
+                if retries < self.max_retries:
+                    delay = self.base_delay * (2 ** (retries - 1))
+                    logger.warning(f"Retry {retries}/{self.max_retries} dopo {delay}s. Errore: {str(e)}")
+                    await asyncio.sleep(delay)
+                else:
+                    logger.error(f"Operazione fallita dopo {self.max_retries} tentativi. Ultimo errore: {str(e)}")
+
+        if last_exception:
+            raise last_exception
+        return None
+
 class AITrading:
     """Sistema base di trading con AI con gestione errori migliorata"""
-
     def __init__(self, config: Optional[Dict[str, Any]] = None):
         self.config = config or {}
         self.retry_handler = RetryHandler()
@@ -27,24 +55,64 @@ class AITrading:
         logger.info("Sistema di trading AI inizializzato con retry configurati")
 
     async def _retry_operation(self, operation, *args, **kwargs):
-        """Gestione retry generica con backoff esponenziale"""
-        retries = 0
-        last_exception = None
+        """Gestione retry generica con backoff esponenziale - Now deprecated"""
+        return await self.retry_handler.execute(operation, *args, **kwargs)
 
-        while retries < self.max_retries:
-            try:
-                return await operation(*args, **kwargs)
-            except Exception as e:
-                last_exception = e
-                retries += 1
-                if retries < self.max_retries:
-                    delay = self.retry_delay * (2 ** (retries - 1))  # Backoff esponenziale
-                    logger.warning(f"Retry {retries}/{self.max_retries} dopo {delay}s. Errore: {str(e)}")
-                    await asyncio.sleep(delay)
-                else:
-                    logger.error(f"Operazione fallita dopo {self.max_retries} tentativi. Ultimo errore: {str(e)}")
+    def _validate_numeric(self, value: float) -> bool:
+        """Validate if a numeric value is valid (not NaN or infinite)"""
+        if isinstance(value, (int, float)):
+            return not (np.isnan(value) or np.isinf(value))
+        return False
 
-        raise last_exception
+    def _extract_market_metrics(self, df: pd.DataFrame) -> Dict[str, float]:
+        """Estrae metriche chiave dai dati di mercato con validazione"""
+        try:
+            if df is None or df.empty:
+                raise ValueError("DataFrame vuoto o None")
+
+            required_columns = ['Close', 'Volume', 'RSI', 'SMA_20', 'SMA_50']
+            missing_columns = [col for col in required_columns if col not in df.columns]
+
+            if missing_columns:
+                logger.warning(f"Colonne mancanti: {missing_columns}")
+                # Aggiungi colonne mancanti con valori di default
+                for col in missing_columns:
+                    if col == 'RSI':
+                        df[col] = 50  # RSI neutrale
+                    elif col in ['SMA_20', 'SMA_50']:
+                        df[col] = df['Close'].rolling(window=int(col.split('_')[1])).mean()
+                    else:
+                        df[col] = 0
+
+            latest = df.iloc[-1]
+            metrics = {
+                'price': float(latest['Close']),
+                'volume': float(latest['Volume']),
+                'rsi': float(latest['RSI']),
+                'trend': 1 if latest['SMA_20'] > latest['SMA_50'] else -1
+            }
+
+            # Validate numeric values
+            invalid_metrics = [
+                key for key, value in metrics.items()
+                if not self._validate_numeric(value)
+            ]
+
+            if invalid_metrics:
+                logger.warning(f"Invalid metrics found: {invalid_metrics}")
+                for key in invalid_metrics:
+                    metrics[key] = 0.0 if key != 'trend' else 0
+
+            return metrics
+
+        except Exception as e:
+            logger.error(f"Errore nell'estrazione metriche: {str(e)}")
+            return {
+                'price': 0.0,
+                'volume': 0.0,
+                'rsi': 50.0,
+                'trend': 0
+            }
 
     async def analyze_market(self, symbol: str) -> Dict[str, Any]:
         """Analizza le condizioni di mercato con retry"""
@@ -86,51 +154,6 @@ class AITrading:
         except Exception as e:
             logger.error(f"Errore nell'analisi del mercato: {str(e)}")
             return {}
-
-    def _extract_market_metrics(self, df: pd.DataFrame) -> Dict[str, float]:
-        """Estrae metriche chiave dai dati di mercato con validazione"""
-        try:
-            if df is None or df.empty:
-                raise ValueError("DataFrame vuoto o None")
-
-            required_columns = ['Close', 'Volume', 'RSI', 'SMA_20', 'SMA_50']
-            missing_columns = [col for col in required_columns if col not in df.columns]
-
-            if missing_columns:
-                logger.warning(f"Colonne mancanti: {missing_columns}")
-                # Aggiungi colonne mancanti con valori di default
-                for col in missing_columns:
-                    if col == 'RSI':
-                        df[col] = 50  # RSI neutrale
-                    elif col in ['SMA_20', 'SMA_50']:
-                        df[col] = df['Close'].rolling(window=int(col.split('_')[1])).mean()
-                    else:
-                        df[col] = 0
-
-            latest = df.iloc[-1]
-            metrics = {
-                'price': latest['Close'],
-                'volume': latest['Volume'],
-                'rsi': latest['RSI'],
-                'trend': 1 if latest['SMA_20'] > latest['SMA_50'] else -1
-            }
-
-            # Validazione dei valori
-            for key, value in metrics.items():
-                if pd.isna(value) or pd.isinf(value):
-                    logger.warning(f"Valore non valido per {key}, usando default")
-                    metrics[key] = 0.0 if key != 'trend' else 0
-
-            return metrics
-
-        except Exception as e:
-            logger.error(f"Errore nell'estrazione metriche: {str(e)}")
-            return {
-                'price': 0.0,
-                'volume': 0.0,
-                'rsi': 50.0,
-                'trend': 0
-            }
 
     async def generate_trading_signals(self, symbol: str) -> List[Dict[str, Any]]:
         """Genera segnali di trading usando analisi AI con retry"""
@@ -282,7 +305,7 @@ class AITrading:
         except Exception as e:
             logger.error(f"Errore nella validazione del segnale: {str(e)}")
             return False
-    
+
     async def _analyze_technical_indicators(self, data: pd.DataFrame) -> Dict[str, Any]:
         """Calculate technical indicators for analysis"""
         try:
@@ -344,7 +367,7 @@ class AITrading:
                 analysis = await self._analyze_technical_indicators(data_window)
 
                 if i > 50:  # Wait for enough data
-                    signal = await self.generate_trading_signals(symbol)
+                    signal = await self._retry_operation(self.generate_trading_signals, symbol)
                     if signal:
                         signals.append(signal[0])
                         # Implement trading logic here
