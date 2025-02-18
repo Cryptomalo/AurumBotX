@@ -795,6 +795,19 @@ wheels = [
 ]
 
 [[package]]
+name = "deepseek-ai"
+version = "0.0.1"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "pydantic" },
+    { name = "requests" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/d0/35/40ab4e870a27efe737798e0d06531504cc9518389298ddae73a61a8365e8/deepseek_ai-0.0.1.tar.gz", hash = "sha256:bd5e660e19ef64a8eed05a0613a5e070d46b2c869c67a87135234e1f963a0db6", size = 7164 }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/07/37/ace0d573e7cd0c59fdfe9872afc6abe19c143a4bd456196a73e0f9eccdbb/deepseek_ai-0.0.1-py3-none-any.whl", hash = "sha256:04eef34cc411436d9cd38f39642267e456fbcf9b75714e998a3bc8e1717bf731", size = 8047 },
+]
+
+[[package]]
 name = "discord-py"
 version = "2.4.0"
 source = { registry = "https://pypi.org/simple" }
@@ -2966,6 +2979,7 @@ dependencies = [
     { name = "beautifulsoup4" },
     { name = "ccxt" },
     { name = "cryptography" },
+    { name = "deepseek-ai" },
     { name = "discord-py" },
     { name = "eth-account" },
     { name = "eth-utils" },
@@ -3033,6 +3047,7 @@ requires-dist = [
     { name = "beautifulsoup4", specifier = "==4.13.3" },
     { name = "ccxt", specifier = ">=4.4.57" },
     { name = "cryptography", specifier = ">=44.0.0" },
+    { name = "deepseek-ai", specifier = ">=0.0.1" },
     { name = "discord-py", specifier = ">=2.4.0" },
     { name = "eth-account", specifier = ">=0.13.5" },
     { name = "eth-utils", specifier = ">=5.2.0" },

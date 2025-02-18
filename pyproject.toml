@@ -66,6 +66,7 @@ dependencies = [
     "qrcode>=8.0",
     "pillow>=11.1.0",
     "asyncpg>=0.30.0",
+    "deepseek-ai>=0.0.1",
 ]
 
 [[tool.uv.index]]
