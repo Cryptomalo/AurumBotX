@@ -129,15 +129,69 @@ class CryptoDataLoader:
             '1d': 86400
         }
 
+        self.engine = None #Initialized here to allow async initialization
+        self.async_session = None
+
         if self.use_live_data:
             try:
-                self._setup_client()
+                loop = asyncio.get_event_loop()
+                loop.run_until_complete(self.initialize())
             except Exception as e:
                 logger.error(f"Errore setup client: {e}")
                 self.use_live_data = False
 
-        self._setup_database()
+
         self.logger = logger # Added for logger access in _save_to_database
+
+    async def initialize(self):
+        """Initialize database connection and Binance client asynchronously"""
+        try:
+            # Setup exchange connection
+            if self.use_live_data:
+                try:
+                    self._setup_client()
+                except Exception as e:
+                    logger.error(f"Errore setup client: {e}")
+                    self.use_live_data = False
+
+            # Setup database connection
+            try:
+                database_url = os.getenv('DATABASE_URL')
+                if not database_url:
+                    logger.warning("DATABASE_URL not found, running without persistent storage")
+                    self.engine = None
+                    return
+
+                # Remove sslmode from connection string if present
+                if 'sslmode=' in database_url:
+                    database_url = database_url.split('?')[0]
+
+                # Convert URL to async format if needed
+                if not database_url.startswith('postgresql+asyncpg://'):
+                    database_url = database_url.replace('postgresql://', 'postgresql+asyncpg://')
+
+                self.engine = create_async_engine(
+                    database_url,
+                    pool_pre_ping=True,
+                    pool_size=5,
+                    max_overflow=10
+                )
+                self.async_session = async_sessionmaker(
+                    self.engine,
+                    expire_on_commit=False,
+                    class_=AsyncSession
+                )
+
+                logger.info("Database connection established successfully")
+                return
+
+            except Exception as e:
+                logger.error(f"Database setup error: {e}", exc_info=True)
+                self.engine = None
+
+        except Exception as e:
+            logger.error(f"Initialization error: {e}", exc_info=True)
+            raise
 
     def _setup_client(self):
         """Setup Binance client with enhanced error handling"""
