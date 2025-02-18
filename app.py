@@ -99,6 +99,12 @@ def custom_theme():
             border-radius: 0.5rem;
             margin: 0.5rem 0;
         }}
+        .nav-menu {{
+            background-color: rgba(255, 255, 255, 0.05);
+            padding: 1rem;
+            border-radius: 0.5rem;
+            margin: 1rem 0;
+        }}
         </style>
     """, unsafe_allow_html=True)
 
@@ -110,11 +116,10 @@ def render_header():
     with col2:
         st.title("🌟 AurumBot Trading Platform")
     with col3:
-        if st.session_state.wallet_connected:
+        if st.session_state.wallet_connected and st.session_state.wallet_address:
             st.image("assets/profile.png", width=50)
-            if st.session_state.wallet_address:
-                address = st.session_state.wallet_address[:6] + "..." + st.session_state.wallet_address[-4:]
-                st.write(f"🔗 {address}")
+            address = st.session_state.wallet_address[:6] + "..." + st.session_state.wallet_address[-4:]
+            st.write(f"🔗 {address}")
 
 def render_wallet_login():
     """Render modern wallet login page"""
@@ -165,95 +170,33 @@ def render_wallet_login():
     # Centered wallet connection
     col1, col2, col3 = st.columns([1,2,1])
     with col2:
-        if not st.session_state.wallet_connected:
-            connect_btn = st.button("🔗 Connect Wallet", use_container_width=True)
-            if connect_btn:
-                # Simulate wallet connection
-                st.session_state.wallet_connected = True
-                st.session_state.wallet_address = "0x742d35Cc6634C0532925a3b844Bc454e4438f44e"
-                st.rerun()
-        else:
-            st.success("✅ Wallet Connected")
-            if st.button("Disconnect", use_container_width=True):
-                st.session_state.wallet_connected = False
-                st.session_state.wallet_address = None
-                st.rerun()
+        if st.button("🔗 Connect Wallet", use_container_width=True):
+            st.session_state.wallet_connected = True
+            st.session_state.wallet_address = "0x742d35Cc6634C0532925a3b844Bc454e4438f44e"
+            st.rerun()
 
-def render_settings():
-    """Render modern settings interface"""
-    st.subheader("⚙️ Settings")
-
-    tabs = st.tabs(["General", "Notifications", "Wallet", "Telegram", "Advanced"])
-
-    with tabs[0]:
-        st.subheader("General Settings")
-        col1, col2 = st.columns(2)
-        with col1:
-            st.session_state.theme = st.selectbox(
-                "Theme",
-                ["dark", "light"],
-                index=0 if st.session_state.theme == "dark" else 1
-            )
-        with col2:
-            st.session_state.auto_trade = st.checkbox(
-                "Enable Auto Trading",
-                value=st.session_state.auto_trade
-            )
-
-    with tabs[1]:
-        st.subheader("Notification Settings")
-        col1, col2 = st.columns(2)
-        with col1:
-            st.session_state.notifications_enabled = st.checkbox(
-                "Enable Notifications",
-                value=st.session_state.notifications_enabled
-            )
-        with col2:
-            st.number_input("Price Alert Threshold (%)", 
-                          min_value=0.1, 
-                          value=5.0,
-                          step=0.1)
-
-    with tabs[2]:
-        st.subheader("Wallet Settings")
-        if st.session_state.wallet_connected:
-            st.markdown(f"""
-            <div class='success-box'>
-                <h4>Wallet Connected</h4>
-                <p>Address: {st.session_state.wallet_address}</p>
-            </div>
-            """, unsafe_allow_html=True)
-            if st.button("Disconnect Wallet"):
-                st.session_state.wallet_connected = False
-                st.session_state.wallet_address = None
-        else:
-            if st.button("Connect Wallet"):
-                st.session_state.wallet_connected = True
-                st.session_state.wallet_address = "0x742d35Cc6634C0532925a3b844Bc454e4438f44e"
-
-    with tabs[3]:
-        st.subheader("Telegram Integration")
-        telegram_enabled = st.checkbox("Enable Telegram Scanner", value=False)
-        if telegram_enabled:
-            st.text_input("Telegram Bot Token")
-            st.text_input("Chat ID")
-            st.multiselect(
-                "Monitor Channels",
-                ["Channel 1", "Channel 2", "Channel 3"]
-            )
-
-    with tabs[4]:
-        st.subheader("Advanced Settings")
-        col1, col2 = st.columns(2)
-        with col1:
-            st.number_input("API Request Timeout (seconds)", 
-                          min_value=1, 
-                          value=30)
-        with col2:
-            st.number_input("Cache Duration (minutes)", 
-                          min_value=1, 
-                          value=5)
-        st.checkbox("Enable Debug Logging")
+def render_navigation():
+    """Render the main navigation menu"""
+    selected = option_menu(
+        menu_title=None,
+        options=["Dashboard", "Trading", "Portfolio", "Analytics", "Social", "Settings"],
+        icons=['house', 'currency-bitcoin', 'wallet2', 'graph-up', 'people', 'gear'],
+        menu_icon="cast",
+        default_index=0,
+        orientation="horizontal",
+        styles={
+            "container": {"padding": "0!important", "background-color": "rgba(255, 255, 255, 0.05)"},
+            "icon": {"color": COLORS['text'], "font-size": "25px"},
+            "nav-link": {
+                "font-size": "16px",
+                "text-align": "center",
+                "margin": "0px",
+                "--hover-color": COLORS['secondary']
+            },
+            "nav-link-selected": {"background-color": COLORS['primary']},
+        }
+    )
+    return selected
 
 def render_dashboard():
     """Render modern dashboard with enhanced visualizations"""
@@ -341,6 +284,11 @@ def render_trading_controls():
     """Render modern trading interface"""
     st.subheader("Trading Controls")
 
+    # Trading form in card-like container
+    st.markdown("""
+    <div style='background-color: rgba(255, 255, 255, 0.05); padding: 20px; border-radius: 10px; margin: 20px 0;'>
+    """, unsafe_allow_html=True)
+
     col1, col2 = st.columns(2)
     with col1:
         trading_pair = st.selectbox(
@@ -369,9 +317,10 @@ def render_trading_controls():
             step=0.1
         )
 
+    # Control buttons
     st.markdown("---")
-
     col1, col2, col3 = st.columns([1,2,1])
+
     with col2:
         testnet_mode = st.checkbox("Testnet Mode", value=True)
 
@@ -400,6 +349,82 @@ def render_trading_controls():
                 st.session_state.data_loader = None
                 st.info("Trading stopped")
                 st.rerun()
+
+    st.markdown("</div>", unsafe_allow_html=True)
+
+def render_settings():
+    """Render modern settings interface"""
+    st.subheader("⚙️ Settings")
+
+    tabs = st.tabs(["General", "Notifications", "Wallet", "Telegram", "Advanced"])
+
+    with tabs[0]:
+        st.subheader("General Settings")
+        col1, col2 = st.columns(2)
+        with col1:
+            st.selectbox(
+                "Theme",
+                ["dark", "light"],
+                index=0 if st.session_state.theme == "dark" else 1,
+                key="theme"
+            )
+        with col2:
+            st.checkbox(
+                "Enable Auto Trading",
+                value=st.session_state.auto_trade,
+                key="auto_trade"
+            )
+
+    with tabs[1]:
+        st.subheader("Notification Settings")
+        col1, col2 = st.columns(2)
+        with col1:
+            st.checkbox(
+                "Enable Notifications",
+                value=st.session_state.notifications_enabled,
+                key="notifications_enabled"
+            )
+        with col2:
+            st.number_input(
+                "Price Alert Threshold (%)",
+                min_value=0.1,
+                value=5.0,
+                step=0.1
+            )
+
+    with tabs[2]:
+        st.subheader("Wallet Settings")
+        if st.session_state.wallet_connected:
+            st.markdown(f"""
+            <div class='success-box'>
+                <h4>Wallet Connected</h4>
+                <p>Address: {st.session_state.wallet_address}</p>
+            </div>
+            """, unsafe_allow_html=True)
+            if st.button("Disconnect Wallet"):
+                st.session_state.wallet_connected = False
+                st.session_state.wallet_address = None
+                st.rerun()
+
+    with tabs[3]:
+        st.subheader("Telegram Integration")
+        telegram_enabled = st.checkbox("Enable Telegram Scanner")
+        if telegram_enabled:
+            st.text_input("Telegram Bot Token")
+            st.text_input("Chat ID")
+            st.multiselect(
+                "Monitor Channels",
+                ["Channel 1", "Channel 2", "Channel 3"]
+            )
+
+    with tabs[4]:
+        st.subheader("Advanced Settings")
+        col1, col2 = st.columns(2)
+        with col1:
+            st.number_input("API Request Timeout (seconds)", min_value=1, value=30)
+        with col2:
+            st.number_input("Cache Duration (minutes)", min_value=1, value=5)
+        st.checkbox("Enable Debug Logging")
 
 async def initialize_bot_and_loader(trading_pair: str, initial_balance: float, risk_per_trade: float, testnet_mode: bool):
     """Initialize trading bot and data loader"""
@@ -446,33 +471,24 @@ def main():
             return
 
         render_header()
+        selected_tab = render_navigation()
+        st.session_state.selected_tab = selected_tab
 
-        # Main navigation
-        selected = option_menu(
-            menu_title=None,
-            options=["Dashboard", "Trading", "Portfolio", "Analytics", "Social", "Settings"],
-            icons=['house', 'currency-bitcoin', 'wallet2', 'graph-up', 'people', 'gear'],
-            menu_icon="cast",
-            default_index=0,
-            orientation="horizontal",
-        )
-        st.session_state.selected_tab = selected
-
-        if selected == "Dashboard":
+        if selected_tab == "Dashboard":
             render_dashboard()
-        elif selected == "Settings":
+        elif selected_tab == "Settings":
             render_settings()
-        elif selected == "Trading":
+        elif selected_tab == "Trading":
             render_trading_controls()
-        elif selected == "Portfolio":
+        elif selected_tab == "Portfolio":
             st.title("Portfolio Analysis")
-            # Add portfolio content
-        elif selected == "Analytics":
+            # Future: Add portfolio content
+        elif selected_tab == "Analytics":
             st.title("Advanced Analytics")
-            # Add analytics content
-        elif selected == "Social":
+            # Future: Add analytics content
+        elif selected_tab == "Social":
             st.title("Social Trading")
-            # Add social trading content
+            # Future: Add social trading content
 
     except Exception as e:
         logger.error(f"Application error: {str(e)}")
