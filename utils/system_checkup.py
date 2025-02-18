@@ -8,7 +8,6 @@ from utils.prediction_model import PredictionModel
 from utils.ai_trading import AITrading
 from utils.database_manager import DatabaseManager
 from utils.websocket_handler import WebSocketHandler
-from utils.database_manager import DatabaseManager
 
 logging.basicConfig(
     level=logging.INFO,
