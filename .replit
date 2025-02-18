@@ -5,7 +5,7 @@ channel = "stable-24_05"
 
 [deployment]
 deploymentTarget = "autoscale"
-run = ["sh", "-c", "streamlit run streamlit_bot.py --server.port=5000 --server.address=0.0.0.0"]
+run = ["sh", "-c", "streamlit run test_streamlit.py"]
 
 [workflows]
 runButton = "Project"
@@ -17,10 +17,10 @@ mode = "parallel"
 
 [[workflows.workflow.tasks]]
 task = "workflow.run"
-args = "Trading Dashboard"
+args = "Streamlit Dashboard"
 
 [[workflows.workflow]]
-name = "Trading Dashboard"
+name = "Streamlit Dashboard"
 mode = "parallel"
 author = "agent"
 
@@ -32,7 +32,8 @@ task = "packager.installForAll"
 
 [[workflows.workflow.tasks]]
 task = "shell.exec"
-args = "streamlit run streamlit_bot.py --server.port=5000 --server.address=0.0.0.0"
+args = "streamlit run test_streamlit.py"
+waitForPort = 5000
 
 [[workflows.workflow]]
 name = "Test WebSocket"
