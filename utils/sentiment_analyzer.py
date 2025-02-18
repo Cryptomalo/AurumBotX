@@ -117,57 +117,76 @@ class SentimentAnalyzer:
             }
 
     async def _get_reddit_data(self, symbol: str) -> List[Dict[str, Any]]:
-        """Get Reddit data with improved error handling"""
+        """Get Reddit data with improved error handling and retry logic"""
         try:
             if not self.reddit:
+                logger.info("Reddit client not initialized - skipping Reddit data collection")
                 return []
 
             posts = []
-            subreddits = ['CryptoCurrency', 'CryptoMarkets', symbol.lower()]
+            # Use more reliable subreddits and better symbol handling
+            symbol_clean = symbol.split('/')[0] if '/' in symbol else symbol
+            subreddits = ['CryptoCurrency', 'CryptoMarkets', symbol_clean.lower()]
+            logger.info(f"Attempting to fetch Reddit data for symbol: {symbol_clean} from subreddits: {subreddits}")
 
             for subreddit in subreddits:
                 try:
                     def fetch_subreddit_posts():
                         try:
-                            # Use a more specific subreddit search format
+                            # First try direct subreddit access
                             sub = self.reddit.subreddit(subreddit)
-                            posts_query = sub.search(f"{symbol} OR {symbol.upper()}", limit=5, time_filter="day")
-                            return list(posts_query)
+                            posts_query = list(sub.hot(limit=5))  # Get hot posts first
+                            logger.debug(f"Retrieved {len(posts_query)} hot posts from r/{subreddit}")
+
+                            # If no posts, try search
+                            if not posts_query and subreddit in ['CryptoCurrency', 'CryptoMarkets']:
+                                search_query = f"title:{symbol_clean} OR flair:{symbol_clean}"
+                                logger.debug(f"Attempting search in r/{subreddit} with query: {search_query}")
+                                posts_query = list(sub.search(search_query, limit=5, time_filter="week"))
+                                logger.debug(f"Search retrieved {len(posts_query)} posts")
+
+                            return posts_query
                         except Exception as e:
-                            if "received 400 HTTP response" in str(e):
-                                # Try alternative search method
-                                return list(sub.hot(limit=5))
-                            raise
+                            logger.debug(f"Reddit fetch error for {subreddit}: {e}")
+                            return []
 
                     # Get posts with retry mechanism
                     for attempt in range(3):  # 3 retries
                         try:
-                            # Execute synchronously since PRAW is not async-compatible
-                            subreddit_posts = await asyncio.get_event_loop().run_in_executor(None, fetch_subreddit_posts)
+                            logger.debug(f"Attempt {attempt + 1} to fetch from r/{subreddit}")
+                            loop = asyncio.get_event_loop()
+                            with concurrent.futures.ThreadPoolExecutor() as executor:
+                                subreddit_posts = await loop.run_in_executor(None, fetch_subreddit_posts)
 
-                            for post in subreddit_posts:
-                                if post and hasattr(post, 'title'):  # Verify post object is valid
-                                    posts.append({
-                                        "title": post.title,
-                                        "text": post.selftext[:500],  # Limit text length
-                                        "score": getattr(post, 'score', 0),
-                                        "comments": getattr(post, 'num_comments', 0),
-                                        "created_utc": getattr(post, 'created_utc', 0),
-                                        "subreddit": subreddit
-                                    })
-                            if posts:  # If we got valid posts, break retry loop
-                                break
-                            await asyncio.sleep(1)  # Brief pause between attempts
+                            if subreddit_posts:  # If we got valid posts, process them
+                                for post in subreddit_posts:
+                                    if post and hasattr(post, 'title'):
+                                        posts.append({
+                                            "title": post.title[:500],  # Limit length
+                                            "text": post.selftext[:1000] if hasattr(post, 'selftext') else "",
+                                            "score": getattr(post, 'score', 0),
+                                            "comments": getattr(post, 'num_comments', 0),
+                                            "created_utc": getattr(post, 'created_utc', 0),
+                                            "subreddit": subreddit,
+                                            "url": getattr(post, 'url', '')
+                                        })
+                                        logger.debug(f"Retrieved post from r/{subreddit}: {post.title[:50]}...")
+                                break  # Break retry loop if successful
+
+                            if attempt < 2:  # Only sleep if we're going to retry
+                                await asyncio.sleep(1 * (attempt + 1))  # Exponential backoff
+
                         except Exception as e:
                             logger.warning(f"Reddit fetch attempt {attempt + 1} failed: {e}")
                             if attempt == 2:  # Last attempt
                                 raise
-                            await asyncio.sleep(1 * (attempt + 1))  # Increasing backoff
+                            await asyncio.sleep(1 * (attempt + 1))  # Exponential backoff
 
                 except Exception as sub_e:
                     logger.warning(f"Error fetching from subreddit {subreddit}: {sub_e}")
                     continue
 
+            logger.info(f"Successfully retrieved {len(posts)} total posts from Reddit")
             return posts
 
         except Exception as e:
@@ -175,10 +194,11 @@ class SentimentAnalyzer:
             return []
 
     async def analyze_with_ai(self, data: Dict[str, Any]) -> Optional[Dict[str, Any]]:
-        """Analyze social data with AI"""
+        """Analyze social data with AI and improved error handling"""
         try:
             if not self.openai_client:
-                return None
+                logger.warning("OpenAI client not initialized")
+                return self._get_fallback_analysis()
 
             prompt = self._create_analysis_prompt(data)
 
@@ -200,7 +220,8 @@ class SentimentAnalyzer:
                                     "content": prompt
                                 }
                             ],
-                            response_format={"type": "json_object"}
+                            response_format={"type": "json_object"},
+                            temperature=0.7
                         )
                     )
 
@@ -209,21 +230,32 @@ class SentimentAnalyzer:
                     if self._validate_ai_response(result):
                         return result
 
+                logger.warning("Invalid AI response format")
+                return self._get_fallback_analysis()
+
             except RateLimitError as e:
                 logger.warning(f"OpenAI rate limit exceeded: {e}")
-                return None
+                return self._get_fallback_analysis()
             except APIError as e:
                 logger.error(f"OpenAI API error: {e}")
-                return None
+                return self._get_fallback_analysis()
             except Exception as e:
                 logger.error(f"Error in AI analysis: {e}")
-                return None
-
-            return None
+                return self._get_fallback_analysis()
 
         except Exception as e:
-            logger.error(f"Error in AI analysis: {e}")
-            return None
+            logger.error(f"Error in analyze_with_ai: {e}")
+            return self._get_fallback_analysis()
+
+    def _get_fallback_analysis(self) -> Dict[str, Any]:
+        """Get fallback analysis when AI analysis fails"""
+        return {
+            "sentiment": "neutral",
+            "confidence": 0.5,
+            "insights": ["Insufficient data for detailed analysis"],
+            "market_signals": ["No clear market signals"],
+            "momentum_score": 0.5
+        }
 
     def _create_analysis_prompt(self, data: Dict[str, Any]) -> str:
         """Create analysis prompt with metrics"""

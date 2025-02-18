@@ -13,7 +13,7 @@ logger = logging.getLogger(__name__)
 class LearningModule:
     def __init__(self):
         self.logger = logging.getLogger(__name__)
-        # Inizializza sia RandomForest che GradientBoosting per ensemble
+        # Initialize both RandomForest and GradientBoosting for ensemble
         self.rf_model = RandomForestClassifier(n_estimators=100, random_state=42)
         self.gb_model = GradientBoostingClassifier(n_estimators=100, random_state=42)
         self.scaler = StandardScaler()
@@ -210,7 +210,7 @@ class LearningModule:
             return 0.5
 
     def _validate_prediction_features(self, features: Dict[str, float]) -> Optional[pd.DataFrame]:
-        """Validazione avanzata delle features per la predizione"""
+        """Validate features for prediction with improved error handling"""
         try:
             required_features = {
                 'price', 'volume', 'volatility', 'rsi', 'macd',
@@ -219,19 +219,20 @@ class LearningModule:
             }
 
             if missing := required_features - features.keys():
-                self.logger.error(f"Missing required features: {missing}")
+                logger.error(f"Missing required features: {missing}")
                 return None
 
             df = pd.DataFrame([features])
 
-            if df.isnull().any().any() or (df == np.inf).any().any():
-                self.logger.error("Invalid feature values detected")
+            # Use numpy's isinf and isnan for validation
+            if df.isnull().any().any() or np.isinf(df.values).any():
+                logger.error("Invalid feature values detected")
                 return None
 
             return df
 
         except Exception as e:
-            self.logger.error(f"Feature validation error: {e}")
+            logger.error(f"Feature validation error: {e}")
             return None
 
     def get_model_metrics(self) -> Dict[str, Any]:
