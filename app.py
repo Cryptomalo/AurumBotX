@@ -42,7 +42,8 @@ def init_session_state():
         'theme': 'light',
         'notifications_enabled': True,
         'auto_trade': False,
-        'selected_tab': "Dashboard"
+        'selected_tab': "Dashboard",
+        'initialization_running': False
     }
     for key, value in defaults.items():
         if key not in st.session_state:
@@ -64,11 +65,37 @@ def render_wallet_login():
     """Render the wallet login page"""
     st.markdown("""
     <div style='text-align: center; padding: 50px;'>
-        <h1>Welcome to AurumBot</h1>
-        <p>Connect your wallet to start trading</p>
+        <h1>🌟 Welcome to AurumBot</h1>
+        <p style='font-size: 1.2em; margin: 20px 0;'>The Advanced AI-Powered Trading Platform</p>
+        <p>Connect your wallet to start your trading journey</p>
     </div>
     """, unsafe_allow_html=True)
 
+    # Features showcase
+    st.markdown("---")
+    col1, col2, col3 = st.columns(3)
+
+    with col1:
+        st.markdown("""
+        ### 🤖 AI Trading
+        Leverage advanced AI algorithms for smart trading decisions
+        """)
+
+    with col2:
+        st.markdown("""
+        ### 📊 Real-time Analysis
+        Get instant market insights and performance metrics
+        """)
+
+    with col3:
+        st.markdown("""
+        ### 🔒 Secure Trading
+        Connect your wallet for safe and secure transactions
+        """)
+
+    st.markdown("---")
+
+    # Wallet connection
     col1, col2, col3 = st.columns([1,2,1])
     with col2:
         if not st.session_state.wallet_connected:
@@ -181,13 +208,12 @@ def show_main_app():
         render_wallet_login()
         return
 
-
+    # Main navigation after login
     selected_tab = st.sidebar.selectbox(
         "Main Menu",
         ["Dashboard", "Trading", "Portfolio", "Analytics", "Social", "Settings"],
     )
     st.session_state.selected_tab = selected_tab
-
 
     if st.session_state.selected_tab == "Dashboard":
         render_dashboard()
