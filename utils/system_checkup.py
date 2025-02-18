@@ -2,7 +2,7 @@
 import logging
 import asyncio
 from datetime import datetime
-from utils.data_loader import CryptoDataLoader
+from data_loader import CryptoDataLoader
 from utils.sentiment_analyzer import SentimentAnalyzer
 from utils.prediction_model import PredictionModel
 from utils.ai_trading import AITrading
