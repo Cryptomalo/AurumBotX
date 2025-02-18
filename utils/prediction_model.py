@@ -33,9 +33,20 @@ class PredictionModel:
                     return {'prediction': 0.5, 'confidence': 0.5}
                     
                 time.sleep(retry_delay * attempt)  # Exponential backoff
-            
-            features = self._prepare_features(data)
-            weighted_pred = 0
+                features = self._prepare_features(data)
+                weighted_pred = 0
+                
+                for name, model in self.models.items():
+                    pred = model.predict(features)
+                    weighted_pred += pred[0] if len(pred) > 0 else 0.5
+                    
+                weighted_pred /= len(self.models) if self.models else 1
+                return {'prediction': weighted_pred, 'confidence': 0.7}
+                
+            except Exception as e:
+                self.logger.error(f"Prediction error: {str(e)}")
+                if attempt == max_retries - 1:
+                    return {'prediction': 0.5, 'confidence': 0.5}
             
             for name, model in self.models.items():
                 pred = model.predict(features)
