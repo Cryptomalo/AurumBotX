@@ -21,6 +21,26 @@ class PredictionModel:
     def __init__(self):
         self.logger = logging.getLogger(__name__)
         self.models = {}
+        
+    def predict(self, data):
+        """Synchronous prediction method"""
+        try:
+            if not self.models:
+                return {'prediction': 0.5, 'confidence': 0.5}
+            
+            features = self._prepare_features(data)
+            weighted_pred = 0
+            
+            for name, model in self.models.items():
+                pred = model.predict(features)
+                weighted_pred += pred[0] if len(pred) > 0 else 0.5
+                
+            weighted_pred /= len(self.models) if self.models else 1
+            return {'prediction': weighted_pred, 'confidence': 0.7}
+            
+        except Exception as e:
+            self.logger.error(f"Prediction error: {str(e)}")
+            return {'prediction': 0.5, 'confidence': 0.5}
         self.scaler = StandardScaler()
         self.feature_importance = {}
         self.metrics = {}

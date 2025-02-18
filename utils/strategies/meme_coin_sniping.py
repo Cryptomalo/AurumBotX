@@ -30,7 +30,7 @@ class MemeCoinStrategy:
 
         # Setup notifiche
         if config.get('phone_number'):
-            self.notifier.setup(config['phone_number'])
+            await self.notifier.setup(config['phone_number'])
 
     def analyze_market(self, market_data: Dict, sentiment_data: Optional[Dict] = None) -> List[Dict]:
         """Analisi ottimizzata del mercato per meme coin con predizioni ML"""

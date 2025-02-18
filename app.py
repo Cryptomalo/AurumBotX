@@ -86,7 +86,7 @@ def show_main_app():
             value=2.0,
             step=0.1
         )
-        
+
         testnet_mode = st.checkbox("Modalità Testnet", value=True)
 
         # Pulsanti Start/Stop
@@ -178,13 +178,13 @@ def create_candlestick_chart(df):
         logger.error(f"Errore creazione grafico: {str(e)}")
         return None
 
-def load_market_data(symbol, period='1d'):
+async def load_market_data(symbol, period='1d'):
     """Carica i dati di mercato in modo sicuro"""
     try:
         if not st.session_state.data_loader:
             return None
 
-        df = st.session_state.data_loader.get_historical_data(symbol, period)
+        df = await st.session_state.data_loader.get_historical_data(symbol, period)
         if df is not None and not df.empty:
             st.session_state.market_data = df
             return df
