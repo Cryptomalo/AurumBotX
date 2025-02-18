@@ -23,10 +23,16 @@ class PredictionModel:
         self.models = {}
         
     def predict(self, data):
-        """Synchronous prediction method"""
-        try:
-            if not self.models:
-                return {'prediction': 0.5, 'confidence': 0.5}
+        """Synchronous prediction method with retry logic"""
+        max_retries = 3
+        retry_delay = 1
+        
+        for attempt in range(max_retries):
+            try:
+                if not self.models:
+                    return {'prediction': 0.5, 'confidence': 0.5}
+                    
+                time.sleep(retry_delay * attempt)  # Exponential backoff
             
             features = self._prepare_features(data)
             weighted_pred = 0
