@@ -9,6 +9,7 @@ from utils.auto_trader import AutoTrader
 from utils.data_loader import CryptoDataLoader
 from utils.backup_manager import BackupManager
 from components.login import render_login_page
+from streamlit_option_menu import option_menu
 import json
 from pathlib import Path
 import asyncio
@@ -29,6 +30,173 @@ logging.basicConfig(
 logging.getLogger('werkzeug').setLevel(logging.WARNING)
 logging.getLogger('streamlit').setLevel(logging.WARNING)
 logger = logging.getLogger(__name__)
+
+def init_session_state():
+    """Inizializza lo stato della sessione"""
+    defaults = {
+        'bot': None,
+        'data_loader': None,
+        'last_update': datetime.now(),
+        'error_count': 0,
+        'market_data': None,
+        'user': {'authenticated': False},
+        'initialization_running': False,
+        'selected_tab': "Dashboard",
+        'wallet_connected': False,
+        'theme': 'light',
+        'notifications_enabled': True,
+        'auto_trade': False
+    }
+    for key, value in defaults.items():
+        if key not in st.session_state:
+            st.session_state[key] = value
+
+def render_header():
+    """Render the application header with profile"""
+    col1, col2, col3 = st.columns([1,2,1])
+    with col1:
+        st.image("assets/logo.png", width=100)
+    with col2:
+        st.title("🌟 AurumBot Trading Platform")
+    with col3:
+        if st.session_state.user.get('authenticated'):
+            st.image("assets/profile.png", width=50)
+            st.write(f"Welcome, {st.session_state.user.get('username', 'User')}")
+
+def render_sidebar():
+    """Render the application sidebar"""
+    with st.sidebar:
+        selected = option_menu(
+            "Main Menu",
+            ["Dashboard", "Trading", "Portfolio", "Analytics", "Social", "Settings"],
+            icons=['house', 'currency-bitcoin', 'wallet2', 'graph-up', 'people', 'gear'], 
+            menu_icon="cast",
+            default_index=0
+        )
+        st.session_state.selected_tab = selected
+
+        if selected == "Trading":
+            st.subheader("Trading Controls")
+            trading_pair = st.selectbox(
+                "Select Trading Pair",
+                ["BTC/USDT", "ETH/USDT", "SOL/USDT", "DOGE/USDT", "SHIB/USDT"],
+                index=0
+            )
+            strategy = st.selectbox(
+                "Trading Strategy",
+                ["Scalping", "Swing", "Meme Coin"],
+                index=0
+            )
+            initial_balance = st.number_input(
+                "Initial Balance (USDT)",
+                min_value=10.0,
+                value=1000.0,
+                step=10.0
+            )
+            risk_per_trade = st.slider(
+                "Risk per Trade (%)",
+                min_value=0.1,
+                max_value=5.0,
+                value=2.0,
+                step=0.1
+            )
+            testnet_mode = st.checkbox("Testnet Mode", value=True)
+
+            col1, col2 = st.columns(2)
+            with col1:
+                if st.button("▶️ Start"):
+                    if not st.session_state.initialization_running:
+                        st.session_state.initialization_running = True
+                        try:
+                            loop = asyncio.new_event_loop()
+                            asyncio.set_event_loop(loop)
+                            success = loop.run_until_complete(initialize_bot_and_loader(
+                                trading_pair, initial_balance, risk_per_trade, testnet_mode
+                            ))
+                            loop.close()
+                            if success:
+                                st.success(f"Bot initialized for {trading_pair}")
+                                st.rerun()
+                        except Exception as e:
+                            st.error(f"Error during startup: {str(e)}")
+                            logger.error(f"Startup error: {str(e)}")
+                        finally:
+                            st.session_state.initialization_running = False
+
+            with col2:
+                if st.button("⏹️ Stop"):
+                    st.session_state.bot = None
+                    st.session_state.data_loader = None
+                    st.info("Trading stopped")
+                    st.rerun()
+
+def render_dashboard():
+    """Render the main dashboard"""
+    col1, col2, col3 = st.columns([2,1,1])
+
+    with col1:
+        st.subheader("Market Overview")
+        if st.session_state.market_data is not None:
+            chart = create_candlestick_chart(st.session_state.market_data)
+            if chart:
+                st.plotly_chart(chart, use_container_width=True)
+
+    with col2:
+        st.subheader("Portfolio Summary")
+        if st.session_state.bot:
+            current_balance = st.session_state.bot.balance
+            initial_balance = st.session_state.bot.initial_balance
+            pnl = current_balance - initial_balance
+            pnl_color = "green" if pnl >= 0 else "red"
+
+            st.metric("Current Balance", f"${current_balance:.2f}")
+            st.metric("PNL", f"${pnl:.2f}", delta=f"{(pnl/initial_balance)*100:.1f}%")
+
+            # Add PNL Chart
+            if hasattr(st.session_state.bot, 'balance_history'):
+                pnl_df = pd.DataFrame(st.session_state.bot.balance_history)
+                st.line_chart(pnl_df.set_index('timestamp')['balance'])
+
+    with col3:
+        st.subheader("Top Meme Coins")
+        meme_coins = [
+            {"symbol": "DOGE/USDT", "change": "+5.2%"},
+            {"symbol": "SHIB/USDT", "change": "+3.1%"},
+            {"symbol": "PEPE/USDT", "change": "+8.7%"}
+        ]
+        for coin in meme_coins:
+            st.write(f"{coin['symbol']}: {coin['change']}")
+
+def render_settings():
+    """Render settings page"""
+    st.subheader("⚙️ Settings")
+
+    col1, col2 = st.columns(2)
+    with col1:
+        st.subheader("General Settings")
+        st.session_state.theme = st.selectbox(
+            "Theme",
+            ["light", "dark"],
+            index=0 if st.session_state.theme == "light" else 1
+        )
+        st.session_state.notifications_enabled = st.checkbox(
+            "Enable Notifications",
+            value=st.session_state.notifications_enabled
+        )
+        st.session_state.auto_trade = st.checkbox(
+            "Auto Trading",
+            value=st.session_state.auto_trade
+        )
+
+    with col2:
+        st.subheader("Wallet Connection")
+        if not st.session_state.wallet_connected:
+            if st.button("Connect Wallet"):
+                st.session_state.wallet_connected = True
+        else:
+            st.success("Wallet Connected")
+            if st.button("Disconnect"):
+                st.session_state.wallet_connected = False
 
 async def initialize_bot_and_loader(trading_pair: str, initial_balance: float, risk_per_trade: float, testnet_mode: bool):
     """Inizializza il bot e il data loader in modo asincrono"""
@@ -58,120 +226,33 @@ async def initialize_bot_and_loader(trading_pair: str, initial_balance: float, r
         st.error(f"Errore avvio: {str(e)}")
         return False
 
-def init_session_state():
-    """Inizializza lo stato della sessione"""
-    if 'bot' not in st.session_state:
-        st.session_state.bot = None
-    if 'data_loader' not in st.session_state:
-        st.session_state.data_loader = None
-    if 'last_update' not in st.session_state:
-        st.session_state.last_update = datetime.now()
-    if 'error_count' not in st.session_state:
-        st.session_state.error_count = 0
-    if 'market_data' not in st.session_state:
-        st.session_state.market_data = None
-    if 'user' not in st.session_state:
-        st.session_state.user = {'authenticated': False}
-    if 'initialization_running' not in st.session_state:
-        st.session_state.initialization_running = False
-
 def show_main_app():
-    """Mostra l'applicazione principale"""
+    """Main application UI"""
     if 'user' not in st.session_state or not st.session_state['user'].get('authenticated'):
         render_login_page()
         return
 
-    st.title("🌟 AurumBot Trading Platform")
-    st.markdown("""
-    Piattaforma avanzata di trading crypto con automazione intelligente e backtesting sofisticato.
-    """)
+    render_header()
+    render_sidebar()
 
-    with st.sidebar:
-        st.title("Controlli Trading")
-        trading_pair = st.selectbox(
-            "Seleziona Coppia Trading",
-            ["BTC/USDT", "ETH/USDT", "SOL/USDT", "DOGE/USDT", "SHIB/USDT"],
-            index=0
-        )
-        strategy = st.selectbox(
-            "Strategia Trading",
-            ["scalping", "swing", "meme_coin"],
-            index=0
-        )
-        initial_balance = st.number_input(
-            "Bilancio Iniziale (USDT)",
-            min_value=10.0,
-            value=1000.0,
-            step=10.0
-        )
-        risk_per_trade = st.slider(
-            "Rischio per Trade (%)",
-            min_value=0.1,
-            max_value=5.0,
-            value=2.0,
-            step=0.1
-        )
-        testnet_mode = st.checkbox("Modalità Testnet", value=True)
+    if st.session_state.selected_tab == "Dashboard":
+        render_dashboard()
+    elif st.session_state.selected_tab == "Settings":
+        render_settings()
 
-        col1, col2 = st.columns(2)
-        with col1:
-            if st.button("▶️ Avvia"):
-                if not st.session_state.initialization_running:
-                    st.session_state.initialization_running = True
-                    try:
-                        loop = asyncio.new_event_loop()
-                        asyncio.set_event_loop(loop)
-                        success = loop.run_until_complete(initialize_bot_and_loader(
-                            trading_pair, initial_balance, risk_per_trade, testnet_mode
-                        ))
-                        loop.close()
-                        if success:
-                            st.success(f"Bot inizializzato per {trading_pair}")
-                            st.rerun()
-                    except Exception as e:
-                        st.error(f"Errore durante l'avvio: {str(e)}")
-                        logger.error(f"Errore durante l'avvio: {str(e)}")
-                    finally:
-                        st.session_state.initialization_running = False
+    # Placeholder for other tabs
+    elif st.session_state.selected_tab == "Portfolio":
+        st.title("Portfolio Analysis")
+        render_portfolio_status()
+    elif st.session_state.selected_tab == "Analytics":
+        st.title("Advanced Analytics")
+        # Add analytics content here
+    elif st.session_state.selected_tab == "Social":
+        st.title("Social Trading")
+        # Add social trading content here
+    elif st.session_state.selected_tab == "Trading":
+        pass #Trading controls are in the sidebar
 
-        with col2:
-            if st.button("⏹️ Ferma"):
-                st.session_state.bot = None
-                st.session_state.data_loader = None
-                st.info("Trading fermato")
-                st.rerun()
-
-    tab1, tab2, tab3, tab4 = st.tabs([
-        "📊 Analisi Mercato",
-        "🤖 Auto Trading", 
-        "💼 Portfolio",
-        "🔗 Social Connections"
-    ])
-
-    with tab1:
-        if st.session_state.bot and st.session_state.market_data is not None:
-            df = st.session_state.market_data
-            chart = create_candlestick_chart(df)
-            if chart:
-                st.plotly_chart(chart, use_container_width=True)
-            render_market_metrics(df)
-        else:
-            st.info("Avvia il trading per vedere l'analisi di mercato")
-
-    with tab2:
-        if st.session_state.bot:
-            render_portfolio_status()
-        else:
-            st.info("Avvia il trading per accedere al trading automatico")
-
-    with tab3:
-        if st.session_state.bot:
-            render_portfolio_status()
-        else:
-            st.info("Avvia il trading per vedere il portfolio")
-
-    with tab4:
-        render_login_page()
 
 def create_candlestick_chart(df):
     """Crea un grafico candlestick interattivo"""
@@ -259,13 +340,14 @@ def main():
         st.set_page_config(
             page_title="AurumBot Trading Platform",
             page_icon="🤖",
-            layout="wide"
+            layout="wide",
+            initial_sidebar_state="expanded"
         )
         init_session_state()
         show_main_app()
     except Exception as e:
-        logger.error(f"Errore applicazione: {str(e)}")
-        st.error("Si è verificato un errore imprevisto. Ricarica la pagina.")
+        logger.error(f"Application error: {str(e)}")
+        st.error("An unexpected error occurred. Please reload the page.")
 
 if __name__ == "__main__":
     main()
