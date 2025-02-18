@@ -448,7 +448,7 @@ def render_settings():
     try:
         st.subheader("⚙️ Settings")
 
-        tabs = st.tabs(["General", "Notifications", "Wallet", "Telegram", "Advanced"])
+        tabs = st.tabs(["General", "Notifications", "Wallet"])
 
         with tabs[0]:
             st.subheader("General Settings")
@@ -497,26 +497,6 @@ def render_settings():
                     st.session_state.wallet_connected = False
                     st.session_state.wallet_address = None
                     st.rerun()
-
-        with tabs[3]:
-            st.subheader("Telegram Integration")
-            telegram_enabled = st.checkbox("Enable Telegram Scanner")
-            if telegram_enabled:
-                st.text_input("Telegram Bot Token")
-                st.text_input("Chat ID")
-                st.multiselect(
-                    "Monitor Channels",
-                    ["Channel 1", "Channel 2", "Channel 3"]
-                )
-
-        with tabs[4]:
-            st.subheader("Advanced Settings")
-            col1, col2 = st.columns(2)
-            with col1:
-                st.number_input("API Request Timeout (seconds)", min_value=1, value=30)
-            with col2:
-                st.number_input("Cache Duration (minutes)", min_value=1, value=5)
-            st.checkbox("Enable Debug Logging")
 
     except Exception as e:
         logger.error(f"Error in settings: {str(e)}")
@@ -567,6 +547,7 @@ def load_market_data(symbol, period='1d'):
     except Exception as e:
         logger.error(f"Error loading market data: {str(e)}")
         return None
+
 
 
 def main():
