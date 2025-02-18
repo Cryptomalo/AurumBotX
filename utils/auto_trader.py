@@ -245,7 +245,6 @@ class AutoTrader:
 
 
     async def execute_trade_async(self, signal: Optional[Dict[str, Any]]) -> Dict[str, Any]:
-        """Execute a trade based on the generated signal asynchronously"""
         try:
             if not signal:
                 return {'success': False, 'reason': 'No signal provided'}

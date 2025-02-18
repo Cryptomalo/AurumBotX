@@ -140,13 +140,18 @@ class SentimentAnalyzer:
 
     async def _analyze_with_openai(self, data: Dict[str, Any]) -> Optional[Dict[str, Any]]:
         """Analyze with OpenAI with improved retry logic and longer delays"""
+        if not self.openai_client:
+            logger.warning("OpenAI client not initialized")
+            return None
+
         prompt = self._create_analysis_prompt(data)
+        current_model = "gpt-3.5-turbo"  # Fallback to a more commonly available model
 
         for attempt in range(self.max_retries):
             try:
                 # Increase delay between attempts significantly
                 if attempt > 0:
-                    delay = self.retry_delay * (4 ** attempt)  # Exponential backoff with higher base
+                    delay = self.retry_delay * (2 ** attempt)  # Exponential backoff
                     logger.info(f"Waiting {delay} seconds before retry {attempt + 1}")
                     await asyncio.sleep(delay)
 
@@ -155,7 +160,7 @@ class SentimentAnalyzer:
                     completion = await loop.run_in_executor(
                         executor,
                         lambda: self.openai_client.chat.completions.create(
-                            model="gpt-4",
+                            model=current_model,
                             messages=[
                                 {
                                     "role": "system",
@@ -174,13 +179,18 @@ class SentimentAnalyzer:
                 if completion and completion.choices:
                     result = json.loads(completion.choices[0].message.content)
                     if self._validate_ai_response(result):
-                        logger.info(f"OpenAI analysis successful: {result}")
+                        logger.info(f"OpenAI analysis successful with model {current_model}")
                         return result
 
-            except RateLimitError:
-                logger.warning(f"OpenAI rate limit hit on attempt {attempt + 1}, will retry in {delay} seconds")
+            except RateLimitError as e:
+                logger.warning(f"OpenAI rate limit hit on attempt {attempt + 1}: {e}")
+                await asyncio.sleep(delay)
             except Exception as e:
                 logger.error(f"OpenAI analysis error on attempt {attempt + 1}: {e}")
+                if "model_not_found" in str(e) and current_model == "gpt-4":
+                    current_model = "gpt-3.5-turbo"
+                    logger.info(f"Falling back to {current_model}")
+                    continue
                 if attempt < self.max_retries - 1:
                     continue
                 break
