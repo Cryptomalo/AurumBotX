@@ -330,24 +330,27 @@ def render_trading_controls():
     """Render modern trading interface"""
     st.subheader("Trading Controls")
 
-    # Trading form in card-like container
-    st.markdown("""
-    <div style='background-color: rgba(255, 255, 255, 0.05); padding: 20px; border-radius: 10px; margin: 20px 0;'>
-    """, unsafe_allow_html=True)
+    try:
+        # Trading form in card-like container
+        st.markdown("""
+        <div style='background-color: rgba(255, 255, 255, 0.05); padding: 20px; border-radius: 10px; margin: 20px 0;'>
+        """, unsafe_allow_html=True)
 
-    col1, col2 = st.columns(2)
-    with col1:
-        trading_pair = st.selectbox(
-            "Select Trading Pair",
-            ["BTC/USDT", "ETH/USDT", "SOL/USDT", "DOGE/USDT", "SHIB/USDT"],
-            index=0
-        )
-        initial_balance = st.number_input(
-            "Initial Balance (USDT)",
-            min_value=10.0,
-            value=1000.0,
-            step=10.0
-        )
+        col1, col2 = st.columns(2)
+        with col1:
+            trading_pair = st.selectbox(
+                "Select Trading Pair",
+                ["BTC/USDT", "ETH/USDT", "SOL/USDT", "DOGE/USDT", "SHIB/USDT"],
+                index=0,
+                key="trading_pair_select"
+            )
+            initial_balance = st.number_input(
+                "Initial Balance (USDT)",
+                min_value=10.0,
+                value=1000.0,
+                step=10.0,
+                key="initial_balance_input"
+            )
 
     with col2:
         strategy = st.selectbox(
@@ -370,24 +373,45 @@ def render_trading_controls():
     with col2:
         testnet_mode = st.checkbox("Testnet Mode", value=True)
 
-        if st.button("▶️ Start Trading", use_container_width=True):
-            if not st.session_state.initialization_running:
-                st.session_state.initialization_running = True
+        start_button = st.button(
+            "▶️ Start Trading" if not st.session_state.get('trading_active', False) else "⏹️ Stop Trading",
+            use_container_width=True,
+            key="trading_control_button"
+        )
+        
+        if start_button:
+            if not st.session_state.get('trading_active', False):
+                if not st.session_state.get('initialization_running', False):
+                    st.session_state.initialization_running = True
+                    try:
+                        loop = asyncio.new_event_loop()
+                        asyncio.set_event_loop(loop)
+                        success = loop.run_until_complete(initialize_bot_and_loader(
+                            trading_pair, initial_balance, risk_per_trade, testnet_mode
+                        ))
+                        loop.close()
+                        
+                        if success:
+                            st.session_state.trading_active = True
+                            st.success(f"Bot initialized and running for {trading_pair}")
+                            st.rerun()
+                    except Exception as e:
+                        st.error(f"Error during startup: {str(e)}")
+                        logger.error(f"Startup error: {str(e)}")
+                    finally:
+                        st.session_state.initialization_running = False
+            else:
                 try:
-                    loop = asyncio.new_event_loop()
-                    asyncio.set_event_loop(loop)
-                    success = loop.run_until_complete(initialize_bot_and_loader(
-                        trading_pair, initial_balance, risk_per_trade, testnet_mode
-                    ))
-                    loop.close()
-                    if success:
-                        st.success(f"Bot initialized for {trading_pair}")
-                        st.rerun()
+                    if st.session_state.bot:
+                        st.session_state.bot.stop_trading()
+                    st.session_state.trading_active = False
+                    st.session_state.bot = None
+                    st.session_state.data_loader = None
+                    st.info("Trading stopped successfully")
+                    st.rerun()
                 except Exception as e:
-                    st.error(f"Error during startup: {str(e)}")
-                    logger.error(f"Startup error: {str(e)}")
-                finally:
-                    st.session_state.initialization_running = False
+                    st.error(f"Error stopping trading: {str(e)}")
+                    logger.error(f"Stop trading error: {str(e)}")
 
         if st.session_state.bot:
             if st.button("⏹️ Stop Trading", use_container_width=True):
