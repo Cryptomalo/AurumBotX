@@ -548,8 +548,9 @@ async def initialize_bot_and_loader(trading_pair: str, initial_balance: float, r
         st.error(f"Startup error: {str(e)}")
         return False
 
+@st.cache_data(ttl=300)  # Cache for 5 minutes
 def load_market_data(symbol, period='1d'):
-    """Load market data safely with improved error handling"""
+    """Load market data safely with improved error handling and caching"""
     try:
         if not st.session_state.data_loader:
             logger.warning("Data loader not initialized")
