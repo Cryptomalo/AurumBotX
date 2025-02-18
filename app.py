@@ -8,7 +8,6 @@ import plotly.graph_objects as go
 from utils.auto_trader import AutoTrader
 from utils.data_loader import CryptoDataLoader
 from utils.backup_manager import BackupManager
-from components.login import render_login_page
 from streamlit_option_menu import option_menu
 import json
 from pathlib import Path
@@ -39,13 +38,11 @@ def init_session_state():
         'last_update': datetime.now(),
         'error_count': 0,
         'market_data': None,
-        'user': {'authenticated': False},
-        'initialization_running': False,
-        'selected_tab': "Dashboard",
         'wallet_connected': False,
         'theme': 'light',
         'notifications_enabled': True,
-        'auto_trade': False
+        'auto_trade': False,
+        'selected_tab': "Dashboard"
     }
     for key, value in defaults.items():
         if key not in st.session_state:
@@ -59,9 +56,31 @@ def render_header():
     with col2:
         st.title("🌟 AurumBot Trading Platform")
     with col3:
-        if st.session_state.user.get('authenticated'):
+        if st.session_state.wallet_connected:
             st.image("assets/profile.png", width=50)
-            st.write(f"Welcome, {st.session_state.user.get('username', 'User')}")
+            st.write(f"Wallet Connected")
+
+def render_wallet_login():
+    """Render the wallet login page"""
+    st.markdown("""
+    <div style='text-align: center; padding: 50px;'>
+        <h1>Welcome to AurumBot</h1>
+        <p>Connect your wallet to start trading</p>
+    </div>
+    """, unsafe_allow_html=True)
+
+    col1, col2, col3 = st.columns([1,2,1])
+    with col2:
+        if not st.session_state.wallet_connected:
+            if st.button("🔗 Connect Wallet", use_container_width=True):
+                # Here you would implement actual wallet connection logic
+                st.session_state.wallet_connected = True
+                st.rerun()
+        else:
+            st.success("✅ Wallet Connected")
+            if st.button("Disconnect"):
+                st.session_state.wallet_connected = False
+                st.rerun()
 
 def render_sidebar():
     """Render the application sidebar"""
@@ -75,60 +94,59 @@ def render_sidebar():
         )
         st.session_state.selected_tab = selected
 
-        if selected == "Trading":
-            st.subheader("Trading Controls")
-            trading_pair = st.selectbox(
-                "Select Trading Pair",
-                ["BTC/USDT", "ETH/USDT", "SOL/USDT", "DOGE/USDT", "SHIB/USDT"],
-                index=0
-            )
-            strategy = st.selectbox(
-                "Trading Strategy",
-                ["Scalping", "Swing", "Meme Coin"],
-                index=0
-            )
-            initial_balance = st.number_input(
-                "Initial Balance (USDT)",
-                min_value=10.0,
-                value=1000.0,
-                step=10.0
-            )
-            risk_per_trade = st.slider(
-                "Risk per Trade (%)",
-                min_value=0.1,
-                max_value=5.0,
-                value=2.0,
-                step=0.1
-            )
-            testnet_mode = st.checkbox("Testnet Mode", value=True)
+def render_settings():
+    """Render settings page"""
+    st.subheader("⚙️ Settings")
 
-            col1, col2 = st.columns(2)
-            with col1:
-                if st.button("▶️ Start"):
-                    if not st.session_state.initialization_running:
-                        st.session_state.initialization_running = True
-                        try:
-                            loop = asyncio.new_event_loop()
-                            asyncio.set_event_loop(loop)
-                            success = loop.run_until_complete(initialize_bot_and_loader(
-                                trading_pair, initial_balance, risk_per_trade, testnet_mode
-                            ))
-                            loop.close()
-                            if success:
-                                st.success(f"Bot initialized for {trading_pair}")
-                                st.rerun()
-                        except Exception as e:
-                            st.error(f"Error during startup: {str(e)}")
-                            logger.error(f"Startup error: {str(e)}")
-                        finally:
-                            st.session_state.initialization_running = False
+    tabs = st.tabs(["General", "Notifications", "Wallet", "Telegram", "Advanced"])
 
-            with col2:
-                if st.button("⏹️ Stop"):
-                    st.session_state.bot = None
-                    st.session_state.data_loader = None
-                    st.info("Trading stopped")
-                    st.rerun()
+    with tabs[0]:
+        st.subheader("General Settings")
+        st.session_state.theme = st.selectbox(
+            "Theme",
+            ["light", "dark"],
+            index=0 if st.session_state.theme == "light" else 1
+        )
+        st.session_state.auto_trade = st.checkbox(
+            "Auto Trading",
+            value=st.session_state.auto_trade
+        )
+
+    with tabs[1]:
+        st.subheader("Notification Settings")
+        st.session_state.notifications_enabled = st.checkbox(
+            "Enable Notifications",
+            value=st.session_state.notifications_enabled
+        )
+        st.number_input("Price Alert Threshold (%)", min_value=0.1, value=5.0)
+
+    with tabs[2]:
+        st.subheader("Wallet Settings")
+        if st.session_state.wallet_connected:
+            st.success("Wallet Connected")
+            st.text("Address: 0x...")  # Would show actual wallet address
+            if st.button("Disconnect Wallet"):
+                st.session_state.wallet_connected = False
+        else:
+            if st.button("Connect Wallet"):
+                st.session_state.wallet_connected = True
+
+    with tabs[3]:
+        st.subheader("Telegram Integration")
+        telegram_enabled = st.checkbox("Enable Telegram Scanner", value=False)
+        if telegram_enabled:
+            st.text_input("Telegram Bot Token")
+            st.text_input("Chat ID")
+            st.multiselect(
+                "Monitor Channels",
+                ["Channel 1", "Channel 2", "Channel 3"]
+            )
+
+    with tabs[4]:
+        st.subheader("Advanced Settings")
+        st.number_input("API Request Timeout (seconds)", min_value=1, value=30)
+        st.number_input("Cache Duration (minutes)", min_value=1, value=5)
+        st.checkbox("Enable Debug Logging")
 
 def render_dashboard():
     """Render the main dashboard"""
@@ -159,88 +177,28 @@ def render_dashboard():
 
     with col3:
         st.subheader("Top Meme Coins")
-        meme_coins = [
-            {"symbol": "DOGE/USDT", "change": "+5.2%"},
-            {"symbol": "SHIB/USDT", "change": "+3.1%"},
-            {"symbol": "PEPE/USDT", "change": "+8.7%"}
-        ]
-        for coin in meme_coins:
-            st.write(f"{coin['symbol']}: {coin['change']}")
-
-def render_settings():
-    """Render settings page"""
-    st.subheader("⚙️ Settings")
-
-    col1, col2 = st.columns(2)
-    with col1:
-        st.subheader("General Settings")
-        st.session_state.theme = st.selectbox(
-            "Theme",
-            ["light", "dark"],
-            index=0 if st.session_state.theme == "light" else 1
-        )
-        st.session_state.notifications_enabled = st.checkbox(
-            "Enable Notifications",
-            value=st.session_state.notifications_enabled
-        )
-        st.session_state.auto_trade = st.checkbox(
-            "Auto Trading",
-            value=st.session_state.auto_trade
-        )
-
-    with col2:
-        st.subheader("Wallet Connection")
-        if not st.session_state.wallet_connected:
-            if st.button("Connect Wallet"):
-                st.session_state.wallet_connected = True
-        else:
-            st.success("Wallet Connected")
-            if st.button("Disconnect"):
-                st.session_state.wallet_connected = False
-
-async def initialize_bot_and_loader(trading_pair: str, initial_balance: float, risk_per_trade: float, testnet_mode: bool):
-    """Inizializza il bot e il data loader in modo asincrono"""
-    try:
-        bot = AutoTrader(
-            symbol=trading_pair,
-            initial_balance=initial_balance,
-            risk_per_trade=risk_per_trade/100,
-            testnet=testnet_mode
-        )
-        data_loader = CryptoDataLoader(testnet=testnet_mode)
-        await data_loader.initialize()
-        bot.backup_manager = BackupManager()
-
-        # Carica i dati iniziali
-        df = await data_loader.get_historical_data(trading_pair, '1d')
-        if df is not None and not df.empty:
-            st.session_state.market_data = df
-            st.session_state.bot = bot
-            st.session_state.data_loader = data_loader
-            return True
-        else:
-            st.warning("Impossibile caricare i dati iniziali. Riprova tra qualche secondo.")
-            return False
-    except Exception as e:
-        logger.error(f"Errore inizializzazione: {str(e)}")
-        st.error(f"Errore avvio: {str(e)}")
-        return False
+        st.markdown("""
+        | Coin | 24h Change |
+        |------|------------|
+        | DOGE | +5.2% |
+        | SHIB | +3.1% |
+        | PEPE | +8.7% |
+        """)
 
 def show_main_app():
     """Main application UI"""
-    if 'user' not in st.session_state or not st.session_state['user'].get('authenticated'):
-        render_login_page()
+    render_header()
+
+    if not st.session_state.wallet_connected:
+        render_wallet_login()
         return
 
-    render_header()
     render_sidebar()
 
     if st.session_state.selected_tab == "Dashboard":
         render_dashboard()
     elif st.session_state.selected_tab == "Settings":
         render_settings()
-
-    # Placeholder for other tabs
     elif st.session_state.selected_tab == "Portfolio":
         st.title("Portfolio Analysis")
         render_portfolio_status()
@@ -251,8 +209,7 @@ def show_main_app():
         st.title("Social Trading")
         # Add social trading content here
     elif st.session_state.selected_tab == "Trading":
-        pass #Trading controls are in the sidebar
-
+        render_trading_controls()
 
 def create_candlestick_chart(df):
     """Crea un grafico candlestick interattivo"""
@@ -281,29 +238,94 @@ def create_candlestick_chart(df):
         logger.error(f"Errore creazione grafico: {str(e)}")
         return None
 
-def render_market_metrics(df):
-    """Visualizza le metriche di mercato"""
+def render_trading_controls():
+    """Render trading controls"""
+    st.subheader("Trading Controls")
+
+    col1, col2 = st.columns(2)
+    with col1:
+        trading_pair = st.selectbox(
+            "Select Trading Pair",
+            ["BTC/USDT", "ETH/USDT", "SOL/USDT", "DOGE/USDT", "SHIB/USDT"],
+            index=0
+        )
+        initial_balance = st.number_input(
+            "Initial Balance (USDT)",
+            min_value=10.0,
+            value=1000.0,
+            step=10.0
+        )
+
+    with col2:
+        strategy = st.selectbox(
+            "Trading Strategy",
+            ["Scalping", "Swing", "Meme Coin"],
+            index=0
+        )
+        risk_per_trade = st.slider(
+            "Risk per Trade (%)",
+            min_value=0.1,
+            max_value=5.0,
+            value=2.0,
+            step=0.1
+        )
+
+    testnet_mode = st.checkbox("Testnet Mode", value=True)
+
+    col1, col2 = st.columns(2)
+    with col1:
+        if st.button("▶️ Start"):
+            if not st.session_state.initialization_running:
+                st.session_state.initialization_running = True
+                try:
+                    loop = asyncio.new_event_loop()
+                    asyncio.set_event_loop(loop)
+                    success = loop.run_until_complete(initialize_bot_and_loader(
+                        trading_pair, initial_balance, risk_per_trade, testnet_mode
+                    ))
+                    loop.close()
+                    if success:
+                        st.success(f"Bot initialized for {trading_pair}")
+                        st.rerun()
+                except Exception as e:
+                    st.error(f"Error during startup: {str(e)}")
+                    logger.error(f"Startup error: {str(e)}")
+                finally:
+                    st.session_state.initialization_running = False
+
+    with col2:
+        if st.button("⏹️ Stop"):
+            st.session_state.bot = None
+            st.session_state.data_loader = None
+            st.info("Trading stopped")
+            st.rerun()
+
+async def initialize_bot_and_loader(trading_pair: str, initial_balance: float, risk_per_trade: float, testnet_mode: bool):
+    """Initialize bot and loader asynchronously"""
     try:
-        if df is None or df.empty:
-            st.warning("Dati di mercato non disponibili")
-            return
+        bot = AutoTrader(
+            symbol=trading_pair,
+            initial_balance=initial_balance,
+            risk_per_trade=risk_per_trade/100,
+            testnet=testnet_mode
+        )
+        data_loader = CryptoDataLoader(testnet=testnet_mode)
+        await data_loader.initialize()
+        bot.backup_manager = BackupManager()
 
-        col1, col2, col3 = st.columns(3)
-        with col1:
-            current_price = df['Close'].iloc[-1]
-            st.metric("Prezzo Attuale", f"${current_price:.2f}")
-
-        with col2:
-            price_change = ((df['Close'].iloc[-1] - df['Close'].iloc[0]) / df['Close'].iloc[0]) * 100
-            st.metric("Variazione 24h", f"{price_change:.2f}%")
-
-        with col3:
-            volume = df['Volume'].sum()
-            st.metric("Volume 24h", f"${volume:,.0f}")
-
+        df = await data_loader.get_historical_data(trading_pair, '1d')
+        if df is not None and not df.empty:
+            st.session_state.market_data = df
+            st.session_state.bot = bot
+            st.session_state.data_loader = data_loader
+            return True
+        else:
+            st.warning("Cannot load initial data. Please try again in a few seconds.")
+            return False
     except Exception as e:
-        logger.error(f"Errore visualizzazione metriche: {str(e)}")
-        st.error("Errore nel calcolo delle metriche")
+        logger.error(f"Initialization error: {str(e)}")
+        st.error(f"Startup error: {str(e)}")
+        return False
 
 def render_portfolio_status():
     """Visualizza lo stato del portfolio"""
