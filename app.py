@@ -82,18 +82,6 @@ def render_wallet_login():
                 st.session_state.wallet_connected = False
                 st.rerun()
 
-def render_sidebar():
-    """Render the application sidebar"""
-    with st.sidebar:
-        selected = option_menu(
-            "Main Menu",
-            ["Dashboard", "Trading", "Portfolio", "Analytics", "Social", "Settings"],
-            icons=['house', 'currency-bitcoin', 'wallet2', 'graph-up', 'people', 'gear'], 
-            menu_icon="cast",
-            default_index=0
-        )
-        st.session_state.selected_tab = selected
-
 def render_settings():
     """Render settings page"""
     st.subheader("⚙️ Settings")
@@ -193,7 +181,13 @@ def show_main_app():
         render_wallet_login()
         return
 
-    render_sidebar()
+
+    selected_tab = st.sidebar.selectbox(
+        "Main Menu",
+        ["Dashboard", "Trading", "Portfolio", "Analytics", "Social", "Settings"],
+    )
+    st.session_state.selected_tab = selected_tab
+
 
     if st.session_state.selected_tab == "Dashboard":
         render_dashboard()
