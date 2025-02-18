@@ -31,12 +31,12 @@ if __name__ == "__main__":
     try:
         # Start the keep-alive server in a separate thread
         keep_alive()
-        logger.info("Starting main Flask application on port 5000")
+        logger.info("Starting main Flask application on port 3000")
 
         # Start the main application
         app.run(
             host="0.0.0.0", 
-            port=3000,  # Changed to avoid conflict with Streamlit
+            port=3000,
             debug=False
         )
     except Exception as e:
