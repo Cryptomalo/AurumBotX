@@ -89,7 +89,7 @@ class SentimentAnalyzer:
             raise
 
     async def analyze_sentiment(self, symbol: str) -> Dict[str, Any]:
-        """Analyze sentiment with fallback mechanisms and rate limiting"""
+        """Analyze sentiment with improved fallback mechanisms and rate limiting"""
         try:
             social_data = {
                 "reddit": await self._get_reddit_data(symbol) if self.reddit else [],
@@ -107,17 +107,17 @@ class SentimentAnalyzer:
                 try:
                     analysis = await self._analyze_with_openai(data)
                     if analysis:
+                        logger.info("Successfully analyzed sentiment with OpenAI")
                         return self._create_sentiment_response(data, analysis)
-                except (RateLimitError, APIError) as e:
-                    logger.warning(f"OpenAI analysis failed, trying Anthropic fallback: {e}")
                 except Exception as e:
-                    logger.error(f"Unexpected OpenAI error: {e}")
+                    logger.error(f"OpenAI analysis failed: {e}")
 
-            # Fallback to Anthropic if available
+            # Fallback to Anthropic
             if self.anthropic_client:
                 try:
                     analysis = await self._analyze_with_anthropic(data)
                     if analysis:
+                        logger.info("Successfully analyzed sentiment with Anthropic")
                         return self._create_sentiment_response(data, analysis)
                 except Exception as e:
                     logger.error(f"Anthropic analysis failed: {e}")
@@ -139,19 +139,18 @@ class SentimentAnalyzer:
         self.last_api_call = time.time()
 
     async def _analyze_with_openai(self, data: Dict[str, Any]) -> Optional[Dict[str, Any]]:
-        """Analyze with OpenAI with improved retry logic and longer delays"""
+        """Analyze with OpenAI with improved retry logic and error handling"""
         if not self.openai_client:
             logger.warning("OpenAI client not initialized")
             return None
 
         prompt = self._create_analysis_prompt(data)
-        current_model = "gpt-3.5-turbo"  # Fallback to a more commonly available model
+        current_model = "gpt-4o"  # Start with latest model
 
         for attempt in range(self.max_retries):
             try:
-                # Increase delay between attempts significantly
+                delay = self.retry_delay * (2 ** attempt)  # Exponential backoff
                 if attempt > 0:
-                    delay = self.retry_delay * (2 ** attempt)  # Exponential backoff
                     logger.info(f"Waiting {delay} seconds before retry {attempt + 1}")
                     await asyncio.sleep(delay)
 
@@ -182,32 +181,39 @@ class SentimentAnalyzer:
                         logger.info(f"OpenAI analysis successful with model {current_model}")
                         return result
 
-            except RateLimitError as e:
-                logger.warning(f"OpenAI rate limit hit on attempt {attempt + 1}: {e}")
-                await asyncio.sleep(delay)
-            except Exception as e:
-                logger.error(f"OpenAI analysis error on attempt {attempt + 1}: {e}")
-                if "model_not_found" in str(e) and current_model == "gpt-4":
+            except RateLimitError:
+                logger.warning(f"OpenAI rate limit hit on attempt {attempt + 1}")
+                if attempt < self.max_retries - 1:
+                    continue
+            except APIError as e:
+                logger.error(f"OpenAI API error on attempt {attempt + 1}: {e}")
+                if "model_not_found" in str(e) and current_model == "gpt-4o":
                     current_model = "gpt-3.5-turbo"
                     logger.info(f"Falling back to {current_model}")
                     continue
-                if attempt < self.max_retries - 1:
-                    continue
+                break
+            except Exception as e:
+                logger.error(f"Unexpected OpenAI error: {e}")
                 break
 
-        logger.info("Falling back to technical analysis after OpenAI attempts exhausted")
         return None
 
     async def _analyze_with_anthropic(self, data: Dict[str, Any]) -> Optional[Dict[str, Any]]:
-        """Analyze with Anthropic as fallback"""
+        """Analyze with Anthropic with improved error handling"""
         if not self.anthropic_client:
             logger.warning("Anthropic client not initialized")
             return None
 
         prompt = self._create_analysis_prompt(data)
+        delay = self.retry_delay
 
         for attempt in range(self.max_retries):
             try:
+                if attempt > 0:
+                    logger.info(f"Waiting {delay} seconds before retry {attempt + 1}")
+                    await asyncio.sleep(delay)
+                    delay *= 2  # Exponential backoff
+
                 loop = asyncio.get_event_loop()
                 with concurrent.futures.ThreadPoolExecutor() as executor:
                     completion = await loop.run_in_executor(
@@ -226,6 +232,7 @@ class SentimentAnalyzer:
                     try:
                         result = json.loads(completion.content[0].text)
                         if self._validate_ai_response(result):
+                            logger.info("Successfully analyzed sentiment with Anthropic")
                             return result
                     except json.JSONDecodeError as e:
                         logger.error(f"Error parsing Anthropic response: {e}")
@@ -233,9 +240,39 @@ class SentimentAnalyzer:
             except Exception as e:
                 logger.error(f"Anthropic analysis error on attempt {attempt + 1}: {e}")
                 if attempt < self.max_retries - 1:
-                    await asyncio.sleep(self.retry_delay * (attempt + 1))
+                    continue
+                break
 
         return None
+
+    def _validate_ai_response(self, response: Dict[str, Any]) -> bool:
+        """Validate AI response format"""
+        try:
+            required_fields = ['sentiment', 'confidence', 'key_points', 'market_signals']
+            if not all(field in response for field in required_fields):
+                return False
+
+            # Validate sentiment values
+            if response['sentiment'] not in ['positive', 'negative', 'neutral']:
+                return False
+
+            # Validate confidence is float between 0-1
+            if not isinstance(response['confidence'], (int, float)):
+                return False
+            if not 0 <= response['confidence'] <= 1:
+                return False
+
+            # Validate arrays
+            if not isinstance(response['key_points'], list):
+                return False
+            if not isinstance(response['market_signals'], list):
+                return False
+
+            return True
+
+        except Exception as e:
+            logger.error(f"Error validating AI response: {e}")
+            return False
 
     async def _get_technical_analysis(self, data: Dict[str, Any]) -> Dict[str, Any]:
         """Enhanced technical analysis fallback with improved metrics"""
@@ -348,11 +385,6 @@ class SentimentAnalyzer:
         }}
         """
 
-    def _validate_ai_response(self, response: Dict[str, Any]) -> bool:
-        """Validate AI response format"""
-        required_fields = ['sentiment', 'confidence', 'key_points', 'market_signals']
-        return all(field in response for field in required_fields)
-
     def _create_sentiment_response(self, data: Dict[str, Any], 
                                  analysis: Dict[str, Any]) -> Dict[str, Any]:
         """Create standardized sentiment response"""
@@ -438,7 +470,7 @@ class SentimentAnalyzer:
                                             "url": getattr(post, 'url', '')
                                         })
                                         logger.debug(f"Retrieved post from r/{subreddit}: {post.title[:50]}...")
-                                break  # Break retry loop if successful
+                                    break  # Break retry loop if successful
 
                             if attempt < 2:  # Only sleep if we're going to retry
                                 await asyncio.sleep(1 * (2**attempt))  # Exponential backoff

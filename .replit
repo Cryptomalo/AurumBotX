@@ -5,13 +5,23 @@ channel = "stable-24_05"
 
 [deployment]
 deploymentTarget = "autoscale"
-run = ["sh", "-c", "python3 test_bot.py"]
+run = ["sh", "-c", "python test_bot.py"]
 
 [workflows]
 runButton = "Project"
 
 [[workflows.workflow]]
-name = "Test Bot"
+name = "Project"
+author = "agent"
+mode = "parallel"
+
+[[workflows.workflow.tasks]]
+task = "workflow.run"
+args = "Trading Bot Server"
+
+[[workflows.workflow]]
+name = "Trading Bot Server"
+mode = "parallel"
 author = "agent"
 
 [workflows.workflow.metadata]
@@ -23,55 +33,11 @@ task = "packager.installForAll"
 [[workflows.workflow.tasks]]
 task = "shell.exec"
 args = "python test_bot.py"
-
-[[workflows.workflow]]
-name = "Test Strategies"
-author = 39294082
-
-[[workflows.workflow.tasks]]
-task = "shell.exec"
-args = "python test_strategies.py"
-
-[[workflows.workflow]]
-name = "Project"
-mode = "parallel"
-author = "agent"
-
-[[workflows.workflow.tasks]]
-task = "workflow.run"
-args = "Test Bot"
-
-[[workflows.workflow.tasks]]
-task = "workflow.run"
-args = "Test Meme Strategy"
-
-[[workflows.workflow.tasks]]
-task = "workflow.run"
-args = "Streamlit Dashboard"
-
-[[workflows.workflow.tasks]]
-task = "workflow.run"
-args = "Test Notifications"
-
-[[workflows.workflow.tasks]]
-task = "workflow.run"
-args = "Test Trading AI"
-
-[[workflows.workflow.tasks]]
-task = "workflow.run"
-args = "Test Sentiment"
-
-[[workflows.workflow.tasks]]
-task = "workflow.run"
-args = "Flask Server"
+waitForPort = 3001
 
 [[workflows.workflow]]
 name = "Test WebSocket"
 author = 39294082
-
-[[workflows.workflow.tasks]]
-task = "shell.exec"
-args = "python -m pytest utils/test_websocket.py -v"
 
 [[workflows.workflow]]
 name = "Full Test Suite"
@@ -177,6 +143,10 @@ args = "python main.py"
 [[ports]]
 localPort = 3000
 externalPort = 4200
+
+[[ports]]
+localPort = 3001
+externalPort = 5000
 
 [[ports]]
 localPort = 5000

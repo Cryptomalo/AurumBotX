@@ -5,9 +5,9 @@ import os
 import signal
 import sys
 from typing import Optional, Dict, Any
-from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession
-from sqlalchemy.ext.asyncio import async_sessionmaker
-from sqlalchemy import text
+import uvicorn
+from fastapi import FastAPI, BackgroundTasks
+from fastapi.middleware.cors import CORSMiddleware
 from utils.database_manager import DatabaseManager
 from utils.trading_bot import WebSocketHandler
 from utils.strategies.strategy_manager import StrategyManager
@@ -20,39 +20,37 @@ from utils.risk_management import RiskManager
 from utils.learning_module import LearningModule
 from utils.ai_trading import AITrading
 from utils.dashboard import TradingDashboard
-from utils.database_manager import DatabaseManager
-
-def setup_test_environment():
-    """Setup test environment variables if not present"""
-    test_vars = {
-        'DATABASE_URL': os.environ.get('DATABASE_URL', 'postgresql://user:pass@localhost:5432/testdb'),
-        'OPENAI_API_KEY': os.environ.get('OPENAI_API_KEY', 'test_key'),
-        'ALPHA_VANTAGE_KEY': os.environ.get('ALPHA_VANTAGE_KEY', 'demo'),
-        'BINANCE_API_KEY': os.environ.get('BINANCE_API_KEY', 'test'),
-        'BINANCE_API_SECRET': os.environ.get('BINANCE_API_SECRET', 'test'),
-    }
-
-    for key, value in test_vars.items():
-        if key not in os.environ:
-            os.environ[key] = value
-            logging.info(f"Set test environment variable: {key}")
 
 # Setup logging
-log_filename = f'test_bot_{datetime.now().strftime("%Y%m%d_%H%M%S")}.log'
 logging.basicConfig(
     level=logging.DEBUG,
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+    format='%(asctime)s - %(name)s - %(levelname)s - [%(filename)s:%(lineno)d] - %(message)s',
     handlers=[
-        logging.FileHandler(log_filename),
+        logging.FileHandler('test_bot.log'),
         logging.StreamHandler(sys.stdout)
     ]
 )
 logger = logging.getLogger(__name__)
 
+# Initialize FastAPI app
+app = FastAPI(
+    title="AurumBot Trading API",
+    description="Trading Bot Control Interface",
+    version="1.0.0"
+)
+
+# Configure CORS
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
 class TestBot:
     def __init__(self):
-        logger.info("Initializing TestBot...")
-        self.db_manager = DatabaseManager()
+        self.db_manager = None
         self.websocket_handler = None
         self.strategy_manager = None
         self.sentiment_analyzer = None
@@ -65,203 +63,189 @@ class TestBot:
         self.ai_trading = None
         self.dashboard = None
         self.should_run = True
-        self.test_duration = timedelta(minutes=10)
+        self.test_duration = timedelta(minutes=30)
         self.start_time = datetime.now()
         self.trade_results = []
-        setup_test_environment()
-        self.setup_signal_handlers()
-        logger.info("TestBot initialized successfully")
+        logger.info("TestBot instance created")
 
-    def setup_signal_handlers(self):
-        """Setup handlers for graceful shutdown"""
-        def handle_signal(signum, frame):
-            logger.info(f"Received signal {signum}")
-            self.should_run = False
-
-        signal.signal(signal.SIGINT, handle_signal)
-        signal.signal(signal.SIGTERM, handle_signal)
-
-    async def initialize_database(self) -> bool:
-        """Initialize database connection with proper async support"""
+    async def initialize_components(self) -> bool:
+        """Initialize all components with error handling"""
         try:
-            logger.info("Initializing database connection...")
+            # Initialize database
             db_url = os.environ.get('DATABASE_URL')
             if not db_url:
                 logger.error("DATABASE_URL not set")
                 return False
 
-            return await self.db_manager.initialize(db_url)
-
-        except Exception as e:
-            logger.error(f"Database initialization error: {str(e)}")
-            return False
-
-    async def db_health_check(self) -> bool:
-        """Verify database health"""
-        try:
-            return await self.db_manager.verify_connection()
-        except Exception as e:
-            logger.error(f"Database health check failed: {str(e)}")
-            return False
-
-    async def initialize_components(self) -> bool:
-        """Initialize all components with proper error handling"""
-        try:
-            logger.info("Initializing components...")
-
-            # Initialize database first
-            if not await self.initialize_database():
+            self.db_manager = DatabaseManager()
+            if not await self.db_manager.initialize(db_url):
                 logger.error("Database initialization failed")
                 return False
 
-            # Initialize other components
-            try:
-                self.data_loader = CryptoDataLoader(use_live_data=False)
-                await self.data_loader.preload_data()
+            logger.info("Database initialized")
 
-                self.websocket_handler = WebSocketHandler(logger, self.db_manager.engine) #Modified this line
-                self.strategy_manager = StrategyManager()
-                await self.strategy_manager.configure_for_live_testing()
+            # Initialize core components
+            self.data_loader = CryptoDataLoader(use_live_data=False)
+            self.strategy_manager = StrategyManager()
+            self.sentiment_analyzer = SentimentAnalyzer()
 
-                self.sentiment_analyzer = SentimentAnalyzer()
-                self.backup_manager = BackupManager()
-                self.auto_optimizer = AutoOptimizer(self.db_manager.engine, self.strategy_manager) #Modified this line
-                self.dex_sniper = DexSniper(testnet=True)
-                self.risk_manager = RiskManager()
-                self.learning_module = LearningModule()
+            logger.info("Core components initialized")
 
-                self.ai_trading = AITrading({
-                    'min_confidence': 0.7,
-                    'use_sentiment': True,
-                    'risk_threshold': 0.8
-                })
+            # Initialize trading components
+            self.ai_trading = AITrading({
+                'min_confidence': 0.7,
+                'use_sentiment': True,
+                'risk_threshold': 0.8
+            })
 
-                self.dashboard = TradingDashboard()
-                logger.info("All components initialized successfully")
-                return True
+            logger.info("AI trading initialized")
 
-            except Exception as e:
-                logger.error(f"Component initialization error: {str(e)}")
-                return False
+            self.dashboard = TradingDashboard()
+            logger.info("Dashboard initialized")
 
-        except Exception as e:
-            logger.error(f"Component initialization error: {str(e)}")
-            return False
-
-    async def execute_ai_trade(self, signal: Dict) -> Dict:
-        """Execute AI-driven trade with proper error handling"""
-        try:
-            if not signal or not isinstance(signal, dict):
-                raise ValueError("Invalid signal format")
-
-            return {
-                'success': True,
-                'action': signal.get('action'),
-                'price': signal.get('price', 0),
-                'size': signal.get('size', 0),
-                'ai_confidence': signal.get('confidence', 0),
-                'take_profit': signal.get('take_profit', 0),
-                'timestamp': datetime.now().isoformat()
-            }
-        except Exception as e:
-            logger.error(f"AI Trade execution error: {e}")
-            return {'success': False, 'error': str(e)}
-
-    async def run_ai_testnet_simulation(self) -> bool:
-        """Run the AI testnet simulation with improved error handling"""
-        try:
-            logger.info("Starting AI-based testnet simulation...")
-            if not await self.initialize_components():
-                logger.error("Component initialization failed")
-                return False
-
-            test_pairs = ['BTC/USDT', 'ETH/USDT', 'SOL/USDT']
-            logger.info(f"Testing with pairs: {test_pairs}")
-
-            while self.should_run and (datetime.now() - self.start_time) < self.test_duration:
-                try:
-                    for symbol in test_pairs:
-                        logger.debug(f"Processing symbol: {symbol}")
-                        if self.ai_trading:  # Check if AI trading component is initialized
-                            predictions = await self.ai_trading.analyze_and_predict(symbol)
-                            logger.debug(f"Predictions for {symbol}: {predictions}")
-
-                            if predictions and isinstance(predictions, dict):
-                                trade_result = await self.execute_ai_trade(predictions)
-                                self.trade_results.append(trade_result)
-                                logger.info(f"Trade result for {symbol}: {trade_result}")
-
-                                if self.dashboard:  # Check if dashboard is initialized
-                                    await self.dashboard.update_trade_data(trade_result)
-                        else:
-                            logger.warning("AI trading component not initialized")
-
-                    await asyncio.sleep(1)
-
-                except Exception as e:
-                    logger.error(f"Error in AI testnet simulation loop: {str(e)}")
-                    await asyncio.sleep(2)
-
-            await self.generate_test_report()
-            logger.info("AI testnet simulation completed")
             return True
 
         except Exception as e:
-            logger.error(f"Error during AI testnet simulation: {e}")
+            logger.error(f"Component initialization error: {str(e)}", exc_info=True)
             return False
 
-    async def generate_test_report(self):
-        """Generate comprehensive test report with error handling"""
+    async def execute_test_trade(self) -> Dict:
+        """Execute a test trade to verify system functionality"""
         try:
-            logger.info("Generating AI testnet simulation report...")
-            total_trades = len(self.trade_results)
-            successful_trades = sum(1 for trade in self.trade_results if trade.get('success'))
-            avg_confidence = sum(trade.get('ai_confidence', 0) for trade in self.trade_results) / max(total_trades, 1)
-            avg_profit = sum(trade.get('take_profit', 0) - trade.get('price', 0) for trade in self.trade_results) / max(total_trades, 1)
-
-            report = {
-                "total_trades": total_trades,
-                "successful_trades": successful_trades,
-                "success_rate": f"{(successful_trades / max(total_trades, 1)) * 100:.2f}%",
-                "average_confidence": f"{avg_confidence:.2f}",
-                "average_profit_per_trade": f"${avg_profit:.2f}"
+            logger.info("Executing test trade")
+            test_data = {
+                'symbol': 'BTC/USDT',
+                'action': 'buy',
+                'price': 50000,
+                'amount': 0.1,
+                'confidence': 0.85
             }
 
-            if self.dashboard:  # Check if dashboard is initialized
-                await self.dashboard.update_report(report)
-            logger.info(f"AI Trading Test Report: {report}")
+            if self.ai_trading:
+                result = await self.ai_trading.analyze_and_predict('BTC/USDT')
+                if result:
+                    test_data.update(result)
+
+            return {
+                'success': True,
+                'test_data': test_data,
+                'timestamp': datetime.now().isoformat()
+            }
 
         except Exception as e:
-            logger.error(f"Error generating test report: {e}")
+            logger.error(f"Test trade error: {str(e)}", exc_info=True)
+            return {'success': False, 'error': str(e)}
 
     async def cleanup(self):
         """Cleanup resources"""
         try:
-            logger.info("Starting cleanup process...")
-
             if self.db_manager:
                 await self.db_manager.cleanup()
-
-            if self.websocket_handler:
-                await self.websocket_handler.cleanup()
-
-            if self.strategy_manager:
-                await self.strategy_manager.cleanup()
-
-            logger.info("Cleanup completed successfully")
-
+            logger.info("Cleanup completed")
         except Exception as e:
-            logger.error(f"Error during cleanup: {str(e)}")
+            logger.error(f"Cleanup error: {str(e)}", exc_info=True)
+
+# Global bot instance
+bot = None
+
+async def get_or_create_bot() -> TestBot:
+    """Get existing bot instance or create new one"""
+    global bot
+    if not bot:
+        bot = TestBot()
+        if not await bot.initialize_components():
+            logger.error("Bot initialization failed")
+            return None
+    return bot
+
+# API Routes
+@app.get("/")
+async def root():
+    """Root endpoint"""
+    return {
+        "name": "AurumBot Trading API",
+        "version": "1.0.0",
+        "status": "active"
+    }
+
+@app.get("/status")
+async def get_status():
+    """Get bot status"""
+    try:
+        current_bot = await get_or_create_bot()
+        if not current_bot:
+            return {"status": "error", "message": "Bot not initialized"}
+
+        return {
+            "status": "running",
+            "uptime": str(datetime.now() - current_bot.start_time),
+            "trades": len(current_bot.trade_results)
+        }
+    except Exception as e:
+        logger.error(f"Status check error: {str(e)}", exc_info=True)
+        return {"status": "error", "message": str(e)}
+
+@app.post("/test")
+async def test_trading():
+    """Execute test trade"""
+    try:
+        current_bot = await get_or_create_bot()
+        if not current_bot:
+            return {"status": "error", "message": "Bot not initialized"}
+
+        result = await current_bot.execute_test_trade()
+        return result
+    except Exception as e:
+        logger.error(f"Test trade error: {str(e)}", exc_info=True)
+        return {"status": "error", "message": str(e)}
+
+@app.get("/metrics")
+async def get_metrics():
+    """Get trading metrics"""
+    try:
+        current_bot = await get_or_create_bot()
+        if not current_bot:
+            return {"status": "error", "message": "Bot not initialized"}
+
+        return {
+            "total_trades": len(current_bot.trade_results),
+            "active_pairs": ["BTC/USDT", "ETH/USDT"],
+            "last_update": datetime.now().isoformat()
+        }
+    except Exception as e:
+        logger.error(f"Metrics error: {str(e)}", exc_info=True)
+        return {"status": "error", "message": str(e)}
+
+@app.on_event("startup")
+async def startup_event():
+    """Initialize bot on startup"""
+    try:
+        await get_or_create_bot()
+    except Exception as e:
+        logger.error(f"Startup error: {str(e)}", exc_info=True)
+
+@app.on_event("shutdown")
+async def shutdown_event():
+    """Cleanup on shutdown"""
+    try:
+        if bot:
+            await bot.cleanup()
+    except Exception as e:
+        logger.error(f"Shutdown error: {str(e)}", exc_info=True)
+
+def run_server():
+    """Run the FastAPI server"""
+    try:
+        logger.info("Starting FastAPI server...")
+        uvicorn.run(
+            app,
+            host="0.0.0.0",
+            port=3001,
+            log_level="info"
+        )
+    except Exception as e:
+        logger.error(f"Server error: {str(e)}", exc_info=True)
+        sys.exit(1)
 
 if __name__ == "__main__":
-    logger.info("Starting AI testnet simulation...")
-    bot = TestBot()
-    try:
-        asyncio.run(bot.run_ai_testnet_simulation())
-    except KeyboardInterrupt:
-        logger.info("Test interrupted by user")
-        asyncio.run(bot.cleanup())
-    except Exception as e:
-        logger.error(f"Test failed: {str(e)}")
-        asyncio.run(bot.cleanup())
-    sys.exit(0)
+    run_server()
