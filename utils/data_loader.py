@@ -265,7 +265,7 @@ class CryptoDataLoader:
     async def _save_to_database(self, symbol: str, df: pd.DataFrame) -> None:
         """Save market data to database with optimized batch processing and retry"""
         if not self.engine:
-            logger.warning("Database engine non disponibile")
+            logger.warning("Database engine not available")
             return
 
         try:
@@ -307,58 +307,51 @@ class CryptoDataLoader:
                         logger.warning(f"No valid records in batch {start_idx}-{end_idx} for {symbol}")
                         continue
 
-                    # Create monthly partition if not exists
-                    current_time = datetime.now()
-                    try:
-                        async with self.async_session() as session:
-                            # Create partition using standardized format
-                            partition_date = current_time.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
-                            partition_name = f"market_data_y{partition_date.year}m{partition_date.month:02d}"
+                    async with self.async_session() as session:
+                        partition_date = datetime.now().replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+                        partition_name = f"market_data_y{partition_date.year}m{partition_date.month:02d}"
 
-                            create_partition_sql = f"""
-                            DO $$ 
-                            BEGIN
-                                IF NOT EXISTS (
-                                    SELECT 1 FROM pg_class c
-                                    JOIN pg_namespace n ON n.oid = c.relnamespace
-                                    WHERE c.relname = '{partition_name}'
-                                ) THEN
-                                    CREATE TABLE IF NOT EXISTS {partition_name}
-                                    PARTITION OF market_data
-                                    FOR VALUES FROM ('{partition_date}') 
-                                    TO ('{(partition_date + timedelta(days=32)).replace(day=1)}');
-                                END IF;
-                            END $$;
-                            """
-                            await session.execute(text(create_partition_sql))
+                        # Create partition if not exists
+                        create_partition_sql = f"""
+                        DO $$ 
+                        BEGIN
+                            IF NOT EXISTS (
+                                SELECT 1 FROM pg_class c
+                                JOIN pg_namespace n ON n.oid = c.relnamespace
+                                WHERE c.relname = '{partition_name}'
+                            ) THEN
+                                CREATE TABLE IF NOT EXISTS {partition_name}
+                                PARTITION OF market_data
+                                FOR VALUES FROM ('{partition_date}') 
+                                TO ('{(partition_date + timedelta(days=32)).replace(day=1)}');
+                            END IF;
+                        END $$;
+                        """
+                        await session.execute(text(create_partition_sql))
 
-                            # Insert data
-                            await session.execute(
-                                text("""
-                                    INSERT INTO market_data 
-                                    (symbol, timestamp, open, high, low, close, volume)
-                                    VALUES 
-                                    (:symbol, :timestamp, :open, :high, :low, :close, :volume)
-                                    ON CONFLICT (symbol, timestamp) DO UPDATE SET
-                                    open = EXCLUDED.open,
-                                    high = EXCLUDED.high,
-                                    low = EXCLUDED.low,
-                                    close = EXCLUDED.close,
-                                    volume = EXCLUDED.volume
-                                """),
-                                records
-                            )
-                            await session.commit()
-
-                    except SQLAlchemyError as e:
-                        logger.error(f"Database error for batch of {symbol}: {str(e)}")
-                        continue
-
-                    logger.info(f"Batch {start_idx}-{end_idx} saved successfully for {symbol}")
+                        # Insert data
+                        await session.execute(
+                            text("""
+                                INSERT INTO market_data 
+                                (symbol, timestamp, open, high, low, close, volume)
+                                VALUES 
+                                (:symbol, :timestamp, :open, :high, :low, :close, :volume)
+                                ON CONFLICT (symbol, timestamp) DO UPDATE SET
+                                open = EXCLUDED.open,
+                                high = EXCLUDED.high,
+                                low = EXCLUDED.low,
+                                close = EXCLUDED.close,
+                                volume = EXCLUDED.volume
+                            """),
+                            records
+                        )
+                        await session.commit()
 
                 except SQLAlchemyError as e:
                     logger.error(f"Database error for batch of {symbol}: {str(e)}")
                     continue
+
+                logger.info(f"Batch {start_idx}-{end_idx} saved successfully for {symbol}")
 
             logger.info(f"Successfully saved {total_rows} rows for {symbol}")
 
@@ -824,27 +817,28 @@ class CryptoDataLoader:
             success_count = 0
             for symbol in symbols:
                 try:
-                    # Use get_historical_data directly since it's already async
                     data = await self.get_historical_data_async(
                         symbol=symbol,
                         period=period,
                         interval='1m'
                     )
 
-                    if isinstance(data, pd.DataFrame):
-                        logger.info(f"Successfully preloaded data for {symbol}")
+                    if data is not None:
                         success_count += 1
+                        logger.info(f"Successfully preloaded data for {symbol}")
                     else:
                         logger.warning(f"Failed to preload data for {symbol}")
+
                 except Exception as e:
-                    logger.error(f"Error preloading data for {symbol}: {e}", exc_info=True)
+                    logger.error(f"Error preloading data for {symbol}: {str(e)}")
                     continue
 
-            logger.info(f"Successfully preloaded data for {success_count}/{len(symbols)} symbols")
-            return success_count > 0
+            success_rate = success_count / len(symbols) if symbols else 0
+            logger.info(f"Preload completed. Success rate: {success_rate:.2%}")
+            return success_rate > 0.5  # Consider successful if more than 50% loaded
 
         except Exception as e:
-            logger.error(f"Error preloading data: {e}", exc_info=True)
+            logger.error(f"Error in preload_data: {str(e)}", exc_info=True)
             return False
 
     def get_current_price(self, symbol: str) -> Optional[float]:
