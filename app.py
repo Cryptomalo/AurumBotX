@@ -263,10 +263,21 @@ def render_dashboard():
 
         with col1:
             st.subheader("Market Overview")
-            if st.session_state.market_data is not None:
-                chart = create_candlestick_chart(st.session_state.market_data)
-                if chart:
-                    st.plotly_chart(chart, use_container_width=True)
+
+            # Force data reload
+            trading_pair = "BTC/USDT"  # Default pair
+            if st.session_state.data_loader:
+                df = load_market_data(trading_pair)
+                if df is not None and not df.empty:
+                    # Add loading indicator
+                    with st.spinner('Loading market data...'):
+                        chart = create_candlestick_chart(df)
+                        if chart:
+                            st.plotly_chart(chart, use_container_width=True)
+                        else:
+                            st.error("Could not create chart. Please try again.")
+                else:
+                    st.warning("No market data available. Please wait while we fetch the latest data.")
 
         with col2:
             st.subheader("Portfolio Summary")
@@ -276,36 +287,43 @@ def render_dashboard():
                 pnl = current_balance - initial_balance
                 pnl_color = COLORS['success'] if pnl >= 0 else COLORS['error']
 
-                st.markdown(f"""
-                <div class='metric-card'>
-                    <h4>Current Balance</h4>
-                    <h2 style='color: {COLORS["text"]};'>${current_balance:.2f}</h2>
-                </div>
-                <div class='metric-card'>
-                    <h4>PNL</h4>
-                    <h2 style='color: {pnl_color};'>${pnl:.2f} ({(pnl/initial_balance)*100:.1f}%)</h2>
-                </div>
-                """, unsafe_allow_html=True)
+                # Add portfolio metrics with loading state
+                with st.spinner('Loading portfolio data...'):
+                    st.markdown(f"""
+                    <div class='metric-card'>
+                        <h4>Current Balance</h4>
+                        <h2 style='color: {COLORS["text"]};'>${current_balance:.2f}</h2>
+                    </div>
+                    <div class='metric-card'>
+                        <h4>PNL</h4>
+                        <h2 style='color: {pnl_color};'>${pnl:.2f} ({(pnl/initial_balance)*100:.1f}%)</h2>
+                    </div>
+                    """, unsafe_allow_html=True)
 
-                if hasattr(st.session_state.bot, 'balance_history'):
-                    pnl_df = pd.DataFrame(st.session_state.bot.balance_history)
-                    st.line_chart(pnl_df.set_index('timestamp')['balance'])
+                    if hasattr(st.session_state.bot, 'balance_history'):
+                        pnl_df = pd.DataFrame(st.session_state.bot.balance_history)
+                        st.line_chart(pnl_df.set_index('timestamp')['balance'])
 
         with col3:
             st.subheader("Top Meme Coins")
-            meme_data = [
-                {"coin": "DOGE", "change": "+5.2%", "color": COLORS['success']},
-                {"coin": "SHIB", "change": "+3.1%", "color": COLORS['success']},
-                {"coin": "PEPE", "change": "+8.7%", "color": COLORS['success']}
-            ]
+            # Add loading state for meme coins
+            with st.spinner('Loading meme coin data...'):
+                meme_pairs = ["DOGE/USDT", "SHIB/USDT", "PEPE/USDT"]
+                for pair in meme_pairs:
+                    df = load_market_data(pair)
+                    if df is not None and not df.empty:
+                        last_price = df['Close'].iloc[-1]
+                        price_change = ((last_price - df['Open'].iloc[-1]) / df['Open'].iloc[-1]) * 100
+                        color = COLORS['success'] if price_change >= 0 else COLORS['error']
 
-            for coin in meme_data:
-                st.markdown(f"""
-                <div class='metric-card'>
-                    <h4>{coin['coin']}</h4>
-                    <h3 style='color: {coin["color"]};'>{coin["change"]}</h3>
-                </div>
-                """, unsafe_allow_html=True)
+                        st.markdown(f"""
+                        <div class='metric-card'>
+                            <h4>{pair.split('/')[0]}</h4>
+                            <h3 style='color: {color};'>{price_change:+.1f}%</h3>
+                        </div>
+                        """, unsafe_allow_html=True)
+                    else:
+                        st.warning(f"No data available for {pair}")
 
     except Exception as e:
         logger.error(f"Error in dashboard: {str(e)}")
@@ -530,22 +548,30 @@ async def initialize_bot_and_loader(trading_pair: str, initial_balance: float, r
         return False
 
 def load_market_data(symbol, period='1d'):
-    """Carica i dati di mercato in modo sicuro"""
+    """Load market data safely with improved error handling"""
     try:
         if not st.session_state.data_loader:
+            logger.warning("Data loader not initialized")
             return None
 
         loop = asyncio.new_event_loop()
         asyncio.set_event_loop(loop)
+
+        # Add loading message
+        logger.info(f"Loading market data for {symbol}...")
+
         df = loop.run_until_complete(st.session_state.data_loader.get_historical_data(symbol, period))
         loop.close()
 
         if df is not None and len(df) > 0:
+            logger.info(f"Successfully loaded {len(df)} rows of market data for {symbol}")
             st.session_state.market_data = df
             return df
+
+        logger.warning(f"No data available for {symbol}")
         return None
     except Exception as e:
-        logger.error(f"Error loading market data: {str(e)}")
+        logger.error(f"Error loading market data for {symbol}: {str(e)}")
         return None
 
 

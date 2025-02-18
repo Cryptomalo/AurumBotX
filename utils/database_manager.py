@@ -18,41 +18,34 @@ class DatabaseManager:
     async def initialize(self, database_url: str) -> bool:
         """Initialize database connection with optimized pooling"""
         self.logger.info("Initializing database connection with connection pooling...")
-        
-        # Configure optimal pool settings for Replit environment
-        pool_settings = {
-            'pool_size': 5,
-            'max_overflow': 10,
-            'pool_timeout': 30,
-            'pool_recycle': 1800,
-            'pool_pre_ping': True
-        }
-        
+
         try:
             # Parse database URL and handle SSL parameters
             parsed_url = urlparse(database_url)
             query_params = parse_qs(parsed_url.query)
-            
-            # Convert to async URL
+
+            # Convert to async URL and handle SSL
             base_url = database_url.split('?')[0].replace('postgresql://', 'postgresql+asyncpg://')
-            
-            # Configure SSL if needed
-            ssl_args = {}
+
+            # Configure SSL parameters correctly for asyncpg
+            ssl_mode = None
             if 'sslmode' in query_params:
                 ssl_mode = query_params['sslmode'][0]
-                if ssl_mode == 'require':
-                    ssl_args = {"ssl": True}
                 self.logger.debug(f"SSL mode configured: {ssl_mode}")
 
             # Create engine with proper configuration
+            connect_args = {}
+            if ssl_mode:
+                connect_args['ssl'] = ssl_mode == 'require'
+
             self.engine = create_async_engine(
                 base_url,
                 echo=False,
                 pool_size=5,
                 max_overflow=10,
-                pool_pre_ping=True,  # Enable connection health checks
-                pool_recycle=3600,   # Recycle connections every hour
-                **ssl_args
+                pool_pre_ping=True,
+                pool_recycle=3600,
+                connect_args=connect_args
             )
 
             # Create session maker
@@ -80,11 +73,10 @@ class DatabaseManager:
         for attempt in range(self.max_retries):
             try:
                 async with self.session_maker() as session:
-                    result = await session.execute(text("SELECT 1"))
+                    await session.execute(text("SELECT 1"))
                     await session.commit()
-                    if result:
-                        return True
-                    
+                    return True
+
             except Exception as e:
                 self.logger.warning(f"Connection attempt {attempt + 1} failed: {str(e)}")
                 if attempt < self.max_retries - 1:
@@ -102,15 +94,15 @@ class DatabaseManager:
             await self.verify_connection()
         return self.session_maker()
 
-    async def execute_query(self, query: str, params: Dict[str, Any] = None) -> Any:
+    async def execute_query(self, query: str, params: Optional[Dict[str, Any]] = None) -> Any:
         """Execute a query with retry logic"""
         for attempt in range(self.max_retries):
             try:
                 async with await self.get_session() as session:
-                    result = await session.execute(text(query), params)
+                    result = await session.execute(text(query), params or {})
                     await session.commit()
                     return result
-                    
+
             except Exception as e:
                 self.logger.error(f"Query execution failed (attempt {attempt + 1}): {str(e)}")
                 if attempt < self.max_retries - 1:
