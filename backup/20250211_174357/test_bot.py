@@ -5,13 +5,13 @@ import os
 import signal
 import sys
 from typing import Optional, Dict, Any
-from sqlalchemy import text
+from sqlalchemy import create_engine, text
+from sqlalchemy.orm import sessionmaker
 from utils.trading_bot import WebSocketHandler
 from utils.strategies.strategy_manager import StrategyManager
 from utils.sentiment_analyzer import SentimentAnalyzer
-from utils.database import Database
 
-# Setup logging avanzato
+# Setup logging
 log_filename = f'test_bot_{datetime.now().strftime("%Y%m%d_%H%M%S")}.log'
 logging.basicConfig(
     level=logging.INFO,
@@ -22,94 +22,87 @@ logging.basicConfig(
     ])
 logger = logging.getLogger(__name__)
 
-
 class TestBot:
-
     def __init__(self):
-        logger.info("Inizializzazione TestBot...")
-        self.db: Optional[Database] = None
+        logger.info("Initializing TestBot...")
+        self.engine = None
+        self.Session = None
         self.websocket_handler: Optional[WebSocketHandler] = None
         self.strategy_manager: Optional[StrategyManager] = None
         self.sentiment_analyzer: Optional[SentimentAnalyzer] = None
         self.should_run: bool = True
         self.setup_signal_handlers()
-        logger.info("TestBot inizializzato con successo")
+        logger.info("TestBot initialized successfully")
 
     def setup_signal_handlers(self) -> None:
-        """Configura gestione segnali per shutdown graceful"""
+        """Configure signal handlers for graceful shutdown"""
         signal.signal(signal.SIGINT, self.handle_shutdown)
         signal.signal(signal.SIGTERM, self.handle_shutdown)
-        logger.info("Signal handlers configurati")
+        logger.info("Signal handlers configured")
 
     def handle_shutdown(self, signum: int, frame: Any) -> None:
-        """Gestisce shutdown graceful"""
-        logger.info("Ricevuto segnale di shutdown...")
+        """Handle graceful shutdown"""
+        logger.info("Received shutdown signal...")
         self.should_run = False
 
     async def initialize_components(self) -> bool:
-        """Inizializza componenti con retry"""
+        """Initialize components with retry"""
         try:
-            logger.info("Inizializzazione componenti...")
-            # Inizializzazione database
+            logger.info("Initializing components...")
+            # Initialize database connection
             db_url = os.environ.get('DATABASE_URL')
             if not db_url:
-                logger.error("DATABASE_URL non impostato")
+                logger.error("DATABASE_URL not set")
                 raise ValueError("DATABASE_URL not set")
 
-            logger.info("Inizializzazione connessione database...")
-            self.db = Database(db_url)
+            logger.info("Initializing database connection...")
+            self.engine = create_engine(db_url)
+            self.Session = sessionmaker(bind=self.engine)
+
             if not await self.db_health_check():
-                logger.error("Health check database fallito")
+                logger.error("Database health check failed")
                 raise ValueError("Database health check failed")
 
-            # Inizializza componenti
-            if not self.db:
-                logger.error("Database non inizializzato")
-                raise ValueError("Database not initialized")
+            # Initialize components
+            logger.info("Initializing WebSocket handler...")
+            self.websocket_handler = WebSocketHandler(logger)
 
-            logger.info("Inizializzazione WebSocket handler...")
-            self.websocket_handler = WebSocketHandler(logger, self.db)
-
-            logger.info("Inizializzazione Strategy manager...")
+            logger.info("Initializing Strategy manager...")
             self.strategy_manager = StrategyManager()
 
-            logger.info("Inizializzazione Sentiment analyzer...")
+            logger.info("Initializing Sentiment analyzer...")
             self.sentiment_analyzer = SentimentAnalyzer()
 
-            logger.info("Tutti i componenti inizializzati con successo")
+            logger.info("All components initialized successfully")
             return True
 
         except Exception as e:
-            logger.error(f"Errore inizializzazione componenti: {str(e)}")
+            logger.error(f"Error initializing components: {str(e)}")
             return False
 
     async def db_health_check(self) -> bool:
-        """Verifica salute database con sessione sincrona"""
-        if not self.db:
-            logger.error("Database non inizializzato durante health check")
-            raise ValueError("Database not initialized")
+        """Verify database health with synchronous session"""
+        if not self.Session:
+            logger.error("Database session not initialized during health check")
+            raise ValueError("Database session not initialized")
 
         max_attempts = 3
         retry_delay = 5
 
         for attempt in range(max_attempts):
             try:
-                logger.info(
-                    f"Tentativo {attempt + 1} di health check database")
-                if not self.db.connect():
-                    logger.error("Connessione database fallita")
-                    raise Exception("Connessione database fallita")
+                logger.info(f"Attempt {attempt + 1} of database health check")
 
-                # Test query semplice usando sessione sincrona
-                session = self.db.Session()
+                # Test simple query using synchronous session
+                session = self.Session()
                 try:
-                    logger.debug("Esecuzione query test...")
+                    logger.debug("Executing test query...")
                     session.execute(text("SELECT 1"))
                     session.commit()
-                    logger.info("Database health check superato")
+                    logger.info("Database health check passed")
                     return True
                 except Exception as e:
-                    logger.error(f"Query test fallita: {str(e)}")
+                    logger.error(f"Test query failed: {str(e)}")
                     session.rollback()
                     raise
                 finally:
@@ -117,17 +110,17 @@ class TestBot:
 
             except Exception as e:
                 logger.error(
-                    f"Database health check tentativo {attempt + 1} fallito: {str(e)}"
+                    f"Database health check attempt {attempt + 1} failed: {str(e)}"
                 )
                 if attempt < max_attempts - 1:
                     logger.info(
-                        f"Attesa {retry_delay}s prima del prossimo tentativo..."
+                        f"Waiting {retry_delay}s before next attempt..."
                     )
                     await asyncio.sleep(retry_delay)
                     retry_delay *= 2
 
-        logger.error("Database health check fallito dopo tutti i tentativi")
-        raise Exception("Database health check fallito dopo tutti i tentativi")
+        logger.error("Database health check failed after all attempts")
+        raise Exception("Database health check failed after all attempts")
 
     async def test_websocket(self) -> bool:
         """Test connessione WebSocket"""
@@ -247,6 +240,8 @@ class TestBot:
                         self.strategy_manager.active_strategies.keys()):
                     await self.strategy_manager.deactivate_strategy(
                         strategy_name)
+            if self.engine:
+                self.engine.dispose()
             logger.info("Pulizia risorse completata")
         except Exception as e:
             logger.error(f"Errore durante la pulizia: {str(e)}")
