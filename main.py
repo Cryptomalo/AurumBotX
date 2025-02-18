@@ -1,6 +1,7 @@
 import logging
 import sys
-from fastapi import FastAPI
+from flask import Flask, jsonify
+from keep_alive import keep_alive
 
 # Setup logging
 logging.basicConfig(
@@ -13,28 +14,31 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-app = FastAPI(title="AurumBot Dashboard")
+app = Flask(__name__, title="AurumBot Dashboard")
 
-@app.get("/")
-async def index():
+@app.route("/")
+def index():
     logger.info("Index endpoint called")
-    return {"message": "AurumBot Dashboard"}
+    return jsonify({"message": "AurumBot Dashboard"})
 
-@app.get("/health")
-async def health_check():
+@app.route("/health")
+def health_check():
     """Keep-alive endpoint"""
     logger.info("Health check endpoint called")
-    return {"status": "healthy"}
+    return jsonify({"status": "healthy"})
 
 if __name__ == "__main__":
-    import uvicorn
-    logger.info("Starting FastAPI application on port 8000")
     try:
-        uvicorn.run(
-            "main:app",
+        # Start the keep-alive server in a separate thread
+        keep_alive()
+        logger.info("Starting main Flask application on port 5000")
+
+        # Start the main application
+        app.run(
             host="0.0.0.0",
-            port=8000,
-            log_level="info"
+            port=5000,
+            debug=False  # Disable debug mode in production
         )
     except Exception as e:
         logger.error(f"Failed to start server: {e}")
+        sys.exit(1)

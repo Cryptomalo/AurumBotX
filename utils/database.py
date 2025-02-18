@@ -8,84 +8,88 @@ from sqlalchemy.orm import sessionmaker, relationship, Session
 from sqlalchemy.exc import SQLAlchemyError, OperationalError, InterfaceError
 import os
 from typing import Optional, Generator
+from urllib.parse import urlparse, parse_qs
 
 logger = logging.getLogger(__name__)
 
 Base = declarative_base()
 
-class Database:
-    def __init__(self, connection_string: str, max_retries: int = 5, initial_delay: float = 1.0):
-        """
-        Initialize database connection manager with enhanced retry mechanism
-        """
-        self.connection_string = connection_string
-        self.max_retries = max_retries
-        self.initial_delay = initial_delay
+class DatabaseManager:
+    _instance = None
+
+    def __new__(cls):
+        if cls._instance is None:
+            cls._instance = super(DatabaseManager, cls).__new__(cls)
+            cls._instance.initialized = False
+        return cls._instance
+
+    def __init__(self):
+        if self.initialized:
+            return
+
         self.engine = None
         self.Session = None
+        self.max_retries = 5
+        self.initial_delay = 1.0
         self.last_connection_attempt = 0
-        self.connection_timeout = 30  # seconds
+        self.connection_timeout = 30
+        self.initialized = True
 
-    def connect(self) -> bool:
-        """Initialize database connection with enhanced retry mechanism"""
-        retry_count = 0
-        retry_delay = self.initial_delay
+    def _parse_db_url(self, url: str) -> dict:
+        """Parse database URL and extract SSL mode"""
+        parsed = urlparse(url)
+        query_params = parse_qs(parsed.query)
 
-        while retry_count < self.max_retries:
-            try:
-                if self.engine and self._test_connection():
-                    return True
+        # Default to require SSL if not specified
+        ssl_mode = query_params.get('sslmode', ['prefer'])[0]
 
-                self.engine = create_engine(
-                    self.connection_string,
-                    pool_size=5,
-                    max_overflow=10,
-                    pool_timeout=30,
-                    pool_recycle=1800,
-                    pool_pre_ping=True
-                )
+        # Remove SSL parameters from URL as they'll be handled separately
+        cleaned_url = url.split('?')[0]
 
-                # Test connection
-                with self.engine.connect() as conn:
-                    conn.execute(text('SELECT 1'))
+        return {
+            'url': cleaned_url,
+            'ssl_mode': ssl_mode
+        }
 
-                self.Session = sessionmaker(bind=self.engine)
-                self.last_connection_attempt = time.time()
+    def initialize(self, connection_string: str) -> bool:
+        """Initialize database connection with proper SSL handling"""
+        db_config = self._parse_db_url(connection_string)
 
-                logger.info("Database connection established successfully")
-                return True
-
-            except (OperationalError, InterfaceError) as e:
-                retry_count += 1
-                logger.error(f"Database connection attempt {retry_count}/{self.max_retries} failed: {str(e)}")
-
-                if retry_count < self.max_retries:
-                    time.sleep(retry_delay)
-                    retry_delay *= 2  # Exponential backoff
-                else:
-                    logger.critical("All connection attempts failed")
-                    raise SQLAlchemyError(f"Failed to establish database connection after {self.max_retries} attempts")
-
-        return False
-
-    def _test_connection(self) -> bool:
-        """Test if current connection is valid"""
         try:
-            if not self.engine:
-                return False
+            self.engine = create_engine(
+                db_config['url'],
+                pool_size=5,
+                max_overflow=10,
+                pool_timeout=30,
+                pool_recycle=1800,
+                pool_pre_ping=True,
+                connect_args={
+                    "sslmode": db_config['ssl_mode']
+                }
+            )
 
+            # Test connection
             with self.engine.connect() as conn:
-                conn.execute(text('SELECT 1')).scalar()
+                conn.execute(text('SELECT 1'))
+
+            self.Session = sessionmaker(bind=self.engine)
+            self.last_connection_attempt = time.time()
+            logger.info("Database connection established successfully")
             return True
+
         except Exception as e:
-            logger.warning(f"Connection test failed: {str(e)}")
+            logger.error(f"Database initialization error: {str(e)}")
             return False
 
     def get_session(self) -> Session:
-        """Get a new database session with automatic reconnection"""
+        """Get a database session with automatic reconnection"""
         if not self.Session:
-            if not self.connect():
-                raise SQLAlchemyError("Could not establish database connection for new session")
+            db_url = os.getenv('DATABASE_URL')
+            if not db_url:
+                raise ValueError("DATABASE_URL environment variable not set")
+
+            if not self.initialize(db_url):
+                raise SQLAlchemyError("Could not establish database connection")
 
         try:
             session = self.Session()
@@ -94,28 +98,7 @@ class Database:
             logger.error(f"Failed to create new session: {str(e)}")
             raise SQLAlchemyError(f"Failed to create database session: {str(e)}")
 
-def get_db() -> Generator[Session, None, None]:
-    """Database session generator with proper error handling"""
-    db_url = os.getenv('DATABASE_URL')
-    if not db_url:
-        raise ValueError("DATABASE_URL environment variable not set")
-
-    db = Database(db_url)
-    session = None
-
-    try:
-        session = db.get_session()
-        yield session
-    except Exception as e:
-        logger.error(f"Database session error: {e}")
-        if session:
-            session.rollback()
-        raise
-    finally:
-        if session:
-            session.close()
-
-# Model definitions
+# Model definitions remain unchanged
 class TradingStrategy(Base):
     __tablename__ = "trading_strategies"
 
@@ -144,6 +127,23 @@ class SimulationResult(Base):
 
     strategy = relationship("TradingStrategy", back_populates="simulations")
 
+def get_db() -> Generator[Session, None, None]:
+    """Database session generator with proper error handling"""
+    db_manager = DatabaseManager()
+    session = None
+
+    try:
+        session = db_manager.get_session()
+        yield session
+    except Exception as e:
+        logger.error(f"Database session error: {e}")
+        if session:
+            session.rollback()
+        raise
+    finally:
+        if session:
+            session.close()
+
 def init_db():
     """Initialize database tables with standardized schema"""
     try:
@@ -151,10 +151,15 @@ def init_db():
         if not db_url:
             raise ValueError("DATABASE_URL environment variable not set")
 
-        engine = create_engine(db_url)
+        db_manager = DatabaseManager()
+        if not db_manager.initialize(db_url):
+            raise SQLAlchemyError("Failed to initialize database connection")
+
+        # Create tables using the engine from DatabaseManager
+        Base.metadata.create_all(bind=db_manager.engine)
 
         # Create standardized market data table template
-        with engine.begin() as conn:
+        with db_manager.engine.begin() as conn:
             conn.execute(text("""
             CREATE TABLE IF NOT EXISTS market_data_template (
                 timestamp TIMESTAMP PRIMARY KEY,
@@ -185,7 +190,6 @@ def init_db():
             ) PARTITION BY RANGE (timestamp);
             """))
 
-            # Create partitioned indexes for performance
             conn.execute(text("""
             CREATE INDEX IF NOT EXISTS idx_market_data_template_timestamp 
             ON market_data_template (timestamp);

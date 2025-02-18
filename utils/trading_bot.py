@@ -4,10 +4,11 @@ import json
 import time
 import websockets
 import threading
+import os
 from datetime import datetime
 from typing import Dict, List, Optional, Any, Union
 import openai
-from utils.database import get_db
+from utils.database import DatabaseManager
 from utils.indicators import TechnicalIndicators
 import pandas as pd
 import numpy as np
@@ -39,23 +40,24 @@ class WebSocketHandler:
         self.openai_client = openai.OpenAI()
 
     def _initialize_db(self) -> None:
-        """Inizializza la connessione al database con retry"""
-        max_attempts = 3
-        retry_delay = 5
+        """Initialize database connection using DatabaseManager"""
+        try:
+            if isinstance(self.db, DatabaseManager):
+                db_url = os.getenv('DATABASE_URL')
+                if not db_url:
+                    raise ValueError("DATABASE_URL environment variable not set")
 
-        for attempt in range(max_attempts):
-            try:
-                if hasattr(self.db, 'connect'):
-                    self.db.connect()
-                    self.logger.info("Database connection established successfully")
-                    return
-            except Exception as e:
-                self.logger.error(f"Database connection attempt {attempt + 1} failed: {str(e)}")
-                if attempt < max_attempts - 1:
-                    time.sleep(retry_delay)
-                    retry_delay *= 2
-                else:
-                    raise Exception("Failed to establish database connection after all attempts")
+                if not self.db.initialize(db_url):
+                    raise Exception("Failed to initialize database connection")
+
+                self.logger.info("Database connection established successfully")
+                return
+
+            self.logger.info("Using custom database handler")
+
+        except Exception as e:
+            self.logger.error(f"Database initialization error: {str(e)}")
+            raise
 
     async def _preprocess_message(self, msg: Dict) -> Optional[Dict]:
         """Preprocessa i messaggi con validazione"""

@@ -11,17 +11,17 @@ thread = None
 
 @app.route('/')
 def index():
-    return "Alive"
+    return "AurumBot Trading Platform is online! 🚀"
 
 class ServerThread(Thread):
     def __init__(self, app):
         Thread.__init__(self)
-        self.server = make_server('0.0.0.0', 4000, app)
+        self.server = make_server('0.0.0.0', 8080, app)
         self.ctx = app.app_context()
         self.ctx.push()
 
     def run(self):
-        logger.info("Starting keep-alive server on port 4000")
+        logger.info("Starting keep-alive server on port 8080")
         self.server.serve_forever()
 
     def shutdown(self):
