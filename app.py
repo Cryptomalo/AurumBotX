@@ -352,75 +352,79 @@ def render_trading_controls():
                 key="initial_balance_input"
             )
 
-    with col2:
-        strategy = st.selectbox(
-            "Trading Strategy",
-            ["AI-Enhanced", "Momentum", "Meme Coin Tracker"],
-            index=0
-        )
-        risk_per_trade = st.slider(
-            "Risk per Trade (%)",
-            min_value=0.1,
-            max_value=5.0,
-            value=2.0,
-            step=0.1
-        )
+        with col2:
+            strategy = st.selectbox(
+                "Trading Strategy",
+                ["AI-Enhanced", "Momentum", "Meme Coin Tracker"],
+                index=0
+            )
+            risk_per_trade = st.slider(
+                "Risk per Trade (%)",
+                min_value=0.1,
+                max_value=5.0,
+                value=2.0,
+                step=0.1
+            )
 
-    # Control buttons
-    st.markdown("---")
-    col1, col2, col3 = st.columns([1,2,1])
+        # Control buttons
+        st.markdown("---")
+        col1, col2, col3 = st.columns([1,2,1])
 
-    with col2:
-        testnet_mode = st.checkbox("Testnet Mode", value=True)
+        with col2:
+            testnet_mode = st.checkbox("Testnet Mode", value=True)
 
-        start_button = st.button(
-            "▶️ Start Trading" if not st.session_state.get('trading_active', False) else "⏹️ Stop Trading",
-            use_container_width=True,
-            key="trading_control_button"
-        )
-        
-        if start_button:
-            if not st.session_state.get('trading_active', False):
-                if not st.session_state.get('initialization_running', False):
-                    st.session_state.initialization_running = True
+            start_button = st.button(
+                "▶️ Start Trading" if not st.session_state.get('trading_active', False) else "⏹️ Stop Trading",
+                use_container_width=True,
+                key="trading_control_button"
+            )
+
+            if start_button:
+                if not st.session_state.get('trading_active', False):
+                    if not st.session_state.get('initialization_running', False):
+                        st.session_state.initialization_running = True
+                        try:
+                            loop = asyncio.new_event_loop()
+                            asyncio.set_event_loop(loop)
+                            success = loop.run_until_complete(initialize_bot_and_loader(
+                                trading_pair, initial_balance, risk_per_trade, testnet_mode
+                            ))
+                            loop.close()
+
+                            if success:
+                                st.session_state.trading_active = True
+                                st.success(f"Bot initialized and running for {trading_pair}")
+                                st.rerun()
+                        except Exception as e:
+                            st.error(f"Error during startup: {str(e)}")
+                            logger.error(f"Startup error: {str(e)}")
+                        finally:
+                            st.session_state.initialization_running = False
+                else:
                     try:
-                        loop = asyncio.new_event_loop()
-                        asyncio.set_event_loop(loop)
-                        success = loop.run_until_complete(initialize_bot_and_loader(
-                            trading_pair, initial_balance, risk_per_trade, testnet_mode
-                        ))
-                        loop.close()
-                        
-                        if success:
-                            st.session_state.trading_active = True
-                            st.success(f"Bot initialized and running for {trading_pair}")
-                            st.rerun()
+                        if st.session_state.bot:
+                            st.session_state.bot.stop_trading()
+                        st.session_state.trading_active = False
+                        st.session_state.bot = None
+                        st.session_state.data_loader = None
+                        st.info("Trading stopped successfully")
+                        st.rerun()
                     except Exception as e:
-                        st.error(f"Error during startup: {str(e)}")
-                        logger.error(f"Startup error: {str(e)}")
-                    finally:
-                        st.session_state.initialization_running = False
-            else:
-                try:
-                    if st.session_state.bot:
-                        st.session_state.bot.stop_trading()
-                    st.session_state.trading_active = False
+                        st.error(f"Error stopping trading: {str(e)}")
+                        logger.error(f"Stop trading error: {str(e)}")
+
+            if st.session_state.bot:
+                if st.button("⏹️ Stop Trading", use_container_width=True):
                     st.session_state.bot = None
                     st.session_state.data_loader = None
-                    st.info("Trading stopped successfully")
+                    st.info("Trading stopped")
                     st.rerun()
-                except Exception as e:
-                    st.error(f"Error stopping trading: {str(e)}")
-                    logger.error(f"Stop trading error: {str(e)}")
 
-        if st.session_state.bot:
-            if st.button("⏹️ Stop Trading", use_container_width=True):
-                st.session_state.bot = None
-                st.session_state.data_loader = None
-                st.info("Trading stopped")
-                st.rerun()
+        st.markdown("</div>", unsafe_allow_html=True)
 
-    st.markdown("</div>", unsafe_allow_html=True)
+    except Exception as e:
+        logger.error(f"Error in trading controls: {str(e)}")
+        st.error("An error occurred while rendering trading controls. Please try again.")
 
 def render_settings():
     """Render modern settings interface"""
