@@ -118,22 +118,28 @@ def show_main_app():
             if st.button("▶️ Avvia"):
                 if not st.session_state.initialization_running:
                     st.session_state.initialization_running = True
-                    loop = asyncio.new_event_loop()
-                    asyncio.set_event_loop(loop)
-                    success = loop.run_until_complete(initialize_bot_and_loader(
-                        trading_pair, initial_balance, risk_per_trade, testnet_mode
-                    ))
-                    loop.close()
-                    st.session_state.initialization_running = False
-                    if success:
-                        st.success(f"Bot inizializzato per {trading_pair}")
-                        st.experimental_rerun()
+                    try:
+                        loop = asyncio.new_event_loop()
+                        asyncio.set_event_loop(loop)
+                        success = loop.run_until_complete(initialize_bot_and_loader(
+                            trading_pair, initial_balance, risk_per_trade, testnet_mode
+                        ))
+                        loop.close()
+                        if success:
+                            st.success(f"Bot inizializzato per {trading_pair}")
+                            st.rerun()
+                    except Exception as e:
+                        st.error(f"Errore durante l'avvio: {str(e)}")
+                        logger.error(f"Errore durante l'avvio: {str(e)}")
+                    finally:
+                        st.session_state.initialization_running = False
 
         with col2:
             if st.button("⏹️ Ferma"):
                 st.session_state.bot = None
                 st.session_state.data_loader = None
                 st.info("Trading fermato")
+                st.rerun()
 
     tab1, tab2, tab3, tab4 = st.tabs([
         "📊 Analisi Mercato",
@@ -258,8 +264,8 @@ def main():
         init_session_state()
         show_main_app()
     except Exception as e:
-        st.error("Si è verificato un errore imprevisto. Ricarica la pagina.")
         logger.error(f"Errore applicazione: {str(e)}")
+        st.error("Si è verificato un errore imprevisto. Ricarica la pagina.")
 
 if __name__ == "__main__":
     main()
