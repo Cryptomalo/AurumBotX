@@ -57,6 +57,10 @@ args = "Test Notifications"
 task = "workflow.run"
 args = "Test Trading AI"
 
+[[workflows.workflow.tasks]]
+task = "workflow.run"
+args = "Test Sentiment"
+
 [[workflows.workflow]]
 name = "Test WebSocket"
 author = 39294082
@@ -136,6 +140,20 @@ task = "packager.installForAll"
 [[workflows.workflow.tasks]]
 task = "shell.exec"
 args = "python test_trading_ai.py"
+
+[[workflows.workflow]]
+name = "Test Sentiment"
+author = "agent"
+
+[workflows.workflow.metadata]
+agentRequireRestartOnSave = false
+
+[[workflows.workflow.tasks]]
+task = "packager.installForAll"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "python utils/test_sentiment.py"
 
 [[ports]]
 localPort = 5000

@@ -7,43 +7,18 @@ from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker, relationship, Session
 from sqlalchemy.exc import SQLAlchemyError, OperationalError, InterfaceError
 import os
-from utils.db_maintenance import setup_maintenance
-import threading
-from urllib.parse import urlparse, parse_qs
+from typing import Optional, Generator
 
 logger = logging.getLogger(__name__)
 
-def clean_database_url(url):
-    """Clean database URL by removing incompatible parameters"""
-    parsed = urlparse(url)
-    # Extract query parameters
-    params = parse_qs(parsed.query)
-
-    # Remove problematic parameters for asyncpg
-    params.pop('sslmode', None)
-
-    # Rebuild query string
-    query = '&'.join(f"{k}={''.join(v)}" for k, v in params.items())
-
-    # Reconstruct URL
-    clean_url = f"{parsed.scheme}://{parsed.netloc}{parsed.path}"
-    if query:
-        clean_url = f"{clean_url}?{query}"
-
-    return clean_url
+Base = declarative_base()
 
 class Database:
-    def __init__(self, connection_string, max_retries=5, initial_delay=1.0):
+    def __init__(self, connection_string: str, max_retries: int = 5, initial_delay: float = 1.0):
         """
         Initialize database connection manager with enhanced retry mechanism
-
-        Args:
-            connection_string (str): Database connection URL
-            max_retries (int): Maximum number of connection attempts
-            initial_delay (float): Initial delay between retries in seconds
         """
-        logger.info("Initializing Database with max_retries=%d", max_retries)
-        self.db_url = clean_database_url(connection_string)
+        self.connection_string = connection_string
         self.max_retries = max_retries
         self.initial_delay = initial_delay
         self.engine = None
@@ -51,59 +26,18 @@ class Database:
         self.last_connection_attempt = 0
         self.connection_timeout = 30  # seconds
 
-        # Initialize maintenance
-        self.maintenance = setup_maintenance(self.db_url)
+    def connect(self) -> bool:
+        """Initialize database connection with enhanced retry mechanism"""
+        retry_count = 0
+        retry_delay = self.initial_delay
 
-        # Start maintenance thread
-        self.maintenance_thread = threading.Thread(
-            target=self._maintenance_loop,
-            daemon=True
-        )
-        self.maintenance_thread.start()
-
-        if not self._connect():
-            raise SQLAlchemyError("Failed to establish initial database connection")
-
-    def _get_retry_delay(self, attempt):
-        """Calculate retry delay with exponential backoff and jitter"""
-        delay = min(self.initial_delay * (2 ** attempt), 60)  # Cap at 60 seconds
-        jitter = random.uniform(0, 0.1 * delay)  # 10% jitter
-        return delay + jitter
-
-    def _test_connection(self):
-        """Test if current connection is valid"""
-        try:
-            if not self.engine:
-                return False
-
-            # Simple query to test connection
-            with self.engine.connect() as conn:
-                conn.execute(text('SELECT 1')).scalar()
-            return True
-        except Exception as e:
-            logger.warning(f"Connection test failed: {str(e)}")
-            return False
-
-    def _connect(self) -> bool:
-        """Initialize database connection with enhanced retry mechanism and detailed logging"""
-        logger.info("Attempting database connection...")
-
-        # Check if we already have a valid connection
-        if self._test_connection():
-            logger.debug("Existing connection is valid")
-            return True
-
-        # Reset connection objects
-        self.engine = None
-        self.Session = None
-
-        for attempt in range(self.max_retries):
+        while retry_count < self.max_retries:
             try:
-                logger.info("Connection attempt %d/%d", attempt + 1, self.max_retries)
+                if self.engine and self._test_connection():
+                    return True
 
-                # Create engine with pool settings
                 self.engine = create_engine(
-                    self.db_url,
+                    self.connection_string,
                     pool_size=5,
                     max_overflow=10,
                     pool_timeout=30,
@@ -114,12 +48,7 @@ class Database:
                 # Test connection
                 with self.engine.connect() as conn:
                     conn.execute(text('SELECT 1'))
-                    logger.debug("Connection test successful")
 
-                # Create tables if they don't exist
-                Base.metadata.create_all(bind=self.engine)
-
-                # Create session maker
                 self.Session = sessionmaker(bind=self.engine)
                 self.last_connection_attempt = time.time()
 
@@ -127,58 +56,66 @@ class Database:
                 return True
 
             except (OperationalError, InterfaceError) as e:
-                retry_delay = self._get_retry_delay(attempt)
-                logger.error("Database connection attempt %d/%d failed: %s. Retrying in %.2f seconds...",
-                           attempt + 1, self.max_retries, str(e), retry_delay)
+                retry_count += 1
+                logger.error(f"Database connection attempt {retry_count}/{self.max_retries} failed: {str(e)}")
 
-                if attempt < self.max_retries - 1:
+                if retry_count < self.max_retries:
                     time.sleep(retry_delay)
+                    retry_delay *= 2  # Exponential backoff
                 else:
                     logger.critical("All connection attempts failed")
-                    raise SQLAlchemyError(f"Failed to establish database connection after {self.max_retries} attempts: {str(e)}")
-
-            except SQLAlchemyError as e:
-                logger.critical(f"Unrecoverable database error: {str(e)}")
-                raise
+                    raise SQLAlchemyError(f"Failed to establish database connection after {self.max_retries} attempts")
 
         return False
 
+    def _test_connection(self) -> bool:
+        """Test if current connection is valid"""
+        try:
+            if not self.engine:
+                return False
+
+            with self.engine.connect() as conn:
+                conn.execute(text('SELECT 1')).scalar()
+            return True
+        except Exception as e:
+            logger.warning(f"Connection test failed: {str(e)}")
+            return False
+
     def get_session(self) -> Session:
         """Get a new database session with automatic reconnection"""
-        logger.debug("Requesting new database session")
-
-        # Check connection age and reconnect if necessary
-        if time.time() - self.last_connection_attempt > self.connection_timeout:
-            logger.info("Connection age exceeded timeout, reconnecting...")
-            self._connect()
-
         if not self.Session:
-            logger.info("No session maker available, attempting to reconnect...")
-            if not self._connect():
+            if not self.connect():
                 raise SQLAlchemyError("Could not establish database connection for new session")
 
         try:
             session = self.Session()
-            logger.debug("New database session created successfully")
             return session
         except Exception as e:
-            logger.error("Failed to create new session: %s", str(e))
+            logger.error(f"Failed to create new session: {str(e)}")
             raise SQLAlchemyError(f"Failed to create database session: {str(e)}")
 
-    def _maintenance_loop(self):
-        """Background thread for periodic maintenance"""
-        while True:
-            try:
-                self.maintenance.perform_maintenance()
-                # Sleep for 1 hour before next check
-                time.sleep(3600)
-            except Exception as e:
-                logger.error(f"Error in maintenance loop: {e}")
-                time.sleep(300)  # Wait 5 minutes on error
+def get_db() -> Generator[Session, None, None]:
+    """Database session generator with proper error handling"""
+    db_url = os.getenv('DATABASE_URL')
+    if not db_url:
+        raise ValueError("DATABASE_URL environment variable not set")
 
-# Define Base first before any models
-Base = declarative_base()
+    db = Database(db_url)
+    session = None
 
+    try:
+        session = db.get_session()
+        yield session
+    except Exception as e:
+        logger.error(f"Database session error: {e}")
+        if session:
+            session.rollback()
+        raise
+    finally:
+        if session:
+            session.close()
+
+# Model definitions
 class TradingStrategy(Base):
     __tablename__ = "trading_strategies"
 
@@ -206,28 +143,6 @@ class SimulationResult(Base):
     created_at = Column(DateTime, default=datetime.utcnow)
 
     strategy = relationship("TradingStrategy", back_populates="simulations")
-
-# Function to get database session - this is what most code should use
-def get_db():
-    """Database session generator with proper error handling"""
-    db_url = os.getenv('DATABASE_URL')
-    if not db_url:
-        raise ValueError("DATABASE_URL environment variable not set")
-
-    db = Database(db_url)
-    session = None
-
-    try:
-        session = db.get_session()
-        yield session
-    except Exception as e:
-        logger.error(f"Database session error: {e}")
-        if session:
-            session.rollback()
-        raise
-    finally:
-        if session:
-            session.close()
 
 def init_db():
     """Initialize database tables with standardized schema"""

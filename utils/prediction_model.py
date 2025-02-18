@@ -6,6 +6,8 @@ from sklearn.preprocessing import StandardScaler
 from sklearn.model_selection import TimeSeriesSplit
 from sklearn.metrics import r2_score
 import joblib
+import json
+import asyncio
 from datetime import datetime
 from typing import Dict, Any, List, Optional
 from utils.indicators import TechnicalIndicators
@@ -21,6 +23,7 @@ class PredictionModel:
         self.feature_importance = {}
         self.metrics = {}
         self.indicators = TechnicalIndicators()
+        self.openai_client = None
 
         # Risk management parameters
         self.max_position_size = 0.1  # 10% of portfolio
@@ -29,9 +32,13 @@ class PredictionModel:
         # Required columns for the model
         self.required_columns = ['Open', 'High', 'Low', 'Close', 'Volume']
 
-    def _validate_dataframe(self, df: pd.DataFrame) -> bool:
-        """Validate that DataFrame has required columns"""
-        if df is None or df.empty:
+    def _validate_dataframe(self, df: Any) -> bool:
+        """Validate that input is a valid DataFrame with required columns"""
+        if not isinstance(df, pd.DataFrame):
+            self.logger.error(f"Input is not a DataFrame: {type(df)}")
+            return False
+
+        if df.empty:
             self.logger.error("Empty DataFrame provided")
             return False
 
@@ -70,9 +77,25 @@ class PredictionModel:
             self.logger.error(f"Error creating features: {str(e)}")
             raise
 
-    def prepare_data(self, df: pd.DataFrame, target_column: str = 'Close', prediction_horizon: int = 5) -> tuple:
-        """Prepare data for training with validation"""
+    def prepare_data(self, data: Any, target_column: str = 'Close',
+                     prediction_horizon: int = 5) -> tuple:
+        """Prepare data for training with improved validation"""
         try:
+            # Convert dict to DataFrame if necessary
+            if isinstance(data, dict):
+                # Create DataFrame with proper index
+                df = pd.DataFrame(data)
+                if 'timestamp' in data:
+                    df.index = pd.to_datetime(data['timestamp'])
+                else:
+                    df.index = pd.date_range(end=datetime.now(), periods=len(df), freq='1min')
+            elif isinstance(data, pd.DataFrame):
+                df = data.copy()
+                if df.index.empty:
+                    df.index = pd.date_range(end=datetime.now(), periods=len(df), freq='1min')
+            else:
+                raise ValueError(f"Unsupported data type: {type(data)}")
+
             if not self._validate_dataframe(df):
                 raise ValueError("Invalid DataFrame structure")
 
@@ -84,8 +107,8 @@ class PredictionModel:
             df['target_returns'] = df['target'].pct_change(prediction_horizon)
 
             # Select features
-            feature_columns = [col for col in df.columns 
-                             if col not in ['target', 'target_returns'] + self.required_columns]
+            feature_columns = [col for col in df.columns
+                                 if col not in ['target', 'target_returns'] + self.required_columns]
 
             X = df[feature_columns].iloc[:-prediction_horizon]
             y = df['target_returns'].iloc[:-prediction_horizon]
@@ -100,10 +123,11 @@ class PredictionModel:
             self.logger.error(f"Error preparing data: {str(e)}")
             raise
 
-    def train(self, df: pd.DataFrame, target_column: str = 'Close', prediction_horizon: int = 5) -> Optional[Dict[str, Any]]:
+    def train(self, data: Any, target_column: str = 'Close',
+              prediction_horizon: int = 5) -> Optional[Dict[str, Any]]:
         """Train ensemble models with improved error handling"""
         try:
-            X, y = self.prepare_data(df, target_column, prediction_horizon)
+            X, y = self.prepare_data(data, target_column, prediction_horizon)
 
             # Scale features
             X_scaled = self.scaler.fit_transform(X)
@@ -146,14 +170,22 @@ class PredictionModel:
             self.logger.error(f"Training error: {str(e)}")
             return None
 
-    def predict(self, df: pd.DataFrame, target_column: str = 'Close', 
-                prediction_horizon: int = 5) -> Optional[Dict[str, Any]]:
+    def predict(self, data: Any, target_column: str = 'Close',
+               prediction_horizon: int = 5) -> Optional[Dict[str, Any]]:
         """Generate predictions with comprehensive error handling"""
         try:
             if not self.models:
                 self.logger.warning("Models not trained. Training now...")
-                if self.train(df, target_column, prediction_horizon) is None:
+                if self.train(data, target_column, prediction_horizon) is None:
                     raise ValueError("Model training failed")
+
+            # Convert dict to DataFrame if necessary
+            if isinstance(data, dict):
+                df = pd.DataFrame(data)
+            elif isinstance(data, pd.DataFrame):
+                df = data.copy()
+            else:
+                raise ValueError(f"Unsupported data type: {type(data)}")
 
             X, _ = self.prepare_data(df, target_column, prediction_horizon)
             X_scaled = self.scaler.transform(X)
@@ -208,7 +240,7 @@ class PredictionModel:
         except Exception as e:
             self.logger.error(f"Error loading model: {str(e)}")
             raise
-    
+
     async def scan_twitter_sentiment(self, symbol: str) -> Dict[str, float]:
         """Analyze Twitter sentiment for a given symbol"""
         try:
@@ -224,7 +256,6 @@ class PredictionModel:
         except Exception as e:
             self.logger.error(f"Error scanning Twitter sentiment: {str(e)}")
             return {'sentiment': 0.5, 'confidence': 0.5}
-
     def _prepare_features(self, df: pd.DataFrame) -> pd.DataFrame:
         """Prepara features avanzate con deep learning e analisi multiframe"""
         try:
@@ -258,7 +289,6 @@ class PredictionModel:
         except Exception as e:
             self.logger.error(f"Error preparing features: {str(e)}")
             raise
-
     def optimize_strategy_parameters(self, strategy_name: str, market_data: pd.DataFrame) -> Dict[str, Any]:
         """
         Ottimizza i parametri della strategia basandosi sui dati storici
@@ -468,7 +498,7 @@ class PredictionModel:
 
             response = await asyncio.to_thread(
                 self.openai_client.chat.completions.create,
-                model="gpt-4",
+                model="gpt-4o",
                 messages=[
                     {
                         "role": "system",

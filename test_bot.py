@@ -9,7 +9,7 @@ from sqlalchemy import text
 from utils.trading_bot import WebSocketHandler
 from utils.strategies.strategy_manager import StrategyManager
 from utils.sentiment_analyzer import SentimentAnalyzer
-from utils.database import Database
+from utils.database import Database, get_db
 from utils.data_loader import CryptoDataLoader
 from utils.auto_optimizer import AutoOptimizer
 from utils.backup_manager import BackupManager
@@ -37,7 +37,7 @@ def setup_test_environment():
 # Setup logging with more verbose output
 log_filename = f'test_bot_{datetime.now().strftime("%Y%m%d_%H%M%S")}.log'
 logging.basicConfig(
-    level=logging.DEBUG,  # Changed to DEBUG for more detailed logs
+    level=logging.DEBUG,
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
     handlers=[
         logging.FileHandler(log_filename),
@@ -90,19 +90,19 @@ class TestBot:
         for attempt in range(max_attempts):
             try:
                 logger.info(f"Database health check attempt {attempt + 1}")
-                session = self.db.get_session()
+                db_session = self.db.get_session()
                 try:
                     logger.debug("Executing test query...")
-                    session.execute(text("SELECT 1"))
-                    session.commit()
+                    db_session.execute(text("SELECT 1"))
+                    db_session.commit()
                     logger.info("Database health check passed")
                     return True
                 except Exception as e:
                     logger.error(f"Test query failed: {str(e)}")
-                    session.rollback()
+                    db_session.rollback()
                     raise
                 finally:
-                    session.close()
+                    db_session.close()
 
             except Exception as e:
                 logger.error(f"Database health check attempt {attempt + 1} failed: {str(e)}")
@@ -127,6 +127,9 @@ class TestBot:
 
             try:
                 self.db = Database(db_url)
+                if not self.db.connect():  # Use new connect method
+                    logger.error("Database connection failed")
+                    return False
                 if not await self.db_health_check():
                     return False
                 logger.info("Database initialized successfully")
@@ -134,34 +137,32 @@ class TestBot:
                 logger.error(f"Database connection error: {str(e)}")
                 return False
 
-            # Initialize data loader with retry mechanism
+            # Initialize other components
             try:
                 self.data_loader = CryptoDataLoader(use_live_data=False)
                 await self.data_loader.preload_data()
-                logger.info("Data loader initialized successfully")
-            except Exception as e:
-                logger.error(f"Data loading error: {str(e)}")
-                return False
 
-            # Initialize other components with proper error handling
-            try:
                 self.websocket_handler = WebSocketHandler(logger, self.db)
                 self.strategy_manager = StrategyManager()
                 await self.strategy_manager.configure_for_live_testing()
+
                 self.sentiment_analyzer = SentimentAnalyzer()
                 self.backup_manager = BackupManager()
                 self.auto_optimizer = AutoOptimizer(self.db, self.strategy_manager)
                 self.dex_sniper = DexSniper(testnet=True)
                 self.risk_manager = RiskManager()
                 self.learning_module = LearningModule()
+
                 self.ai_trading = AITrading({
                     'min_confidence': 0.7,
                     'use_sentiment': True,
                     'risk_threshold': 0.8
                 })
+
                 self.dashboard = TradingDashboard()
                 logger.info("All components initialized successfully")
                 return True
+
             except Exception as e:
                 logger.error(f"Component initialization error: {str(e)}")
                 return False
@@ -171,7 +172,11 @@ class TestBot:
             return False
 
     async def execute_ai_trade(self, signal: Dict) -> Dict:
+        """Execute AI-driven trade with proper error handling"""
         try:
+            if not signal or not isinstance(signal, dict):
+                raise ValueError("Invalid signal format")
+
             return {
                 'success': True,
                 'action': signal.get('action'),
@@ -185,7 +190,7 @@ class TestBot:
             logger.error(f"AI Trade execution error: {e}")
             return {'success': False, 'error': str(e)}
 
-    async def run_ai_testnet_simulation(self):
+    async def run_ai_testnet_simulation(self) -> bool:
         """Run the AI testnet simulation with improved error handling"""
         try:
             logger.info("Starting AI-based testnet simulation...")
@@ -198,21 +203,21 @@ class TestBot:
 
             while self.should_run and (datetime.now() - self.start_time) < self.test_duration:
                 try:
-                    # Process each test pair
                     for symbol in test_pairs:
                         logger.debug(f"Processing symbol: {symbol}")
-                        predictions = await self.ai_trading.analyze_and_predict(symbol)
-                        logger.debug(f"Predictions for {symbol}: {predictions}")
+                        if self.ai_trading:  # Check if AI trading component is initialized
+                            predictions = await self.ai_trading.analyze_and_predict(symbol)
+                            logger.debug(f"Predictions for {symbol}: {predictions}")
 
-                        if predictions and isinstance(predictions, dict):
-                            trade_result = await self.execute_ai_trade(predictions)
-                            self.trade_results.append(trade_result)
-                            logger.info(f"Trade result for {symbol}: {trade_result}")
+                            if predictions and isinstance(predictions, dict):
+                                trade_result = await self.execute_ai_trade(predictions)
+                                self.trade_results.append(trade_result)
+                                logger.info(f"Trade result for {symbol}: {trade_result}")
 
-                            try:
-                                await self.dashboard.update_trade_data(trade_result)
-                            except Exception as e:
-                                logger.error(f"Dashboard update error: {str(e)}")
+                                if self.dashboard:  # Check if dashboard is initialized
+                                    await self.dashboard.update_trade_data(trade_result)
+                        else:
+                            logger.warning("AI trading component not initialized")
 
                     await asyncio.sleep(1)
 
@@ -229,6 +234,7 @@ class TestBot:
             return False
 
     async def generate_test_report(self):
+        """Generate comprehensive test report with error handling"""
         try:
             logger.info("Generating AI testnet simulation report...")
             total_trades = len(self.trade_results)
@@ -244,7 +250,8 @@ class TestBot:
                 "average_profit_per_trade": f"${avg_profit:.2f}"
             }
 
-            await self.dashboard.update_report(report)
+            if self.dashboard:  # Check if dashboard is initialized
+                await self.dashboard.update_report(report)
             logger.info(f"AI Trading Test Report: {report}")
 
         except Exception as e:
