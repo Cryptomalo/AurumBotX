@@ -14,7 +14,7 @@ class TradingDashboard:
         self.trade_history = []
         self.performance_metrics = {}
         
-    async def update_trade_data(self, trade_result: Dict[str, Any]):
+    def update_trade_data(self, trade_result: Dict[str, Any]):
         """Update dashboard with new trade data"""
         try:
             self.trade_history.append({

@@ -499,6 +499,26 @@ async def initialize_bot_and_loader(trading_pair: str, initial_balance: float, r
         st.error(f"Startup error: {str(e)}")
         return False
 
+def load_market_data(symbol, period='1d'):
+    """Carica i dati di mercato in modo sicuro"""
+    try:
+        if not st.session_state.data_loader:
+            return None
+
+        loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(loop)
+        df = loop.run_until_complete(st.session_state.data_loader.get_historical_data(symbol, period))
+        loop.close()
+
+        if df is not None and len(df) > 0:
+            st.session_state.market_data = df
+            return df
+        return None
+    except Exception as e:
+        logger.error(f"Error loading market data: {str(e)}")
+        return None
+
+
 def main():
     """Main application entry point"""
     try:
