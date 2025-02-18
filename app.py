@@ -233,8 +233,8 @@ def render_navigation():
     try:
         selected = option_menu(
             menu_title=None,
-            options=["Dashboard", "Trading", "Portfolio", "Analytics", "Social", "Settings"],
-            icons=['house', 'currency-bitcoin', 'wallet2', 'graph-up', 'people', 'gear'],
+            options=["Dashboard", "Trading", "Portfolio", "Analytics", "Profile", "Settings"],
+            icons=['house', 'currency-bitcoin', 'wallet2', 'graph-up', 'person', 'gear'],
             menu_icon="cast",
             default_index=0,
             orientation="horizontal",
@@ -549,6 +549,36 @@ def load_market_data(symbol, period='1d'):
         return None
 
 
+def render_profile():
+    """Render profile section with Telegram integration"""
+    try:
+        st.title("Profile & Integrations")
+
+        col1, col2 = st.columns(2)
+
+        with col1:
+            st.subheader("Profile Information")
+            st.markdown(f"""
+            <div class='metric-card'>
+                <h4>Wallet Address</h4>
+                <p>{st.session_state.wallet_address if st.session_state.wallet_connected else 'Not Connected'}</p>
+            </div>
+            """, unsafe_allow_html=True)
+
+        with col2:
+            st.subheader("Telegram Integration")
+            telegram_enabled = st.checkbox("Enable Telegram Scanner")
+            if telegram_enabled:
+                st.text_input("Telegram Bot Token")
+                st.text_input("Chat ID")
+                st.multiselect(
+                    "Monitor Channels",
+                    ["Channel 1", "Channel 2", "Channel 3"]
+                )
+
+    except Exception as e:
+        logger.error(f"Error in profile section: {str(e)}")
+        st.error("An error occurred while rendering the profile section. Please try again.")
 
 def main():
     """Main application entry point"""
@@ -583,9 +613,8 @@ def main():
         elif selected_tab == "Analytics":
             st.title("Advanced Analytics")
             # Future: Add analytics content
-        elif selected_tab == "Social":
-            st.title("Social Trading")
-            # Future: Add social trading content
+        elif selected_tab == "Profile":
+            render_profile()
         elif selected_tab == "Settings":
             render_settings()
 
