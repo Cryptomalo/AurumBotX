@@ -14,7 +14,7 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-app = Flask(__name__, title="AurumBot Dashboard")
+app = Flask(__name__)
 
 @app.route("/")
 def index():

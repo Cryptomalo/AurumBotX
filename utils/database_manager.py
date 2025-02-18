@@ -16,8 +16,17 @@ class DatabaseManager:
         self.is_connected = False
 
     async def initialize(self, database_url: str) -> bool:
-        """Initialize database connection with retry logic"""
-        self.logger.info("Initializing database connection...")
+        """Initialize database connection with optimized pooling"""
+        self.logger.info("Initializing database connection with connection pooling...")
+        
+        # Configure optimal pool settings for Replit environment
+        pool_settings = {
+            'pool_size': 5,
+            'max_overflow': 10,
+            'pool_timeout': 30,
+            'pool_recycle': 1800,
+            'pool_pre_ping': True
+        }
         
         try:
             # Parse database URL and handle SSL parameters
