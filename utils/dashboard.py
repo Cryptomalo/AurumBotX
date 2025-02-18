@@ -1,3 +1,4 @@
+
 import logging
 import asyncio
 from typing import Dict, Any
@@ -19,24 +20,12 @@ class TradingDashboard:
         try:
             self.trade_history.append({
                 **trade_result,
-                'timestamp': datetime.now().isoformat() if 'timestamp' not in trade_result else trade_result['timestamp']
+                'timestamp': datetime.now().isoformat()
             })
-            
-            # Update performance metrics
             self._calculate_performance_metrics()
-            self.logger.info(f"Dashboard updated with trade: {trade_result}")
             
         except Exception as e:
             self.logger.error(f"Error updating dashboard: {str(e)}")
-
-    async def update_report(self, report_data: Dict[str, Any]):
-        """Update dashboard with new report data"""
-        try:
-            self.performance_metrics.update(report_data)
-            self.logger.info("Dashboard report updated successfully")
-            
-        except Exception as e:
-            self.logger.error(f"Error updating report: {str(e)}")
 
     def _calculate_performance_metrics(self):
         """Calculate performance metrics from trade history"""
@@ -45,13 +34,10 @@ class TradingDashboard:
                 return
             
             df = pd.DataFrame(self.trade_history)
-            
-            # Basic metrics
             total_trades = len(df)
             successful_trades = len(df[df['success'] == True])
             win_rate = successful_trades / total_trades if total_trades > 0 else 0
             
-            # Calculate profit metrics if price data available
             if 'price' in df.columns and 'take_profit' in df.columns:
                 profits = df.apply(lambda x: x['take_profit'] - x['price'] if x['success'] else 0, axis=1)
                 total_profit = profits.sum()
@@ -72,34 +58,76 @@ class TradingDashboard:
             self.logger.error(f"Error calculating metrics: {str(e)}")
 
     def render_dashboard(self):
-        """Render dashboard using Streamlit"""
+        """Render modern dashboard with enhanced metrics"""
         try:
-            st.title("🤖 AurumBot Trading Dashboard")
+            st.title("🌟 AurumBot Trading Dashboard")
             
-            # Performance Metrics
-            st.header("Performance Metrics")
-            col1, col2, col3 = st.columns(3)
+            # Quick Metrics Section
+            col1, col2, col3, col4 = st.columns(4)
             
             with col1:
-                st.metric("Total Trades", self.performance_metrics.get('total_trades', 0))
-            with col2:
-                st.metric("Win Rate", f"{self.performance_metrics.get('win_rate', 0):.2%}")
-            with col3:
-                st.metric("Total Profit", f"${self.performance_metrics.get('total_profit', 0):.2f}")
-            
-            # Trade History
-            if self.trade_history:
-                st.header("Recent Trades")
-                df = pd.DataFrame(self.trade_history[-100:])  # Show last 100 trades
-                st.dataframe(df)
+                st.metric(
+                    "Portfolio Value",
+                    f"${self.performance_metrics.get('total_profit', 0):,.2f}",
+                    f"{self.performance_metrics.get('daily_change', 0):+.2f}%"
+                )
                 
-                # Profit Chart
-                if 'price' in df.columns and 'take_profit' in df.columns:
-                    profits = df.apply(lambda x: x['take_profit'] - x['price'] if x['success'] else 0, axis=1)
-                    fig = go.Figure()
-                    fig.add_trace(go.Scatter(y=profits.cumsum(), mode='lines', name='Cumulative Profit'))
-                    st.plotly_chart(fig)
+            with col2:
+                st.metric(
+                    "Win Rate",
+                    f"{self.performance_metrics.get('win_rate', 0):.1%}",
+                    f"{len(self.trade_history)} trades"
+                )
+                
+            with col3:
+                st.metric(
+                    "Daily P&L",
+                    f"${self.performance_metrics.get('daily_profit', 0):,.2f}",
+                    f"{self.performance_metrics.get('daily_roi', 0):+.2f}%"
+                )
+                
+            with col4:
+                st.metric(
+                    "Active Positions",
+                    f"{self.performance_metrics.get('active_positions', 0)}",
+                    f"{self.performance_metrics.get('position_change', 0):+d} today"
+                )
+            
+            # Main Chart
+            if self.trade_history:
+                df = pd.DataFrame(self.trade_history[-100:])
+                fig = self._create_trading_chart(df)
+                st.plotly_chart(fig, use_container_width=True)
+                
+                # Recent Trades Table
+                st.subheader("Recent Trades")
+                st.dataframe(
+                    df[['timestamp', 'symbol', 'type', 'price', 'success']].tail(10),
+                    hide_index=True
+                )
             
         except Exception as e:
             self.logger.error(f"Error rendering dashboard: {str(e)}")
-            st.error("Error rendering dashboard components")
+            st.error("Error loading dashboard components")
+
+    def _create_trading_chart(self, df: pd.DataFrame) -> go.Figure:
+        """Create interactive trading chart"""
+        fig = go.Figure()
+        
+        fig.add_trace(
+            go.Scatter(
+                x=df['timestamp'],
+                y=df['price'],
+                mode='lines',
+                name='Price'
+            )
+        )
+        
+        fig.update_layout(
+            title='Trading Activity',
+            template='plotly_dark',
+            height=500,
+            margin=dict(l=0, r=0, t=30, b=0)
+        )
+        
+        return fig
