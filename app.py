@@ -119,180 +119,197 @@ def custom_theme():
 
 def render_wallet_login():
     """Render wallet login interface"""
-    st.markdown(f"""
-    <div style='text-align: center; padding: 2rem 0;'>
-        <h1 style='color: {COLORS["primary"]}; font-size: 3em; margin-bottom: 1rem;'>
-            🌟 AurumBot
-        </h1>
-        <p style='font-size: 1.5em; color: {COLORS["text"]}; margin: 1rem 0;'>
-            Advanced AI-Powered Trading Platform
-        </p>
-    </div>
-    """, unsafe_allow_html=True)
-
-    if st.session_state.wallet_error:
+    try:
         st.markdown(f"""
-        <div class='error-box'>
-            <p style='color: {COLORS["error"]};'>
-                {st.session_state.wallet_error}
+        <div style='text-align: center; padding: 2rem 0;'>
+            <h1 style='color: {COLORS["primary"]}; font-size: 3em; margin-bottom: 1rem;'>
+                🌟 AurumBot
+            </h1>
+            <p style='font-size: 1.5em; color: {COLORS["text"]}; margin: 1rem 0;'>
+                Advanced AI-Powered Trading Platform
             </p>
         </div>
         """, unsafe_allow_html=True)
 
-    # Features showcase
-    col1, col2, col3 = st.columns(3)
+        if st.session_state.wallet_error:
+            st.markdown(f"""
+            <div class='error-box'>
+                <p style='color: {COLORS["error"]};'>
+                    {st.session_state.wallet_error}
+                </p>
+            </div>
+            """, unsafe_allow_html=True)
 
-    feature_style = f"""
-        padding: 2rem;
-        background-color: rgba(255,255,255,0.05);
-        border-radius: 10px;
-        min-height: 200px;
-        text-align: center;
-        margin: 1rem 0;
-    """
+        # Features showcase
+        col1, col2, col3 = st.columns(3)
 
-    with col1:
-        st.markdown(f"""
-        <div style='{feature_style}'>
-            <h3 style='color: {COLORS["primary"]};'>🤖 AI Trading</h3>
-            <p>Advanced ML algorithms for optimal trading decisions</p>
-        </div>
-        """, unsafe_allow_html=True)
+        feature_style = f"""
+            padding: 2rem;
+            background-color: rgba(255,255,255,0.05);
+            border-radius: 10px;
+            min-height: 200px;
+            text-align: center;
+            margin: 1rem 0;
+        """
 
-    with col2:
-        st.markdown(f"""
-        <div style='{feature_style}'>
-            <h3 style='color: {COLORS["primary"]};'>📊 Real-time Analysis</h3>
-            <p>Instant market insights and performance metrics</p>
-        </div>
-        """, unsafe_allow_html=True)
+        with col1:
+            st.markdown(f"""
+            <div style='{feature_style}'>
+                <h3 style='color: {COLORS["primary"]};'>🤖 AI Trading</h3>
+                <p>Advanced ML algorithms for optimal trading decisions</p>
+            </div>
+            """, unsafe_allow_html=True)
 
-    with col3:
-        st.markdown(f"""
-        <div style='{feature_style}'>
-            <h3 style='color: {COLORS["primary"]};'>🔒 Secure Trading</h3>
-            <p>Enterprise-grade security for your assets</p>
-        </div>
-        """, unsafe_allow_html=True)
+        with col2:
+            st.markdown(f"""
+            <div style='{feature_style}'>
+                <h3 style='color: {COLORS["primary"]};'>📊 Real-time Analysis</h3>
+                <p>Instant market insights and performance metrics</p>
+            </div>
+            """, unsafe_allow_html=True)
 
-    # Wallet connection
-    st.markdown("<br>", unsafe_allow_html=True)
-    col1, col2, col3 = st.columns([1,2,1])
+        with col3:
+            st.markdown(f"""
+            <div style='{feature_style}'>
+                <h3 style='color: {COLORS["primary"]};'>🔒 Secure Trading</h3>
+                <p>Enterprise-grade security for your assets</p>
+            </div>
+            """, unsafe_allow_html=True)
 
-    with col2:
-        if st.button("🔗 Connect Wallet", use_container_width=True, key="connect_wallet"):
-            try:
-                # Simulate wallet connection
-                st.session_state.login_attempted = True
-                st.session_state.wallet_connected = True
-                st.session_state.wallet_address = "0x742d35Cc6634C0532925a3b844Bc454e4438f44e"
-                st.session_state.wallet_error = None
-                st.rerun()
-            except Exception as e:
-                logger.error(f"Wallet connection error: {str(e)}")
-                st.session_state.wallet_error = "Unable to connect wallet. Please try again."
-                st.session_state.wallet_connected = False
-                st.session_state.wallet_address = None
-                st.rerun()
+        # Wallet connection
+        st.markdown("<br>", unsafe_allow_html=True)
+        col1, col2, col3 = st.columns([1,2,1])
+
+        with col2:
+            if st.button("🔗 Connect Wallet", use_container_width=True, key="connect_wallet"):
+                try:
+                    # Simulate wallet connection
+                    st.session_state.login_attempted = True
+                    st.session_state.wallet_connected = True
+                    st.session_state.wallet_address = "0x742d35Cc6634C0532925a3b844Bc454e4438f44e"
+                    st.session_state.wallet_error = None
+                    st.rerun()
+                except Exception as e:
+                    logger.error(f"Wallet connection error: {str(e)}")
+                    st.session_state.wallet_error = "Unable to connect wallet. Please try again."
+                    st.session_state.wallet_connected = False
+                    st.session_state.wallet_address = None
+                    st.rerun()
+    except Exception as e:
+        logger.error(f"Error in wallet login: {str(e)}")
+        st.error("An error occurred during login. Please try again.")
 
 def render_header():
     """Render application header"""
-    col1, col2, col3 = st.columns([1,2,1])
+    try:
+        col1, col2, col3 = st.columns([1,2,1])
 
-    with col1:
-        st.image("assets/logo.png", width=100)
+        with col1:
+            st.image("assets/logo.png", width=100)
 
-    with col2:
-        st.title("🌟 AurumBot Trading Platform")
+        with col2:
+            st.title("🌟 AurumBot Trading Platform")
 
-    with col3:
-        if st.session_state.wallet_connected and st.session_state.wallet_address:
-            col3.markdown(f"""
-            <div style='text-align: right;'>
-                <img src="assets/profile.png" width="50" style="border-radius: 25px;">
-                <p style='margin-top: 5px;'>🔗 {st.session_state.wallet_address[:6]}...{st.session_state.wallet_address[-4:]}</p>
-                <p style='cursor: pointer; color: {COLORS["error"]}; font-size: 0.8em;' onclick='disconnect_wallet()'>Disconnect</p>
-            </div>
-            """, unsafe_allow_html=True)
+        with col3:
+            if st.session_state.wallet_connected and st.session_state.wallet_address:
+                col3.markdown(f"""
+                <div style='text-align: right;'>
+                    <img src="assets/profile.png" width="50" style="border-radius: 25px;">
+                    <p style='margin-top: 5px;'>🔗 {st.session_state.wallet_address[:6]}...{st.session_state.wallet_address[-4:]}</p>
+                </div>
+                """, unsafe_allow_html=True)
 
-            if st.button("Disconnect", key="disconnect_wallet"):
-                st.session_state.wallet_connected = False
-                st.session_state.wallet_address = None
-                st.session_state.wallet_error = None
-                st.rerun()
+                if st.button("Disconnect", key="disconnect_wallet"):
+                    st.session_state.wallet_connected = False
+                    st.session_state.wallet_address = None
+                    st.session_state.wallet_error = None
+                    st.rerun()
+    except Exception as e:
+        logger.error(f"Error in header: {str(e)}")
+        st.error("An error occurred in the header. Please refresh the page.")
 
 def render_navigation():
     """Render main navigation menu"""
-    selected = option_menu(
-        menu_title=None,
-        options=["Dashboard", "Trading", "Portfolio", "Analytics", "Social", "Settings"],
-        icons=['house', 'currency-bitcoin', 'wallet2', 'graph-up', 'people', 'gear'],
-        menu_icon="cast",
-        default_index=0,
-        orientation="horizontal",
-        styles={
-            "container": {"padding": "0!important", "background-color": "rgba(255, 255, 255, 0.05)"},
-            "icon": {"color": COLORS['text'], "font-size": "25px"},
-            "nav-link": {
-                "font-size": "16px",
-                "text-align": "center",
-                "margin": "0px",
-                "--hover-color": COLORS['secondary']
-            },
-            "nav-link-selected": {"background-color": COLORS['primary']},
-        }
-    )
-    return selected
+    try:
+        selected = option_menu(
+            menu_title=None,
+            options=["Dashboard", "Trading", "Portfolio", "Analytics", "Social", "Settings"],
+            icons=['house', 'currency-bitcoin', 'wallet2', 'graph-up', 'people', 'gear'],
+            menu_icon="cast",
+            default_index=0,
+            orientation="horizontal",
+            styles={
+                "container": {"padding": "0!important", "background-color": "rgba(255, 255, 255, 0.05)"},
+                "icon": {"color": COLORS['text'], "font-size": "25px"},
+                "nav-link": {
+                    "font-size": "16px",
+                    "text-align": "center",
+                    "margin": "0px",
+                    "--hover-color": COLORS['secondary']
+                },
+                "nav-link-selected": {"background-color": COLORS['primary']},
+            }
+        )
+        return selected
+    except Exception as e:
+        logger.error(f"Error in navigation: {str(e)}")
+        st.error("An error occurred in the navigation menu. Please refresh the page.")
+        return "Dashboard"
 
 def render_dashboard():
     """Render modern dashboard with enhanced visualizations"""
-    col1, col2, col3 = st.columns([2,1,1])
+    try:
+        col1, col2, col3 = st.columns([2,1,1])
 
-    with col1:
-        st.subheader("Market Overview")
-        if st.session_state.market_data is not None:
-            chart = create_candlestick_chart(st.session_state.market_data)
-            if chart:
-                st.plotly_chart(chart, use_container_width=True)
+        with col1:
+            st.subheader("Market Overview")
+            if st.session_state.market_data is not None:
+                chart = create_candlestick_chart(st.session_state.market_data)
+                if chart:
+                    st.plotly_chart(chart, use_container_width=True)
 
-    with col2:
-        st.subheader("Portfolio Summary")
-        if st.session_state.bot:
-            current_balance = st.session_state.bot.balance
-            initial_balance = st.session_state.bot.initial_balance
-            pnl = current_balance - initial_balance
-            pnl_color = COLORS['success'] if pnl >= 0 else COLORS['error']
+        with col2:
+            st.subheader("Portfolio Summary")
+            if st.session_state.bot:
+                current_balance = st.session_state.bot.balance
+                initial_balance = st.session_state.bot.initial_balance
+                pnl = current_balance - initial_balance
+                pnl_color = COLORS['success'] if pnl >= 0 else COLORS['error']
 
-            st.markdown(f"""
-            <div class='metric-card'>
-                <h4>Current Balance</h4>
-                <h2 style='color: {COLORS["text"]};'>${current_balance:.2f}</h2>
-            </div>
-            <div class='metric-card'>
-                <h4>PNL</h4>
-                <h2 style='color: {pnl_color};'>${pnl:.2f} ({(pnl/initial_balance)*100:.1f}%)</h2>
-            </div>
-            """, unsafe_allow_html=True)
+                st.markdown(f"""
+                <div class='metric-card'>
+                    <h4>Current Balance</h4>
+                    <h2 style='color: {COLORS["text"]};'>${current_balance:.2f}</h2>
+                </div>
+                <div class='metric-card'>
+                    <h4>PNL</h4>
+                    <h2 style='color: {pnl_color};'>${pnl:.2f} ({(pnl/initial_balance)*100:.1f}%)</h2>
+                </div>
+                """, unsafe_allow_html=True)
 
-            if hasattr(st.session_state.bot, 'balance_history'):
-                pnl_df = pd.DataFrame(st.session_state.bot.balance_history)
-                st.line_chart(pnl_df.set_index('timestamp')['balance'])
+                if hasattr(st.session_state.bot, 'balance_history'):
+                    pnl_df = pd.DataFrame(st.session_state.bot.balance_history)
+                    st.line_chart(pnl_df.set_index('timestamp')['balance'])
 
-    with col3:
-        st.subheader("Top Meme Coins")
-        meme_data = [
-            {"coin": "DOGE", "change": "+5.2%", "color": COLORS['success']},
-            {"coin": "SHIB", "change": "+3.1%", "color": COLORS['success']},
-            {"coin": "PEPE", "change": "+8.7%", "color": COLORS['success']}
-        ]
+        with col3:
+            st.subheader("Top Meme Coins")
+            meme_data = [
+                {"coin": "DOGE", "change": "+5.2%", "color": COLORS['success']},
+                {"coin": "SHIB", "change": "+3.1%", "color": COLORS['success']},
+                {"coin": "PEPE", "change": "+8.7%", "color": COLORS['success']}
+            ]
 
-        for coin in meme_data:
-            st.markdown(f"""
-            <div class='metric-card'>
-                <h4>{coin['coin']}</h4>
-                <h3 style='color: {coin["color"]};'>{coin["change"]}</h3>
-            </div>
-            """, unsafe_allow_html=True)
+            for coin in meme_data:
+                st.markdown(f"""
+                <div class='metric-card'>
+                    <h4>{coin['coin']}</h4>
+                    <h3 style='color: {coin["color"]};'>{coin["change"]}</h3>
+                </div>
+                """, unsafe_allow_html=True)
+
+    except Exception as e:
+        logger.error(f"Error in dashboard: {str(e)}")
+        st.error("An error occurred while rendering the dashboard. Please refresh the page.")
 
 def create_candlestick_chart(df):
     """Create interactive candlestick chart with improved styling"""
@@ -328,9 +345,9 @@ def create_candlestick_chart(df):
 
 def render_trading_controls():
     """Render modern trading interface"""
-    st.subheader("Trading Controls")
-
     try:
+        st.subheader("Trading Controls")
+
         # Trading form in card-like container
         st.markdown("""
         <div style='background-color: rgba(255, 255, 255, 0.05); padding: 20px; border-radius: 10px; margin: 20px 0;'>
@@ -428,77 +445,82 @@ def render_trading_controls():
 
 def render_settings():
     """Render modern settings interface"""
-    st.subheader("⚙️ Settings")
+    try:
+        st.subheader("⚙️ Settings")
 
-    tabs = st.tabs(["General", "Notifications", "Wallet", "Telegram", "Advanced"])
+        tabs = st.tabs(["General", "Notifications", "Wallet", "Telegram", "Advanced"])
 
-    with tabs[0]:
-        st.subheader("General Settings")
-        col1, col2 = st.columns(2)
-        with col1:
-            st.selectbox(
-                "Theme",
-                ["dark", "light"],
-                index=0 if st.session_state.theme == "dark" else 1,
-                key="theme"
-            )
-        with col2:
-            st.checkbox(
-                "Enable Auto Trading",
-                value=st.session_state.auto_trade,
-                key="auto_trade"
-            )
+        with tabs[0]:
+            st.subheader("General Settings")
+            col1, col2 = st.columns(2)
+            with col1:
+                st.selectbox(
+                    "Theme",
+                    ["dark", "light"],
+                    index=0 if st.session_state.theme == "dark" else 1,
+                    key="theme"
+                )
+            with col2:
+                st.checkbox(
+                    "Enable Auto Trading",
+                    value=st.session_state.auto_trade,
+                    key="auto_trade"
+                )
 
-    with tabs[1]:
-        st.subheader("Notification Settings")
-        col1, col2 = st.columns(2)
-        with col1:
-            st.checkbox(
-                "Enable Notifications",
-                value=st.session_state.notifications_enabled,
-                key="notifications_enabled"
-            )
-        with col2:
-            st.number_input(
-                "Price Alert Threshold (%)",
-                min_value=0.1,
-                value=5.0,
-                step=0.1
-            )
+        with tabs[1]:
+            st.subheader("Notification Settings")
+            col1, col2 = st.columns(2)
+            with col1:
+                st.checkbox(
+                    "Enable Notifications",
+                    value=st.session_state.notifications_enabled,
+                    key="notifications_enabled"
+                )
+            with col2:
+                st.number_input(
+                    "Price Alert Threshold (%)",
+                    min_value=0.1,
+                    value=5.0,
+                    step=0.1
+                )
 
-    with tabs[2]:
-        st.subheader("Wallet Settings")
-        if st.session_state.wallet_connected:
-            st.markdown(f"""
-            <div class='success-box'>
-                <h4>Wallet Connected</h4>
-                <p>Address: {st.session_state.wallet_address}</p>
-            </div>
-            """, unsafe_allow_html=True)
-            if st.button("Disconnect Wallet"):
-                st.session_state.wallet_connected = False
-                st.session_state.wallet_address = None
-                st.rerun()
+        with tabs[2]:
+            st.subheader("Wallet Settings")
+            if st.session_state.wallet_connected:
+                st.markdown(f"""
+                <div class='success-box'>
+                    <h4>Wallet Connected</h4>
+                    <p>Address: {st.session_state.wallet_address}</p>
+                </div>
+                """, unsafe_allow_html=True)
+                if st.button("Disconnect Wallet"):
+                    st.session_state.wallet_connected = False
+                    st.session_state.wallet_address = None
+                    st.rerun()
 
-    with tabs[3]:
-        st.subheader("Telegram Integration")
-        telegram_enabled = st.checkbox("Enable Telegram Scanner")
-        if telegram_enabled:
-            st.text_input("Telegram Bot Token")
-            st.text_input("Chat ID")
-            st.multiselect(
-                "Monitor Channels",
-                ["Channel 1", "Channel 2", "Channel 3"]
-            )
+        with tabs[3]:
+            st.subheader("Telegram Integration")
+            telegram_enabled = st.checkbox("Enable Telegram Scanner")
+            if telegram_enabled:
+                st.text_input("Telegram Bot Token")
+                st.text_input("Chat ID")
+                st.multiselect(
+                    "Monitor Channels",
+                    ["Channel 1", "Channel 2", "Channel 3"]
+                )
 
-    with tabs[4]:
-        st.subheader("Advanced Settings")
-        col1, col2 = st.columns(2)
-        with col1:
-            st.number_input("API Request Timeout (seconds)", min_value=1, value=30)
-        with col2:
-            st.number_input("Cache Duration (minutes)", min_value=1, value=5)
-        st.checkbox("Enable Debug Logging")
+        with tabs[4]:
+            st.subheader("Advanced Settings")
+            col1, col2 = st.columns(2)
+            with col1:
+                st.number_input("API Request Timeout (seconds)", min_value=1, value=30)
+            with col2:
+                st.number_input("Cache Duration (minutes)", min_value=1, value=5)
+            st.checkbox("Enable Debug Logging")
+
+    except Exception as e:
+        logger.error(f"Error in settings: {str(e)}")
+        st.error("An error occurred while rendering settings. Please try again.")
 
 async def initialize_bot_and_loader(trading_pair: str, initial_balance: float, risk_per_trade: float, testnet_mode: bool):
     """Initialize trading bot and data loader"""
