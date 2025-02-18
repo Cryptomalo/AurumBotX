@@ -56,6 +56,8 @@ def init_session_state():
         'selected_tab': "Dashboard",
         'initialization_running': False,
         'wallet_address': None,
+        'wallet_error': None,
+        'login_attempted': False,
         'profile': {
             'username': None,
             'email': None,
@@ -93,6 +95,13 @@ def custom_theme():
             border: 1px solid {COLORS['success']};
             margin: 1rem 0;
         }}
+        .error-box {{
+            padding: 1rem;
+            border-radius: 0.5rem;
+            background-color: {COLORS['error']}33;
+            border: 1px solid {COLORS['error']};
+            margin: 1rem 0;
+        }}
         .metric-card {{
             background-color: rgba(255, 255, 255, 0.1);
             padding: 1rem;
@@ -108,44 +117,45 @@ def custom_theme():
         </style>
     """, unsafe_allow_html=True)
 
-def render_header():
-    """Render the application header with profile"""
-    col1, col2, col3 = st.columns([1,2,1])
-    with col1:
-        st.image("assets/logo.png", width=100)
-    with col2:
-        st.title("🌟 AurumBot Trading Platform")
-    with col3:
-        if st.session_state.wallet_connected and st.session_state.wallet_address:
-            st.image("assets/profile.png", width=50)
-            address = st.session_state.wallet_address[:6] + "..." + st.session_state.wallet_address[-4:]
-            st.write(f"🔗 {address}")
-
 def render_wallet_login():
-    """Render modern wallet login page"""
+    """Render wallet login interface"""
     st.markdown(f"""
-    <div style='text-align: center; padding: 50px;'>
-        <h1 style='color: {COLORS["primary"]}; font-size: 3em;'>🌟 AurumBot</h1>
-        <p style='font-size: 1.5em; margin: 20px 0; color: {COLORS["text"]};'>
+    <div style='text-align: center; padding: 2rem 0;'>
+        <h1 style='color: {COLORS["primary"]}; font-size: 3em; margin-bottom: 1rem;'>
+            🌟 AurumBot
+        </h1>
+        <p style='font-size: 1.5em; color: {COLORS["text"]}; margin: 1rem 0;'>
             Advanced AI-Powered Trading Platform
-        </p>
-        <p style='color: {COLORS["secondary"]}; font-size: 1.2em;'>
-            Connect your wallet to start your trading journey
         </p>
     </div>
     """, unsafe_allow_html=True)
 
-    # Features showcase with modern styling
-    st.markdown("---")
+    if st.session_state.wallet_error:
+        st.markdown(f"""
+        <div class='error-box'>
+            <p style='color: {COLORS["error"]};'>
+                {st.session_state.wallet_error}
+            </p>
+        </div>
+        """, unsafe_allow_html=True)
+
+    # Features showcase
     col1, col2, col3 = st.columns(3)
 
-    feature_style = f"padding: 20px; background-color: rgba(255,255,255,0.05); border-radius: 10px; min-height: 200px;"
+    feature_style = f"""
+        padding: 2rem;
+        background-color: rgba(255,255,255,0.05);
+        border-radius: 10px;
+        min-height: 200px;
+        text-align: center;
+        margin: 1rem 0;
+    """
 
     with col1:
         st.markdown(f"""
         <div style='{feature_style}'>
             <h3 style='color: {COLORS["primary"]};'>🤖 AI Trading</h3>
-            <p>Advanced algorithms powered by machine learning for optimal trading decisions</p>
+            <p>Advanced ML algorithms for optimal trading decisions</p>
         </div>
         """, unsafe_allow_html=True)
 
@@ -153,7 +163,7 @@ def render_wallet_login():
         st.markdown(f"""
         <div style='{feature_style}'>
             <h3 style='color: {COLORS["primary"]};'>📊 Real-time Analysis</h3>
-            <p>Instant market insights and performance metrics with dynamic updates</p>
+            <p>Instant market insights and performance metrics</p>
         </div>
         """, unsafe_allow_html=True)
 
@@ -161,22 +171,58 @@ def render_wallet_login():
         st.markdown(f"""
         <div style='{feature_style}'>
             <h3 style='color: {COLORS["primary"]};'>🔒 Secure Trading</h3>
-            <p>Enterprise-grade security with multi-layer protection for your assets</p>
+            <p>Enterprise-grade security for your assets</p>
         </div>
         """, unsafe_allow_html=True)
 
-    st.markdown("---")
-
-    # Centered wallet connection
+    # Wallet connection
+    st.markdown("<br>", unsafe_allow_html=True)
     col1, col2, col3 = st.columns([1,2,1])
+
     with col2:
-        if st.button("🔗 Connect Wallet", use_container_width=True):
-            st.session_state.wallet_connected = True
-            st.session_state.wallet_address = "0x742d35Cc6634C0532925a3b844Bc454e4438f44e"
-            st.rerun()
+        if st.button("🔗 Connect Wallet", use_container_width=True, key="connect_wallet"):
+            try:
+                # Simulate wallet connection
+                st.session_state.login_attempted = True
+                st.session_state.wallet_connected = True
+                st.session_state.wallet_address = "0x742d35Cc6634C0532925a3b844Bc454e4438f44e"
+                st.session_state.wallet_error = None
+                st.rerun()
+            except Exception as e:
+                logger.error(f"Wallet connection error: {str(e)}")
+                st.session_state.wallet_error = "Unable to connect wallet. Please try again."
+                st.session_state.wallet_connected = False
+                st.session_state.wallet_address = None
+                st.rerun()
+
+def render_header():
+    """Render application header"""
+    col1, col2, col3 = st.columns([1,2,1])
+
+    with col1:
+        st.image("assets/logo.png", width=100)
+
+    with col2:
+        st.title("🌟 AurumBot Trading Platform")
+
+    with col3:
+        if st.session_state.wallet_connected and st.session_state.wallet_address:
+            col3.markdown(f"""
+            <div style='text-align: right;'>
+                <img src="assets/profile.png" width="50" style="border-radius: 25px;">
+                <p style='margin-top: 5px;'>🔗 {st.session_state.wallet_address[:6]}...{st.session_state.wallet_address[-4:]}</p>
+                <p style='cursor: pointer; color: {COLORS["error"]}; font-size: 0.8em;' onclick='disconnect_wallet()'>Disconnect</p>
+            </div>
+            """, unsafe_allow_html=True)
+
+            if st.button("Disconnect", key="disconnect_wallet"):
+                st.session_state.wallet_connected = False
+                st.session_state.wallet_address = None
+                st.session_state.wallet_error = None
+                st.rerun()
 
 def render_navigation():
-    """Render the main navigation menu"""
+    """Render main navigation menu"""
     selected = option_menu(
         menu_title=None,
         options=["Dashboard", "Trading", "Portfolio", "Analytics", "Social", "Settings"],
@@ -466,18 +512,18 @@ def main():
         init_session_state()
         custom_theme()
 
+        # Handle wallet connection state
         if not st.session_state.wallet_connected:
             render_wallet_login()
             return
 
+        # Main application interface
         render_header()
         selected_tab = render_navigation()
         st.session_state.selected_tab = selected_tab
 
         if selected_tab == "Dashboard":
             render_dashboard()
-        elif selected_tab == "Settings":
-            render_settings()
         elif selected_tab == "Trading":
             render_trading_controls()
         elif selected_tab == "Portfolio":
@@ -489,10 +535,12 @@ def main():
         elif selected_tab == "Social":
             st.title("Social Trading")
             # Future: Add social trading content
+        elif selected_tab == "Settings":
+            render_settings()
 
     except Exception as e:
         logger.error(f"Application error: {str(e)}")
-        st.error("An unexpected error occurred. Please reload the page.")
+        st.error("An unexpected error occurred. Please refresh the page.")
 
 if __name__ == "__main__":
     main()
