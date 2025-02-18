@@ -129,19 +129,13 @@ class CryptoDataLoader:
             '1d': 86400
         }
 
-        self.engine = None #Initialized here to allow async initialization
+        self.engine = None
         self.async_session = None
+        self.logger = logger
 
-        if self.use_live_data:
-            try:
-                loop = asyncio.get_event_loop()
-                loop.run_until_complete(self.initialize())
-            except Exception as e:
-                logger.error(f"Errore setup client: {e}")
-                self.use_live_data = False
+        # Rimuovo l'inizializzazione sincrona che causava l'errore
+        # L'inizializzazione verrà fatta in modo asincrono quando necessario
 
-
-        self.logger = logger # Added for logger access in _save_to_database
 
     async def initialize(self):
         """Initialize database connection and Binance client asynchronously"""
@@ -646,8 +640,8 @@ class CryptoDataLoader:
     def load_market_data(self, symbol: str, period: str = '1d') -> Optional[pd.DataFrame]:
         """Load market data safely with improved error handling"""
         try:
-            if not self.data_loader:
-                logger.warning("Data loader not initialized")
+            if not self.engine or not self.async_session:
+                logger.warning("Data loader not fully initialized.  Call initialize() first.")
                 return None
 
             # Use existing event loop if available

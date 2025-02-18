@@ -139,17 +139,23 @@ class SentimentAnalyzer:
         self.last_api_call = time.time()
 
     async def _analyze_with_openai(self, data: Dict[str, Any]) -> Optional[Dict[str, Any]]:
-        """Analyze with OpenAI with retry logic"""
+        """Analyze with OpenAI with improved retry logic and longer delays"""
         prompt = self._create_analysis_prompt(data)
 
         for attempt in range(self.max_retries):
             try:
+                # Increase delay between attempts significantly
+                if attempt > 0:
+                    delay = self.retry_delay * (4 ** attempt)  # Exponential backoff with higher base
+                    logger.info(f"Waiting {delay} seconds before retry {attempt + 1}")
+                    await asyncio.sleep(delay)
+
                 loop = asyncio.get_event_loop()
                 with concurrent.futures.ThreadPoolExecutor() as executor:
                     completion = await loop.run_in_executor(
                         executor,
                         lambda: self.openai_client.chat.completions.create(
-                            model="gpt-4o",  # the newest OpenAI model is "gpt-4o" which was released May 13, 2024
+                            model="gpt-4",
                             messages=[
                                 {
                                     "role": "system",
@@ -168,17 +174,18 @@ class SentimentAnalyzer:
                 if completion and completion.choices:
                     result = json.loads(completion.choices[0].message.content)
                     if self._validate_ai_response(result):
+                        logger.info(f"OpenAI analysis successful: {result}")
                         return result
 
             except RateLimitError:
-                logger.warning(f"OpenAI rate limit hit on attempt {attempt + 1}")
-                if attempt < self.max_retries - 1:
-                    await asyncio.sleep(self.retry_delay * (2 ** attempt))  # Exponential backoff
+                logger.warning(f"OpenAI rate limit hit on attempt {attempt + 1}, will retry in {delay} seconds")
             except Exception as e:
                 logger.error(f"OpenAI analysis error on attempt {attempt + 1}: {e}")
                 if attempt < self.max_retries - 1:
-                    await asyncio.sleep(self.retry_delay)
+                    continue
+                break
 
+        logger.info("Falling back to technical analysis after OpenAI attempts exhausted")
         return None
 
     async def _analyze_with_anthropic(self, data: Dict[str, Any]) -> Optional[Dict[str, Any]]:
@@ -221,22 +228,37 @@ class SentimentAnalyzer:
         return None
 
     async def _get_technical_analysis(self, data: Dict[str, Any]) -> Dict[str, Any]:
-        """Fallback to technical analysis when AI services fail"""
+        """Enhanced technical analysis fallback with improved metrics"""
         try:
-            # Simple sentiment calculation based on available metrics
-            total_engagement = sum(self._get_engagement_score(item) for item in data.get('items', []))
-            avg_sentiment = self._calculate_base_sentiment(data)
+            # Calculate more detailed metrics
+            engagement_scores = [self._get_engagement_score(item) for item in data.get('items', [])]
+            total_engagement = sum(engagement_scores)
+            avg_engagement = total_engagement / len(engagement_scores) if engagement_scores else 0
 
-            return {
-                "sentiment": "positive" if avg_sentiment > 0.5 else "negative",
-                "confidence": min(0.6, max(0.3, avg_sentiment)),
-                "score": avg_sentiment,
+            sentiment_score = self._calculate_base_sentiment(data)
+            confidence = min(0.7, max(0.4, avg_engagement / 100 if avg_engagement > 0 else 0.4))
+
+            analysis = {
+                "sentiment": "positive" if sentiment_score > 0.6 else "negative" if sentiment_score < 0.4 else "neutral",
+                "confidence": confidence,
+                "score": sentiment_score,
                 "source": "technical_analysis",
                 "timestamp": datetime.now().isoformat(),
-                "key_points": ["Analysis based on technical indicators only"],
-                "market_signals": ["Limited data available"],
-                "risk_level": "medium"
+                "key_points": [
+                    "Analysis based on technical indicators and social metrics",
+                    f"Total engagement: {total_engagement}",
+                    f"Average engagement: {avg_engagement:.2f}"
+                ],
+                "market_signals": [
+                    "Strong social engagement" if avg_engagement > 50 else "Moderate social activity" if avg_engagement > 10 else "Limited social data",
+                    "Positive sentiment trend" if sentiment_score > 0.6 else "Negative sentiment trend" if sentiment_score < 0.4 else "Neutral market sentiment"
+                ],
+                "risk_level": "low" if confidence > 0.6 else "medium" if confidence > 0.4 else "high"
             }
+
+            logger.info(f"Technical analysis results: {analysis}")
+            return analysis
+
         except Exception as e:
             logger.error(f"Technical analysis error: {e}")
             return self._get_neutral_sentiment()
