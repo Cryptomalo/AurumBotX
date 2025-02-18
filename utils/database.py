@@ -1,11 +1,10 @@
 import logging
 import time
-import random
 from datetime import datetime
 from sqlalchemy import create_engine, Column, Integer, Float, String, DateTime, ForeignKey, text
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker, relationship, Session
-from sqlalchemy.exc import SQLAlchemyError, OperationalError, InterfaceError
+from sqlalchemy.exc import SQLAlchemyError
 import os
 from typing import Optional, Generator
 from urllib.parse import urlparse, parse_qs
@@ -35,37 +34,38 @@ class DatabaseManager:
         self.connection_timeout = 30
         self.initialized = True
 
-    def _parse_db_url(self, url: str) -> dict:
-        """Parse database URL and extract SSL mode"""
-        parsed = urlparse(url)
-        query_params = parse_qs(parsed.query)
+    def _parse_connection_args(self, connection_string: str) -> tuple:
+        """Parse connection string and extract SSL mode"""
+        parsed = urlparse(connection_string)
+        query = parse_qs(parsed.query)
 
-        # Default to require SSL if not specified
-        ssl_mode = query_params.get('sslmode', ['prefer'])[0]
+        # Extract SSL mode if present, default to prefer
+        ssl_mode = query.get('sslmode', ['prefer'])[0]
 
-        # Remove SSL parameters from URL as they'll be handled separately
-        cleaned_url = url.split('?')[0]
+        # Remove SSL parameters from connection string
+        base_url = connection_string.split('?')[0]
 
-        return {
-            'url': cleaned_url,
-            'ssl_mode': ssl_mode
+        connect_args = {
+            'sslmode': ssl_mode,
         }
 
-    def initialize(self, connection_string: str) -> bool:
-        """Initialize database connection with proper SSL handling"""
-        db_config = self._parse_db_url(connection_string)
+        return base_url, connect_args
 
+    def initialize(self, connection_string: str) -> bool:
+        """Initialize database connection with improved error handling"""
         try:
+            # Parse connection string and get SSL configuration
+            base_url, connect_args = self._parse_connection_args(connection_string)
+
+            # Configure the engine with proper pooling settings and SSL
             self.engine = create_engine(
-                db_config['url'],
+                base_url,
                 pool_size=5,
                 max_overflow=10,
                 pool_timeout=30,
                 pool_recycle=1800,
                 pool_pre_ping=True,
-                connect_args={
-                    "sslmode": db_config['ssl_mode']
-                }
+                connect_args=connect_args
             )
 
             # Test connection
@@ -93,12 +93,14 @@ class DatabaseManager:
 
         try:
             session = self.Session()
+            # Test the session
+            session.execute(text('SELECT 1'))
             return session
         except Exception as e:
             logger.error(f"Failed to create new session: {str(e)}")
             raise SQLAlchemyError(f"Failed to create database session: {str(e)}")
 
-# Model definitions remain unchanged
+# Model definitions
 class TradingStrategy(Base):
     __tablename__ = "trading_strategies"
 
@@ -145,7 +147,7 @@ def get_db() -> Generator[Session, None, None]:
             session.close()
 
 def init_db():
-    """Initialize database tables with standardized schema"""
+    """Initialize database tables"""
     try:
         db_url = os.getenv('DATABASE_URL')
         if not db_url:
@@ -155,51 +157,15 @@ def init_db():
         if not db_manager.initialize(db_url):
             raise SQLAlchemyError("Failed to initialize database connection")
 
-        # Create tables using the engine from DatabaseManager
         Base.metadata.create_all(bind=db_manager.engine)
-
-        # Create standardized market data table template
-        with db_manager.engine.begin() as conn:
-            conn.execute(text("""
-            CREATE TABLE IF NOT EXISTS market_data_template (
-                timestamp TIMESTAMP PRIMARY KEY,
-                "Open" DOUBLE PRECISION,
-                "High" DOUBLE PRECISION,
-                "Low" DOUBLE PRECISION,
-                "Close" DOUBLE PRECISION,
-                "Volume" DOUBLE PRECISION,
-                "Returns" DOUBLE PRECISION,
-                "Volatility" DOUBLE PRECISION,
-                "Volume_MA" DOUBLE PRECISION,
-                "Volume_Ratio" DOUBLE PRECISION,
-                "SMA_20" DOUBLE PRECISION,
-                "SMA_50" DOUBLE PRECISION,
-                "SMA_200" DOUBLE PRECISION,
-                "EMA_20" DOUBLE PRECISION,
-                "EMA_50" DOUBLE PRECISION,
-                "EMA_200" DOUBLE PRECISION,
-                "MACD" DOUBLE PRECISION,
-                "MACD_Signal" DOUBLE PRECISION,
-                "MACD_Hist" DOUBLE PRECISION,
-                "RSI" DOUBLE PRECISION,
-                "ATR" DOUBLE PRECISION,
-                "BB_Middle" DOUBLE PRECISION,
-                "BB_Upper" DOUBLE PRECISION,
-                "BB_Lower" DOUBLE PRECISION,
-                "BB_Width" DOUBLE PRECISION
-            ) PARTITION BY RANGE (timestamp);
-            """))
-
-            conn.execute(text("""
-            CREATE INDEX IF NOT EXISTS idx_market_data_template_timestamp 
-            ON market_data_template (timestamp);
-
-            CREATE INDEX IF NOT EXISTS idx_market_data_template_close_timestamp 
-            ON market_data_template ("Close", timestamp);
-            """))
-
         logger.info("Database tables initialized successfully")
 
     except Exception as e:
         logger.error(f"Database initialization error: {e}")
         raise
+
+# Initialize database on module import
+try:
+    init_db()
+except Exception as e:
+    logger.error(f"Failed to initialize database: {e}")
