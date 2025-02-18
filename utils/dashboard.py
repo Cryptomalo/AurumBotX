@@ -1,4 +1,3 @@
-
 import logging
 import asyncio
 from typing import Dict, Any, Optional
@@ -15,14 +14,14 @@ class TradingDashboard:
         self.initialize_session_state()
         self.data_cache = None
         self.last_update = datetime.now() - timedelta(minutes=1)
-        
+
     def initialize_session_state(self):
         """Initialize session state variables"""
         session_vars = ['active_trades', 'daily_change', 'daily_profit']
         for var in session_vars:
             if var not in st.session_state:
                 setattr(st.session_state, var, 0 if var != 'daily_change' else 0.0)
-            
+
     async def update_trade_data(self, trade_result: Dict[str, Any]):
         """Update dashboard with new trade data"""
         try:
@@ -51,17 +50,17 @@ class TradingDashboard:
                     'last_updated': datetime.now().isoformat()
                 }
                 return
-                
+
             df = pd.DataFrame(self.trade_history)
             total_trades = len(df)
             successful_trades = df['success'].sum()
             win_rate = successful_trades / total_trades if total_trades > 0 else 0
-            
+
             if 'price' in df.columns and 'take_profit' in df.columns:
                 profits = df.apply(lambda x: x['take_profit'] - x['price'] if x['success'] else 0, axis=1)
                 total_profit = profits.sum()
                 daily_profit = profits[df['timestamp'].dt.date == datetime.now().date()].sum()
-                
+
                 self.performance_metrics.update({
                     'total_trades': total_trades,
                     'win_rate': win_rate,
@@ -71,7 +70,7 @@ class TradingDashboard:
                     'active_positions': len(df[df['active'] == True]),
                     'last_updated': datetime.now().isoformat()
                 })
-                
+
         except Exception as e:
             self.logger.error(f"Error calculating metrics: {str(e)}")
 
@@ -92,9 +91,9 @@ class TradingDashboard:
             if not hasattr(self, 'trade_history'):
                 st.error("Trading data not initialized")
                 return
-                
+
             st.title("🌟 AurumBot Trading Dashboard")
-            
+
             if (datetime.now() - self.last_update).seconds > 60:
                 self.data_cache = None
                 st.experimental_rerun()
@@ -108,21 +107,21 @@ class TradingDashboard:
                     f"${self.performance_metrics.get('total_profit', 0):,.2f}",
                     f"{self.performance_metrics.get('daily_change', 0):+.2f}%"
                 )
-                
+
             with col2:
                 st.metric(
                     "Win Rate",
                     f"{self.performance_metrics.get('win_rate', 0):.1%}",
                     f"{self.performance_metrics.get('total_trades', 0)} trades"
                 )
-                
+
             with col3:
                 st.metric(
                     "Daily P&L",
                     f"${self.performance_metrics.get('daily_profit', 0):,.2f}",
                     f"{self.performance_metrics.get('daily_change', 0):+.2f}%"
                 )
-                
+
             with col4:
                 active_pos = self.performance_metrics.get('active_positions', 0)
                 st.metric(
@@ -146,7 +145,7 @@ class TradingDashboard:
                 display_df = filtered_df[['timestamp', 'symbol', 'type', 'price', 'success']].tail(10)
                 display_df['timestamp'] = pd.to_datetime(display_df['timestamp']).dt.strftime('%Y-%m-%d %H:%M:%S')
                 st.dataframe(display_df, hide_index=True)
-            
+
         except Exception as e:
             self.logger.error(f"Error rendering dashboard: {str(e)}")
             st.error("Error loading dashboard components")
@@ -165,11 +164,11 @@ class TradingDashboard:
         """Create interactive trading chart with timeframe selection"""
         try:
             fig = go.Figure()
-            
+
             if len(df) > 0:
                 df['timestamp'] = pd.to_datetime(df['timestamp'])
                 df = df.set_index('timestamp')
-                
+
                 if timeframe == "1h":
                     df = df.resample('1H').last()
                 elif timeframe == "1d":
@@ -186,7 +185,7 @@ class TradingDashboard:
                         line=dict(color='#00C853', width=2)
                     )
                 )
-                
+
                 fig.update_layout(
                     title='Trading Activity',
                     template='plotly_dark',
@@ -195,7 +194,7 @@ class TradingDashboard:
                     showlegend=True,
                     hovermode='x unified'
                 )
-                
+
             return fig
         except Exception as e:
             self.logger.error(f"Error creating chart: {str(e)}")
