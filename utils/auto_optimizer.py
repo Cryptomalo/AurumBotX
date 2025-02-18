@@ -4,13 +4,13 @@ from datetime import datetime, timedelta
 from typing import Dict, List, Optional
 import numpy as np
 from utils.backup_manager import BackupManager
-from utils.database import Database
+from utils.database import DatabaseManager
 from utils.strategies.strategy_manager import StrategyManager
 
 logger = logging.getLogger(__name__)
 
 class AutoOptimizer:
-    def __init__(self, db: Database, strategy_manager: StrategyManager):
+    def __init__(self, db: DatabaseManager, strategy_manager: StrategyManager):
         self.db = db
         self.strategy_manager = strategy_manager
         self.backup_manager = BackupManager()
