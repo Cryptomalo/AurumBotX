@@ -552,29 +552,25 @@ def load_market_data(symbol, period='1d'):
 def render_profile():
     """Render profile section with Telegram integration"""
     try:
-        st.title("Profile & Integrations")
+        st.title("Profile")
 
-        col1, col2 = st.columns(2)
+        st.markdown(f"""
+        <div class='metric-card'>
+            <h4>Wallet Address</h4>
+            <p>{st.session_state.wallet_address if st.session_state.wallet_connected else 'Not Connected'}</p>
+        </div>
+        """, unsafe_allow_html=True)
 
-        with col1:
-            st.subheader("Profile Information")
-            st.markdown(f"""
-            <div class='metric-card'>
-                <h4>Wallet Address</h4>
-                <p>{st.session_state.wallet_address if st.session_state.wallet_connected else 'Not Connected'}</p>
-            </div>
-            """, unsafe_allow_html=True)
-
-        with col2:
-            st.subheader("Telegram Integration")
-            telegram_enabled = st.checkbox("Enable Telegram Scanner")
-            if telegram_enabled:
-                st.text_input("Telegram Bot Token")
-                st.text_input("Chat ID")
-                st.multiselect(
-                    "Monitor Channels",
-                    ["Channel 1", "Channel 2", "Channel 3"]
-                )
+        st.markdown("---")
+        st.subheader("Telegram Scanner")
+        telegram_enabled = st.checkbox("Enable Telegram Scanner")
+        if telegram_enabled:
+            st.text_input("Telegram Bot Token")
+            st.text_input("Chat ID")
+            st.multiselect(
+                "Monitor Channels",
+                ["Channel 1", "Channel 2", "Channel 3"]
+            )
 
     except Exception as e:
         logger.error(f"Error in profile section: {str(e)}")
