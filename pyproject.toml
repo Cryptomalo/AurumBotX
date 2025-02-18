@@ -68,6 +68,7 @@ dependencies = [
     "asyncpg>=0.30.0",
     "deepseek-ai>=0.0.1",
     "nest-asyncio>=1.6.0",
+    "pydantic>=2.10.6",
 ]
 
 [[tool.uv.index]]

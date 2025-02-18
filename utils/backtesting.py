@@ -134,7 +134,7 @@ class Backtester:
                     continue
 
                 current_price = row['Close']
-                logger.debug(f"Processing {timestamp}: Price={current_price}, Balance=${self.balance:.2f}")
+                logger.debug(f"Processing {timestamp}: Price=${current_price:.2f}, Balance=${self.balance:.2f}")
 
                 # Prepare market data for analysis
                 market_data = df.loc[:timestamp].copy()

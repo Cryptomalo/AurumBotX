@@ -17,6 +17,7 @@ from utils.notifications import TradingNotifier
 from utils.wallet_manager import WalletManager
 from utils.prediction_model import PredictionModel
 from utils.backup_manager import BackupManager
+from utils.exchange_manager import ExchangeManager
 
 class AutoTrader:
     def __init__(self, symbol: str, initial_balance: float = 10000, risk_per_trade: float = 0.02, testnet: bool = True):
@@ -101,6 +102,14 @@ class AutoTrader:
         self.current_position = None
         self.last_action_time = None
         self.active_strategy = None
+
+        # Initialize exchange manager
+        try:
+            self.exchange = ExchangeManager('binance', testnet=testnet)
+            self.logger.info("Exchange manager initialized successfully")
+        except Exception as e:
+            self.logger.error(f"Failed to initialize exchange manager: {str(e)}")
+            self.exchange = None
 
         # Start automatic backup
         self._start_config_backup()
@@ -245,27 +254,36 @@ class AutoTrader:
 
 
     async def execute_trade_async(self, signal: Optional[Dict[str, Any]]) -> Dict[str, Any]:
+        """Execute trade with enhanced exchange integration"""
         try:
             if not signal:
                 return {'success': False, 'reason': 'No signal provided'}
+
+            if not self.exchange:
+                return {'success': False, 'reason': 'Exchange not initialized'}
 
             current_time = datetime.now()
             if self.last_action_time and (current_time - self.last_action_time).seconds < 300:
                 return {'success': False, 'reason': 'Trade cooldown active'}
 
-            if signal.get('confidence', 0) > 0.9:
-                self.last_action_time = current_time - timedelta(seconds=290)
-
             price = signal['price']
             action = signal['action']
 
             if not self.is_in_position and action == 'buy':
-                position_size = self.balance * self.risk_per_trade * signal['size_factor']
+                position_size = self.balance * self.risk_per_trade * signal.get('size_factor', 1)
 
-                self.logger.info(
-                    f"BUY with strategy {self.active_strategy}: "
-                    f"Price={price:.2f}, Size={position_size:.6f}"
+                # Place order through exchange
+                order = await self.exchange.place_order(
+                    symbol=self.symbol,
+                    order_type='market',
+                    side='buy',
+                    amount=position_size
                 )
+
+                if not order.get('success', True):  # Check if order failed
+                    raise Exception(f"Order failed: {order.get('error', 'Unknown error')}")
+
+                self.logger.info(f"BUY order executed: {order}")
 
                 self.is_in_position = True
                 self.current_position = {
@@ -274,7 +292,8 @@ class AutoTrader:
                     'entry_time': current_time,
                     'strategy': self.active_strategy,
                     'target_price': signal['target_price'],
-                    'stop_loss': signal['stop_loss']
+                    'stop_loss': signal['stop_loss'],
+                    'order_id': order.get('id')
                 }
                 self.last_action_time = current_time
 
@@ -284,29 +303,37 @@ class AutoTrader:
                             'action': 'BUY',
                             'symbol': self.symbol,
                             'price': price,
-                            'size': position_size
+                            'size': position_size,
+                            'order_id': order.get('id')
                         }
                         await self.notifier.send_notification(notification)
                     except Exception as e:
                         self.logger.error(f"Notification error (non-critical): {str(e)}")
 
-                return {'success': True, 'action': 'buy', 'price': price, 'size': position_size}
+                return {'success': True, 'action': 'buy', 'price': price, 'size': position_size, 'order': order}
 
             elif self.is_in_position and self.current_position:
                 if (action == 'sell' or 
                     price >= self.current_position['target_price'] or 
                     price <= self.current_position['stop_loss']):
 
+                    # Place sell order through exchange
+                    order = await self.exchange.place_order(
+                        symbol=self.symbol,
+                        order_type='market',
+                        side='sell',
+                        amount=self.current_position['size']
+                    )
+
+                    if not order.get('success', True):
+                        raise Exception(f"Sell order failed: {order.get('error', 'Unknown error')}")
+
                     entry_price = self.current_position['entry_price']
                     position_size = self.current_position['size']
                     profit_loss = (price - entry_price) * position_size
 
                     self.balance += profit_loss
-                    self.logger.info(
-                        f"SELL with strategy {self.current_position['strategy']}: "
-                        f"Price={price:.2f}, P/L={profit_loss:.2f}, "
-                        f"Balance={self.balance:.2f}"
-                    )
+                    self.logger.info(f"SELL order executed: {order}")
 
                     if self.notifier and not self.testnet:
                         try:
@@ -315,7 +342,8 @@ class AutoTrader:
                                 'symbol': self.symbol,
                                 'price': price,
                                 'size': position_size,
-                                'profit_loss': profit_loss
+                                'profit_loss': profit_loss,
+                                'order_id': order.get('id')
                             }
                             await self.notifier.send_notification(notification)
                         except Exception as e:
@@ -324,7 +352,7 @@ class AutoTrader:
                     self.is_in_position = False
                     self.current_position = None
                     self.last_action_time = current_time
-                    return {'success': True, 'action': 'sell', 'price': price, 'profit_loss': profit_loss}
+                    return {'success': True, 'action': 'sell', 'price': price, 'profit_loss': profit_loss, 'order': order}
 
             return {'success': False, 'reason': 'No trade conditions met'}
 
