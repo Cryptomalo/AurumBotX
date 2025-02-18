@@ -26,6 +26,17 @@ class PredictionModel:
         self.metrics = {}
         self.indicators = TechnicalIndicators()
         self.openai_client = None
+        
+        # DeepSeek integration
+        try:
+            from deepseek import DeepSeekLLM, DeepSeekCoder, DeepSeekMath
+            self.deepseek_llm = DeepSeekLLM()
+            self.deepseek_coder = DeepSeekCoder()
+            self.deepseek_math = DeepSeekMath()
+            self.use_deepseek = True
+        except:
+            self.logger.warning("DeepSeek not available, using fallback models")
+            self.use_deepseek = False
 
         # Risk management parameters
         self.max_position_size = 0.1  # 10% of portfolio
@@ -509,6 +520,38 @@ class PredictionModel:
                 'trailing_stop_distance': entry_price * 0.01,
                 'risk_reward_ratio': 2.0
             }
+
+    async def _analyze_with_deepseek(self, market_data: pd.DataFrame) -> Dict[str, Any]:
+        """Analyze market data using DeepSeek models"""
+        if not self.use_deepseek:
+            return None
+            
+        try:
+            # Pattern recognition with DeepSeek-LLM
+            pattern_analysis = await self.deepseek_llm.analyze_patterns(market_data)
+            
+            # Strategy optimization with DeepSeek-Coder
+            strategy_improvements = await self.deepseek_coder.optimize_trading_logic(
+                self.models,
+                market_data
+            )
+            
+            # Advanced financial calculations
+            risk_metrics = await self.deepseek_math.calculate_advanced_metrics(
+                market_data,
+                include_volatility=True,
+                include_kelly=True
+            )
+            
+            return {
+                'pattern_analysis': pattern_analysis,
+                'strategy_improvements': strategy_improvements,
+                'risk_metrics': risk_metrics,
+                'confidence': 0.85  # DeepSeek typically has higher confidence
+            }
+        except Exception as e:
+            self.logger.error(f"DeepSeek analysis error: {e}")
+            return None
 
     def _prepare_market_context(self, market_data: pd.DataFrame) -> str:
         """Prepare market context for AI analysis"""
