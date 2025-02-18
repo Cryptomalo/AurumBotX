@@ -178,7 +178,7 @@ class WebSocketHandler:
         """Usa OpenAI per analisi errori e suggerimenti"""
         try:
             response = await self.openai_client.chat.completions.create(
-                model="gpt-4o",  # Latest model as of May 2024
+                model="gpt-4",  # Using stable GPT-4 model
                 messages=[{
                     "role": "system",
                     "content": "You are an expert trading bot error analyzer. Analyze the error and suggest fixes."
