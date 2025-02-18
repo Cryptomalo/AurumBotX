@@ -58,6 +58,7 @@ def init_session_state():
         'wallet_address': None,
         'wallet_error': None,
         'login_attempted': False,
+        'data_loader_initialized': False,  # New flag
         'profile': {
             'username': None,
             'email': None,
@@ -602,6 +603,19 @@ def render_profile():
         logger.error(f"Error in profile section: {str(e)}")
         st.error("An error occurred while rendering the profile section. Please try again.")
 
+async def initialize_data_loader():
+    """Initialize data loader if not already initialized"""
+    if not st.session_state.data_loader_initialized:
+        try:
+            data_loader = CryptoDataLoader(testnet=True)
+            await data_loader.initialize()
+            st.session_state.data_loader = data_loader
+            st.session_state.data_loader_initialized = True
+            logger.info("Data loader initialized successfully")
+        except Exception as e:
+            logger.error(f"Failed to initialize data loader: {str(e)}")
+            st.error("Error initializing market data. Please refresh the page.")
+
 def main():
     """Main application entry point"""
     try:
@@ -615,6 +629,10 @@ def main():
         init_session_state()
         custom_theme()
 
+        # Initialize data loader asynchronously
+        if not st.session_state.data_loader_initialized:
+            asyncio.run(initialize_data_loader())
+
         # Handle wallet connection state
         if not st.session_state.wallet_connected:
             render_wallet_login()
@@ -626,7 +644,10 @@ def main():
         st.session_state.selected_tab = selected_tab
 
         if selected_tab == "Dashboard":
-            render_dashboard()
+            if st.session_state.data_loader_initialized:
+                render_dashboard()
+            else:
+                st.warning("Initializing market data, please wait...")
         elif selected_tab == "Trading":
             render_trading_controls()
         elif selected_tab == "Portfolio":
