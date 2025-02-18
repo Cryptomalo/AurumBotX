@@ -56,6 +56,10 @@ class TestBot:
                 raise ValueError("DATABASE_URL not set")
 
             logger.info("Initializing database connection...")
+            # Remove SSL parameter from connection URL if present
+            if 'sslmode=' in db_url:
+                db_url = db_url.replace('?sslmode=require', '')
+
             self.engine = create_engine(db_url)
             self.Session = sessionmaker(bind=self.engine)
 
@@ -65,7 +69,7 @@ class TestBot:
 
             # Initialize components
             logger.info("Initializing WebSocket handler...")
-            self.websocket_handler = WebSocketHandler(logger)
+            self.websocket_handler = WebSocketHandler(db_url)
 
             logger.info("Initializing Strategy manager...")
             self.strategy_manager = StrategyManager()
@@ -120,7 +124,7 @@ class TestBot:
                     retry_delay *= 2
 
         logger.error("Database health check failed after all attempts")
-        raise Exception("Database health check failed after all attempts")
+        return False
 
     async def test_websocket(self) -> bool:
         """Test connessione WebSocket"""
