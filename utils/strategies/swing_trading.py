@@ -1,11 +1,11 @@
 import pandas as pd
-from typing import Dict, Any, List, Optional
 import numpy as np
+import logging
+import asyncio
+from typing import Dict, Any, List, Optional
 from utils.strategies.base_strategy import BaseStrategy
 from openai import OpenAI
 import os
-import asyncio
-import logging
 
 logger = logging.getLogger(__name__)
 
@@ -28,7 +28,7 @@ class SwingTradingStrategy(BaseStrategy):
     async def analyze_market(
         self, 
         market_data: pd.DataFrame,
-        sentiment_data: Optional[Dict] = None
+        sentiment_data: Optional[Dict[str, Any]] = None
     ) -> List[Dict[str, Any]]:
         """Analyze market for swing trading opportunities"""
         try:
@@ -37,15 +37,6 @@ class SwingTradingStrategy(BaseStrategy):
 
             # Calculate technical indicators
             df = market_data.copy()
-
-            # Standardize column names
-            if 'close' in df.columns:
-                df.rename(columns={
-                    'close': 'Close',
-                    'high': 'High',
-                    'low': 'Low',
-                    'volume': 'Volume'
-                }, inplace=True)
 
             df['SMA_20'] = df['Close'].rolling(window=20).mean()
             df['SMA_50'] = df['Close'].rolling(window=50).mean()
@@ -65,7 +56,7 @@ class SwingTradingStrategy(BaseStrategy):
             sentiment_score = await self._analyze_market_sentiment() if self.has_sentiment else await self._technical_sentiment(df)
 
             # Generate signals based on analysis
-            signal = self.generate_signals({
+            signal = self._generate_signals({
                 'trend_direction': trend_direction,
                 'trend_strength': trend_strength,
                 'volatility': volatility,
@@ -74,74 +65,50 @@ class SwingTradingStrategy(BaseStrategy):
                 'current_price': df['Close'].iloc[-1]
             })
 
-            analysis = [{
+            return [{
                 **signal,
                 'sma_20': df['SMA_20'].iloc[-1],
                 'sma_50': df['SMA_50'].iloc[-1],
                 'timestamp': pd.Timestamp.now().isoformat()
             }]
 
-            return analysis
-
         except Exception as e:
             logger.error(f"Error in market analysis: {str(e)}")
             return []
 
-    async def _technical_sentiment(self, df: pd.DataFrame) -> float:
-        """Calculate sentiment based on technical analysis when OpenAI is unavailable"""
+    async def validate_trade(self, signal: Dict[str, Any], portfolio: Dict[str, Any]) -> bool:
+        """Validate a potential swing trade"""
         try:
-            # Calculate long-term trend
-            long_trend = (
-                df['Close'].rolling(window=50).mean().diff().rolling(window=20).mean().iloc[-1]
+            if signal['action'] == 'hold':
+                return False
+
+            # Verify available capital
+            required_capital = portfolio.get('available_capital', 0) * signal['size_factor']
+            min_trade_size = 500  # Minimum size for swing trading
+
+            if required_capital < min_trade_size:
+                return False
+
+            # Verify risk
+            risk_amount = abs(signal['target_price'] - signal['stop_loss']) * required_capital
+            max_risk = portfolio.get('total_capital', 0) * 0.05  # 5% max risk per trade
+
+            # Verify market timing
+            market_conditions_favorable = (
+                signal['confidence'] > 0.8 and
+                portfolio.get('market_trend', 0) * (
+                    1 if signal['action'] == 'buy' else -1
+                ) > 0
             )
 
-            # Volume trend
-            volume_trend = (
-                df['Volume'].rolling(window=50).mean().diff().rolling(window=20).mean().iloc[-1]
-            )
-
-            # RSI for momentum
-            delta = df['Close'].diff()
-            gain = (delta.where(delta > 0, 0)).rolling(window=14).mean()
-            loss = (-delta.where(delta < 0, 0)).rolling(window=14).mean()
-            rs = gain / loss
-            rsi = 100 - (100 / (1 + rs))
-
-            # Combine indicators for sentiment score
-            trend_score = 0.5 + (np.sign(long_trend) * min(0.5, abs(long_trend)))
-            volume_score = 0.5 + (np.sign(volume_trend) * min(0.5, abs(volume_trend)))
-            rsi_score = rsi.iloc[-1] / 100
-
-            final_score = (trend_score * 0.4 + volume_score * 0.3 + rsi_score * 0.3)
-            return max(0, min(1, final_score))
+            return risk_amount <= max_risk and market_conditions_favorable
 
         except Exception as e:
-            logger.error(f"Error in technical sentiment: {str(e)}")
-            return 0.5
+            logger.error(f"Error validating trade: {str(e)}")
+            return False
 
-    async def _analyze_market_sentiment(self) -> float:
-        """Analyze market sentiment using OpenAI"""
-        try:
-            if not self.has_sentiment:
-                return 0.5
-
-            response = await asyncio.to_thread(
-                self.client.chat.completions.create,
-                model="gpt-4",
-                messages=[{
-                    "role": "system",
-                    "content": "Analyze the current market sentiment for long-term crypto trading and provide a sentiment score between 0 and 1."
-                }],
-                response_format={"type": "json_object"}
-            )
-            result = response.choices[0].message.content
-            return float(result.get('sentiment_score', 0.5))
-        except Exception as e:
-            logger.error(f"Error in sentiment analysis: {str(e)}")
-            return 0.5
-
-    def generate_signals(self, analysis: Dict[str, Any]) -> Dict[str, Any]:
-        """Generates signals for swing trading"""
+    def _generate_signals(self, analysis: Dict[str, Any]) -> Dict[str, Any]:
+        """Generate trading signals (internal helper method)"""
         signal = {
             'action': 'hold',
             'confidence': 0.0,
@@ -188,31 +155,58 @@ class SwingTradingStrategy(BaseStrategy):
 
         return signal
 
-    async def validate_trade(self, signal: Dict[str, Any], portfolio: Dict[str, Any]) -> bool:
-        """Validate a potential swing trade"""
-        if signal['action'] == 'hold':
-            return False
+    async def _technical_sentiment(self, df: pd.DataFrame) -> float:
+        """Calculate sentiment based on technical analysis when OpenAI is unavailable"""
+        try:
+            # Calculate long-term trend
+            long_trend = (
+                df['Close'].rolling(window=50).mean().diff().rolling(window=20).mean().iloc[-1]
+            )
 
-        # Verify available capital
-        required_capital = portfolio.get('available_capital', 0) * signal['size_factor']
-        min_trade_size = 500  # Minimum size for swing trading
+            # Volume trend
+            volume_trend = (
+                df['Volume'].rolling(window=50).mean().diff().rolling(window=20).mean().iloc[-1]
+            )
 
-        if required_capital < min_trade_size:
-            return False
+            # RSI for momentum
+            delta = df['Close'].diff()
+            gain = (delta.where(delta > 0, 0)).rolling(window=14).mean()
+            loss = (-delta.where(delta < 0, 0)).rolling(window=14).mean()
+            rs = gain / loss
+            rsi = 100 - (100 / (1 + rs))
 
-        # Verify risk
-        risk_amount = abs(signal['target_price'] - signal['stop_loss']) * required_capital
-        max_risk = portfolio.get('total_capital', 0) * 0.05  # 5% max risk per trade
+            # Combine indicators for sentiment score
+            trend_score = 0.5 + (np.sign(long_trend) * min(0.5, abs(float(long_trend))))
+            volume_score = 0.5 + (np.sign(volume_trend) * min(0.5, abs(float(volume_trend))))
+            rsi_score = float(rsi.iloc[-1]) / 100
 
-        # Verify market timing
-        market_conditions_favorable = (
-            signal['confidence'] > 0.8 and
-            portfolio.get('market_trend', 0) * (
-                1 if signal['action'] == 'buy' else -1
-            ) > 0
-        )
+            final_score = (trend_score * 0.4 + volume_score * 0.3 + rsi_score * 0.3)
+            return max(0.0, min(1.0, float(final_score)))
 
-        return risk_amount <= max_risk and market_conditions_favorable
+        except Exception as e:
+            logger.error(f"Error in technical sentiment: {str(e)}")
+            return 0.5
+
+    async def _analyze_market_sentiment(self) -> float:
+        """Analyze market sentiment using OpenAI"""
+        try:
+            if not self.has_sentiment:
+                return 0.5
+
+            response = await asyncio.to_thread(
+                self.client.chat.completions.create,
+                model="gpt-4o",
+                messages=[{
+                    "role": "system",
+                    "content": "Analyze the current market sentiment for long-term crypto trading and provide a sentiment score between 0 and 1."
+                }],
+                response_format={"type": "json_object"}
+            )
+            result = response.choices[0].message.content
+            return float(result.get('sentiment_score', 0.5))
+        except Exception as e:
+            logger.error(f"Error in sentiment analysis: {str(e)}")
+            return 0.5
 
     async def execute_trade(self, signal: Dict[str, Any]) -> Dict[str, Any]:
         """Execute trade based on signal"""

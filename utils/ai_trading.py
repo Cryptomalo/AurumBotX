@@ -41,6 +41,7 @@ class RetryHandler:
 class AITrading:
     """Sistema base di trading con AI con gestione errori migliorata"""
     def __init__(self, config: Optional[Dict[str, Any]] = None):
+        self.logger = logger
         self.config = config or {}
         self.retry_handler = RetryHandler()
         self.data_loader = CryptoDataLoader()
@@ -52,7 +53,7 @@ class AITrading:
         self.max_retries = 3
         self.retry_delay = 1.0  # Delay iniziale in secondi
 
-        logger.info("Sistema di trading AI inizializzato con retry configurati")
+        self.logger.info("Sistema di trading AI inizializzato con retry configurati")
 
     async def _retry_operation(self, operation, *args, **kwargs):
         """Gestione retry generica con backoff esponenziale - Now deprecated"""
@@ -64,7 +65,7 @@ class AITrading:
             return not (np.isnan(value) or np.isinf(value))
         return False
 
-    def _extract_market_metrics(self, df: pd.DataFrame) -> Dict[str, float]:
+    def _extract_market_metrics(self, df: Optional[pd.DataFrame]) -> Dict[str, float]:
         """Estrae metriche chiave dai dati di mercato con validazione"""
         try:
             if df is None or df.empty:
@@ -74,7 +75,7 @@ class AITrading:
             missing_columns = [col for col in required_columns if col not in df.columns]
 
             if missing_columns:
-                logger.warning(f"Colonne mancanti: {missing_columns}")
+                self.logger.warning(f"Colonne mancanti: {missing_columns}")
                 # Aggiungi colonne mancanti con valori di default
                 for col in missing_columns:
                     if col == 'RSI':
@@ -99,14 +100,14 @@ class AITrading:
             ]
 
             if invalid_metrics:
-                logger.warning(f"Invalid metrics found: {invalid_metrics}")
+                self.logger.warning(f"Invalid metrics found: {invalid_metrics}")
                 for key in invalid_metrics:
                     metrics[key] = 0.0 if key != 'trend' else 0
 
             return metrics
 
         except Exception as e:
-            logger.error(f"Errore nell'estrazione metriche: {str(e)}")
+            self.logger.error(f"Errore nell'estrazione metriche: {str(e)}")
             return {
                 'price': 0.0,
                 'volume': 0.0,
@@ -117,7 +118,7 @@ class AITrading:
     async def analyze_market(self, symbol: str) -> Dict[str, Any]:
         """Analizza le condizioni di mercato con retry"""
         try:
-            logger.info(f"Analisi mercato per {symbol}")
+            self.logger.info(f"Analisi mercato per {symbol}")
 
             # Recupera dati storici con retry
             async def get_data():
@@ -137,7 +138,7 @@ class AITrading:
                 try:
                     return await self.sentiment_analyzer.analyze_sentiment(symbol)
                 except Exception as e:
-                    logger.warning(f"Fallback a sentiment neutrale per {symbol}: {str(e)}")
+                    self.logger.warning(f"Fallback a sentiment neutrale per {symbol}: {str(e)}")
                     return {'score': 0.5, 'magnitude': 0.5}
 
             sentiment_data = await self._retry_operation(get_sentiment)
@@ -152,7 +153,7 @@ class AITrading:
             return analysis
 
         except Exception as e:
-            logger.error(f"Errore nell'analisi del mercato: {str(e)}")
+            self.logger.error(f"Errore nell'analisi del mercato: {str(e)}")
             return {}
 
     async def generate_trading_signals(self, symbol: str) -> List[Dict[str, Any]]:
@@ -177,7 +178,7 @@ class AITrading:
             try:
                 prediction = await self._retry_operation(get_prediction)
             except Exception as e:
-                logger.error(f"Errore previsione, usando default: {str(e)}")
+                self.logger.error(f"Errore previsione, usando default: {str(e)}")
                 prediction = {'prediction': 0.5, 'confidence': 0.0}
 
             signals = []
@@ -198,7 +199,7 @@ class AITrading:
             return signals
 
         except Exception as e:
-            logger.error(f"Errore nella generazione dei segnali: {str(e)}")
+            self.logger.error(f"Errore nella generazione dei segnali: {str(e)}")
             return []
 
     async def analyze_and_predict(self, symbol: str) -> Dict[str, Any]:
@@ -207,14 +208,14 @@ class AITrading:
             # Ottieni l'analisi del mercato con retry
             analysis = await self._retry_operation(self.analyze_market, symbol)
             if not analysis:
-                logger.warning(f"Nessuna analisi disponibile per {symbol}")
+                self.logger.warning(f"Nessuna analisi disponibile per {symbol}")
                 return {}
 
             # Genera segnali di trading
             signals = await self._retry_operation(self.generate_trading_signals, symbol)
 
             if not signals:
-                logger.warning(f"Nessun segnale generato per {symbol}")
+                self.logger.warning(f"Nessun segnale generato per {symbol}")
                 return {
                     'timestamp': datetime.now().isoformat(),
                     'symbol': symbol,
@@ -230,6 +231,7 @@ class AITrading:
 
             # Combina analisi e segnali
             signal = signals[0]  # Prendi il primo segnale
+            signal_analysis = signal.get('analysis', {})
             return {
                 'timestamp': datetime.now().isoformat(),
                 'symbol': symbol,
@@ -237,14 +239,14 @@ class AITrading:
                 'confidence': signal.get('confidence', 0),
                 'price': signal.get('price', 0),
                 'analysis': {
-                    'technical_score': signal['analysis'].get('technical_score', 0.5),
-                    'sentiment_score': signal['analysis'].get('sentiment_score', 0.5),
+                    'technical_score': signal_analysis.get('technical_score', 0.5),
+                    'sentiment_score': signal_analysis.get('sentiment_score', 0.5),
                     'risk_score': self._calculate_risk_score(analysis)
                 }
             }
 
         except Exception as e:
-            logger.error(f"Errore in analyze_and_predict: {str(e)}")
+            self.logger.error(f"Errore in analyze_and_predict: {str(e)}")
             return {
                 'timestamp': datetime.now().isoformat(),
                 'symbol': symbol,
@@ -280,7 +282,7 @@ class AITrading:
             return min(1.0, max(0.0, risk_score))
 
         except Exception as e:
-            logger.error(f"Errore calcolo risk score: {str(e)}")
+            self.logger.error(f"Errore calcolo risk score: {str(e)}")
             return 0.5
 
     async def validate_signal(self, signal: Dict[str, Any]) -> bool:
@@ -294,7 +296,7 @@ class AITrading:
                 return False
 
             # Controlli sul mercato
-            market_data = signal['analysis'].get('market_data', {})
+            market_data = signal.get('analysis', {}).get('market_data', {})
             if market_data.get('rsi', 50) > 70 and signal['action'] == 'buy':
                 return False
             if market_data.get('rsi', 50) < 30 and signal['action'] == 'sell':
@@ -303,12 +305,15 @@ class AITrading:
             return True
 
         except Exception as e:
-            logger.error(f"Errore nella validazione del segnale: {str(e)}")
+            self.logger.error(f"Errore nella validazione del segnale: {str(e)}")
             return False
 
     async def _analyze_technical_indicators(self, data: pd.DataFrame) -> Dict[str, Any]:
         """Calculate technical indicators for analysis"""
         try:
+            if data is None or data.empty:
+                return {}
+
             # Calculate basic technical indicators
             data['SMA_20'] = data['Close'].rolling(window=20).mean()
             data['SMA_50'] = data['Close'].rolling(window=50).mean()
@@ -320,16 +325,24 @@ class AITrading:
             data['MACD'] = exp1 - exp2
             data['Signal'] = data['MACD'].ewm(span=9, adjust=False).mean()
 
-            # Return latest values
-            return {
-                'close': data['Close'].iloc[-1],
-                'sma_20': data['SMA_20'].iloc[-1],
-                'sma_50': data['SMA_50'].iloc[-1],
-                'rsi': data['RSI'].iloc[-1],
-                'macd': data['MACD'].iloc[-1],
-                'macd_signal': data['Signal'].iloc[-1],
+            # Return latest values with validation
+            indicators = {
+                'close': float(data['Close'].iloc[-1]),
+                'sma_20': float(data['SMA_20'].iloc[-1]),
+                'sma_50': float(data['SMA_50'].iloc[-1]),
+                'rsi': float(data['RSI'].iloc[-1]),
+                'macd': float(data['MACD'].iloc[-1]),
+                'macd_signal': float(data['Signal'].iloc[-1]),
                 'trend': 1 if data['SMA_20'].iloc[-1] > data['SMA_50'].iloc[-1] else -1
             }
+
+            # Validate all values
+            for key, value in indicators.items():
+                if not self._validate_numeric(value):
+                    self.logger.warning(f"Invalid indicator value for {key}")
+                    indicators[key] = 0.0 if key != 'trend' else 0
+
+            return indicators
 
         except Exception as e:
             self.logger.error(f"Error calculating technical indicators: {str(e)}")
@@ -338,6 +351,9 @@ class AITrading:
     def _calculate_rsi(self, prices: pd.Series, period: int = 14) -> pd.Series:
         """Calculate Relative Strength Index"""
         try:
+            if prices is None or len(prices) < period:
+                return pd.Series([50] * len(prices) if prices is not None else [])
+
             delta = prices.diff()
             gain = (delta.where(delta > 0, 0)).rolling(window=period).mean()
             loss = (-delta.where(delta < 0, 0)).rolling(window=period).mean()
@@ -345,7 +361,7 @@ class AITrading:
             return 100 - (100 / (1 + rs))
         except Exception as e:
             self.logger.error(f"Error calculating RSI: {str(e)}")
-            return pd.Series([50] * len(prices))  # Return neutral RSI
+            return pd.Series([50] * len(prices) if prices is not None else [])
 
     async def backtest_strategy(self, symbol: str, start_date: str, end_date: str) -> Dict[str, Any]:
         """Backtest AI trading strategy"""

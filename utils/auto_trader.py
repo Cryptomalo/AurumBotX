@@ -4,7 +4,7 @@ import time
 import asyncio
 from typing import Dict, Any, Optional
 import pandas as pd
-import numpy as np # Added numpy import
+import numpy as np
 from utils.data_loader import CryptoDataLoader
 from utils.indicators import TechnicalIndicators
 from utils.strategies.base_strategy import BaseStrategy
@@ -128,7 +128,7 @@ class AutoTrader:
             try:
                 if sentiment_data:
                     ai_signal = await self.prediction_model.analyze_market_with_ai(
-                        market_data, 
+                        market_data,
                         sentiment_data
                     )
                     if ai_signal and ai_signal.get('confidence', 0) > 0.75:
@@ -167,7 +167,7 @@ class AutoTrader:
                         'market_trend': 1 if market_data['Close'].iloc[-1] > market_data['SMA_20'].iloc[-1] else -1
                     }
 
-                    if (signal.get('confidence', 0) > best_confidence and 
+                    if (signal.get('confidence', 0) > best_confidence and
                         await strategy.validate_trade(signal, portfolio_status)):
                         best_signal = signal
                         best_confidence = signal['confidence']
@@ -284,6 +284,7 @@ class AutoTrader:
                         await self.notifier.send_trade_notification('BUY', self.symbol, price, position_size)
                     except Exception as e:
                         self.logger.error(f"Notification error (non-critical): {str(e)}")
+                        # Continue execution even if notification fails
 
                 return {'success': True, 'action': 'buy', 'price': price, 'size': position_size}
 
@@ -310,6 +311,7 @@ class AutoTrader:
                             )
                         except Exception as e:
                             self.logger.error(f"Notification error (non-critical): {str(e)}")
+                            # Continue execution even if notification fails
 
                     self.is_in_position = False
                     self.current_position = None
@@ -325,6 +327,7 @@ class AutoTrader:
                     await self.notifier.send_error_notification(self.symbol, str(e))
                 except Exception as notify_error:
                     self.logger.error(f"Error notification failed: {str(notify_error)}")
+                    # Continue execution even if notification fails
             return {'success': False, 'error': str(e)}
 
     async def run(self, interval: int = 3600):
@@ -345,12 +348,16 @@ class AutoTrader:
 
         except KeyboardInterrupt:
             self.logger.info("Trading bot stopped manually")
-            self.stop() 
+            self.stop()
         except Exception as e:
             self.logger.error(f"Critical error in trading bot: {str(e)}")
             if self.notifier:
-                await self.notifier.send_error_notification(self.symbol, str(e))
-            self.stop() 
+                try:
+                    await self.notifier.send_error_notification(self.symbol, str(e))
+                except Exception as notify_error:
+                    self.logger.error(f"Error notification failed: {str(notify_error)}")
+                    # Continue execution even if notification fails
+            self.stop()
         finally:
             self.logger.info(f"Bot stopped. Final balance: {self.balance}")
 
@@ -364,8 +371,8 @@ class AutoTrader:
             df_long_resampled = df_long.resample('1min').ffill()
 
             df_merged = df_short.copy()
-            df_merged['SMA_medium'] = df_medium_resampled['Close'].rolling(window=20).mean() #Corrected column name
-            df_merged['SMA_long'] = df_long_resampled['Close'].rolling(window=50).mean() #Corrected column name
+            df_merged['SMA_medium'] = df_medium_resampled['Close'].rolling(window=20).mean()
+            df_merged['SMA_long'] = df_long_resampled['Close'].rolling(window=50).mean()
 
             return df_merged
 

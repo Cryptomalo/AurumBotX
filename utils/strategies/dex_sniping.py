@@ -3,9 +3,9 @@ import asyncio
 import aiohttp
 import json
 import logging
-import pandas as pd
 from datetime import datetime
 from typing import Dict, List, Optional, Any
+import pandas as pd
 from utils.strategies.base_strategy import BaseStrategy
 
 logger = logging.getLogger(__name__)
@@ -22,10 +22,12 @@ class DexSnipingStrategy(BaseStrategy):
         self.scanned_pairs = set()
         self.testnet = config.get('testnet', True)  # Enable testnet by default
 
-    async def analyze_market(self, market_data: pd.DataFrame, sentiment_data: Optional[Dict] = None) -> List[Dict]:
-        """
-        Analyzes DEX market for sniping opportunities
-        """
+    async def analyze_market(
+        self,
+        market_data: pd.DataFrame,
+        sentiment_data: Optional[Dict[str, Any]] = None
+    ) -> List[Dict[str, Any]]:
+        """Analyzes DEX market for sniping opportunities"""
         try:
             new_pairs = await self.scan_new_pairs()
             signals = []
@@ -103,16 +105,18 @@ class DexSnipingStrategy(BaseStrategy):
         for pair in pairs:
             if (
                 pair['pairAddress'] not in self.scanned_pairs and
-                float(pair.get('liquidity', {}).get('usd', 0)) >= self.min_liquidity * 1000 and
-                await self._validate_contract(pair['tokenAddress'])
+                float(pair.get('liquidity', {}).get('usd', 0)) >= self.min_liquidity * 1000
             ):
-                self.scanned_pairs.add(pair['pairAddress'])
-                opportunities.append({
-                    'token': pair['tokenAddress'],
-                    'pair': pair['pairAddress'],
-                    'liquidity': pair['liquidity']['usd'],
-                    'confidence': await self._calculate_confidence(pair)
-                })
+                is_valid = await self._validate_contract(pair['tokenAddress'])
+                if is_valid:
+                    self.scanned_pairs.add(pair['pairAddress'])
+                    conf = await self._calculate_confidence(pair)
+                    opportunities.append({
+                        'token': pair['tokenAddress'],
+                        'pair': pair['pairAddress'],
+                        'liquidity': pair['liquidity']['usd'],
+                        'confidence': conf
+                    })
         return opportunities
 
     async def _validate_contract(self, address: str) -> bool:
@@ -122,12 +126,15 @@ class DexSnipingStrategy(BaseStrategy):
                 # Skip intensive validation in testnet
                 return True
 
-            code = await self.w3.eth.get_code(address)
+            code = await asyncio.to_thread(self.w3.eth.get_code, address)
             if not code or len(code) < 2:
                 return False
 
-            # Implement additional security checks for mainnet
-            return True
+            # Additional contract validations
+            is_honeypot = await self._is_honeypot(address)
+            has_dangerous_perms = await self._has_dangerous_permissions(address)
+
+            return not (is_honeypot or has_dangerous_perms)
 
         except Exception as e:
             logger.error(f"Contract validation error: {e}")
@@ -159,16 +166,19 @@ class DexSnipingStrategy(BaseStrategy):
             return min(1.0, score)
 
         except Exception as e:
-            logger.error(f"Errore nel calcolo del confidence score: {e}")
+            logger.error(f"Error calculating confidence score: {e}")
             return 0.0
 
     async def _check_contract_safety(self, address: str) -> bool:
         """Verifica la sicurezza del contratto"""
         try:
+            if self.testnet:
+                return True
+
             # Implementa verifiche di sicurezza avanzate
             return True
         except Exception as e:
-            logger.error(f"Errore nella verifica di sicurezza: {e}")
+            logger.error(f"Security check error: {e}")
             return False
 
     async def _is_honeypot(self, address: str) -> bool:
@@ -177,7 +187,7 @@ class DexSnipingStrategy(BaseStrategy):
             # Implementa la logica per il rilevamento honeypot
             return False
         except Exception as e:
-            logger.error(f"Errore nel controllo honeypot: {e}")
+            logger.error(f"Honeypot check error: {e}")
             return True
 
     async def _has_dangerous_permissions(self, address: str) -> bool:
@@ -186,25 +196,31 @@ class DexSnipingStrategy(BaseStrategy):
             # Implementa la verifica dei permessi
             return False
         except Exception as e:
-            logger.error(f"Errore nella verifica dei permessi: {e}")
+            logger.error(f"Permissions check error: {e}")
             return True
 
     async def _get_holder_count(self, address: str) -> int:
         """Ottiene il numero di holders del token"""
         try:
+            if self.testnet:
+                return 100
+
             # Implementa la logica per ottenere il numero di holders
             return 100  # Placeholder
         except Exception as e:
-            logger.error(f"Errore nel recupero degli holders: {e}")
+            logger.error(f"Holder count error: {e}")
             return 0
 
     async def _get_tax_info(self, address: str) -> Dict[str, float]:
         """Ottiene le informazioni sulle tasse del token"""
         try:
+            if self.testnet:
+                return {'buy_tax': 5.0, 'sell_tax': 5.0}
+
             # Implementa la logica per ottenere le informazioni sulle tasse
             return {'buy_tax': 5.0, 'sell_tax': 5.0}
         except Exception as e:
-            logger.error(f"Errore nel recupero delle tasse: {e}")
+            logger.error(f"Tax info error: {e}")
             return {'buy_tax': 100.0, 'sell_tax': 100.0}
 
     async def validate_trade(self, signal: Dict[str, Any], portfolio: Dict[str, Any]) -> bool:
@@ -230,9 +246,7 @@ class DexSnipingStrategy(BaseStrategy):
             return False
 
     async def execute_trade(self, signal: Dict[str, Any]) -> Dict[str, Any]:
-        """
-        Executes a sniping trade
-        """
+        """Executes a sniping trade"""
         try:
             if self.testnet:
                 # Simulate trade execution for testnet
@@ -275,9 +289,8 @@ class DexSnipingStrategy(BaseStrategy):
     async def _send_transaction(self, signal: Dict) -> Optional[str]:
         """Invia transazione alla blockchain"""
         try:
-            # Implementa logica transazione
-            # TODO: Implementare la logica effettiva della transazione
-            return "0x..."  # Placeholder
+            # Placeholder for actual transaction logic
+            return "0x..."
         except Exception as e:
-            logger.error(f"Errore nell'invio della transazione: {e}")
+            logger.error(f"Transaction error: {e}")
             return None
