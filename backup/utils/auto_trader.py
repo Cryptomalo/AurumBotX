@@ -10,8 +10,9 @@ from utils.strategies.scalping import ScalpingStrategy
 from utils.strategies.swing_trading import SwingTradingStrategy
 from utils.database import get_db, TradingStrategy, SimulationResult
 from utils.notifications import TradingNotifier
-from utils.wallet_manager import WalletManager # Assuming this import is needed
-
+from utils.wallet_manager import WalletManager
+import pandas as pd
+import numpy as np
 
 class AutoTrader:
     def __init__(self, symbol, initial_balance=10000, risk_per_trade=0.02):
@@ -35,24 +36,9 @@ class AutoTrader:
         self.data_loader = CryptoDataLoader()
         self.indicators = TechnicalIndicators()
         self.notifier = TradingNotifier()
-        self.wallet_manager = WalletManager(user_id=1)  # user_id temporaneo
+        self.wallet_manager = WalletManager(user_id=1)  # temporary user_id
 
-        # Setup logging
-        self.setup_logging()
-
-    def connect_wallet(self, wallet_address: str, chain_type: str = 'ETH'):
-        """Collega un wallet specifico per il trading"""
-        try:
-            success = self.wallet_manager.add_wallet(wallet_address, chain_type)
-            if success:
-                self.logger.info(f"Wallet {wallet_address} collegato con successo")
-                return True
-            return False
-        except Exception as e:
-            self.logger.error(f"Errore nel collegamento del wallet: {str(e)}")
-            return False
-
-        # Initialize strategies
+        # Initialize strategies with default parameters
         self.strategies = {
             'meme_coin': MemeCoinSnipingStrategy({
                 'min_liquidity': 200000,
@@ -83,6 +69,21 @@ class AutoTrader:
         self.last_action_time = None
         self.active_strategy = None
 
+        # Setup logging
+        self.setup_logging()
+
+    def connect_wallet(self, wallet_address: str, chain_type: str = 'ETH'):
+        """Connect a specific wallet for trading"""
+        try:
+            success = self.wallet_manager.add_wallet(wallet_address, chain_type)
+            if success:
+                self.logger.info(f"Wallet {wallet_address} connected successfully")
+                return True
+            return False
+        except Exception as e:
+            self.logger.error(f"Error connecting wallet: {str(e)}")
+            return False
+
     def setup_logging(self):
         logging.basicConfig(
             filename=f'trading_log_{self.symbol}_{datetime.now().strftime("%Y%m%d")}.log',
@@ -90,6 +91,32 @@ class AutoTrader:
             format='%(asctime)s - %(levelname)s - %(message)s'
         )
         self.logger = logging.getLogger(__name__)
+
+    def calculate_market_volatility(self, df: pd.DataFrame) -> float:
+        """Calculate market volatility using standard deviation of returns"""
+        try:
+            # Ensure we have enough data
+            if len(df) < 2:
+                self.logger.warning("Insufficient data for volatility calculation")
+                return 0.0
+
+            # Calculate returns
+            returns = df['Close'].pct_change().dropna()
+
+            if len(returns) == 0:
+                self.logger.warning("No valid returns data for volatility calculation")
+                return 0.0
+
+            # Calculate annualized volatility
+            daily_vol = returns.std()
+            annualized_vol = daily_vol * np.sqrt(252)  # Annualize using trading days
+
+            self.logger.info(f"Calculated market volatility: {annualized_vol:.4f}")
+            return float(annualized_vol)
+
+        except Exception as e:
+            self.logger.error(f"Error calculating market volatility: {str(e)}")
+            return 0.0
 
     def analyze_market(self):
         try:
@@ -241,3 +268,62 @@ class AutoTrader:
             self.notifier.send_error_notification(self.symbol, str(e))
         finally:
             self.logger.info(f"Bot stopped. Final balance: {self.balance}")
+
+    def adjust_strategies_parameters(self, market_volatility: float) -> None:
+        """Adjust strategy parameters based on market volatility"""
+        try:
+            # Scale factors based on market volatility
+            volatility_scale = min(max(market_volatility, 0.1), 0.5)  # Cap between 0.1 and 0.5
+
+            # Adjust scalping strategy parameters
+            if 'scalping' in self.strategies:
+                self.strategies['scalping'].params.update({
+                    'volume_threshold': 1000000 * (1 + volatility_scale),
+                    'min_volatility': 0.002 * volatility_scale,
+                    'profit_target': 0.005 * (1 + volatility_scale),
+                    'initial_stop_loss': 0.003 * (1 + volatility_scale),
+                    'trailing_stop': 0.002 * volatility_scale
+                })
+
+            # Adjust swing trading parameters
+            if 'swing' in self.strategies:
+                self.strategies['swing'].params.update({
+                    'trend_period': int(20 * (1 + volatility_scale)),
+                    'profit_target': 0.15 * (1 + volatility_scale),
+                    'stop_loss': 0.10 * (1 + volatility_scale),
+                    'min_trend_strength': 0.6 * (1 - volatility_scale/2)  # Lower requirement in volatile markets
+                })
+
+            # Adjust meme coin strategy parameters
+            if 'meme_coin' in self.strategies:
+                self.strategies['meme_coin'].params.update({
+                    'min_liquidity': 200000 * (1 + volatility_scale),
+                    'sentiment_threshold': 0.75 * (1 - volatility_scale/4),
+                    'profit_target': 0.15 * (1 + volatility_scale),
+                    'max_loss': 0.05 * (1 + volatility_scale/2),
+                    'volume_threshold': 100000 * (1 + volatility_scale),
+                    'momentum_period': int(12 * (1 + volatility_scale/2))
+                })
+
+            self.logger.info(f"Strategy parameters adjusted for volatility: {volatility_scale:.4f}")
+
+        except Exception as e:
+            self.logger.error(f"Error adjusting strategy parameters: {str(e)}")
+            # Continue with default parameters if adjustment fails
+            pass
+
+    def merge_timeframes(self, df_short, df_medium, df_long):
+        # Placeholder for merging multiple timeframes
+        return df_medium
+
+    def _get_social_data(self):
+        # Placeholder for getting social media sentiment data
+        return {}
+
+    def _calculate_target_price(self, df, ai_signal):
+        # Placeholder for calculating target price
+        return df['Close'].iloc[-1] * 1.01
+
+    def _calculate_stop_loss(self, df, ai_signal):
+        # Placeholder for calculating stop loss
+        return df['Close'].iloc[-1] * 0.99

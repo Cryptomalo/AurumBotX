@@ -8,6 +8,7 @@ from sklearn.metrics import r2_score
 import joblib
 import json
 import asyncio
+import time
 from datetime import datetime
 from typing import Dict, Any, List, Optional
 from utils.indicators import TechnicalIndicators
@@ -72,7 +73,6 @@ class PredictionModel:
             df = df.fillna(method='ffill').fillna(method='bfill')
 
             return df
-
         except Exception as e:
             self.logger.error(f"Error creating features: {str(e)}")
             raise
@@ -83,8 +83,18 @@ class PredictionModel:
         try:
             # Convert dict to DataFrame if necessary
             if isinstance(data, dict):
-                # Create DataFrame with proper index
-                df = pd.DataFrame(data)
+                # Handle scalar values
+                if all(not isinstance(v, (list, np.ndarray)) for v in data.values()):
+                    # Convert scalar dict to single-row DataFrame
+                    df = pd.DataFrame([data])
+                    # Ensure all required columns are present
+                    for col in self.required_columns:
+                        if col not in df.columns:
+                            df[col] = 0.0  # Default value for missing columns
+                else:
+                    df = pd.DataFrame(data)
+
+                # Ensure proper index
                 if 'timestamp' in data:
                     df.index = pd.to_datetime(data['timestamp'])
                 else:
@@ -102,13 +112,19 @@ class PredictionModel:
             # Create features
             df = self.create_features(df)
 
-            # Create target
+            # Create target with validation
+            if target_column not in df.columns:
+                raise ValueError(f"Target column '{target_column}' not found")
+
             df['target'] = df[target_column].shift(-prediction_horizon)
             df['target_returns'] = df['target'].pct_change(prediction_horizon)
 
-            # Select features
+            # Select features with validation
             feature_columns = [col for col in df.columns
-                                 if col not in ['target', 'target_returns'] + self.required_columns]
+                               if col not in ['target', 'target_returns'] + self.required_columns]
+
+            if not feature_columns:
+                raise ValueError("No valid feature columns found after preparation")
 
             X = df[feature_columns].iloc[:-prediction_horizon]
             y = df['target_returns'].iloc[:-prediction_horizon]
@@ -343,20 +359,34 @@ class PredictionModel:
             # Calculate risk metrics
             risk_metrics = self.calculate_risk_metrics(market_features)
 
-            # Get technical predictions
-            technical_prediction = self.predict(market_features)
-            if technical_prediction is None:
-                self.logger.error("Failed to get technical predictions")
-                return None
+            # Get technical predictions with retries
+            technical_prediction = None
+            for attempt in range(3):
+                try:
+                    technical_prediction = self.predict(market_features)
+                    if technical_prediction is not None:
+                        break
+                except Exception as e:
+                    self.logger.warning(f"Technical prediction attempt {attempt + 1} failed: {e}")
+                    if attempt == 2:  # Last attempt
+                        self.logger.error("All technical prediction attempts failed")
+                        return None
+                    await asyncio.sleep(1)  # Wait before retry
 
             # Get AI analysis asynchronously if OpenAI client is available
             market_context = self._prepare_market_context(market_features)
             ai_analysis = await self._get_openai_analysis(market_context) if self.openai_client else {
                 'sentiment': 0.5,
-                'confidence': 0.5
+                'confidence': 0.5,
+                'reasoning': 'AI service not available'
             }
 
-            # Calculate optimal position size
+            # Validate technical prediction before proceeding
+            if technical_prediction is None:
+                self.logger.error("Technical prediction is None after retries")
+                return None
+
+            # Calculate optimal position size with enhanced validation
             confidence = self._calculate_confidence(technical_prediction, ai_analysis)
             position_size = self._calculate_position_size(
                 confidence,
@@ -364,13 +394,17 @@ class PredictionModel:
                 100000  # Example portfolio value
             )
 
-            # Calculate stop loss levels
-            current_price = market_features['Close'].iloc[-1]
-            stop_levels = self.calculate_stop_loss(
-                current_price,
-                risk_metrics,
-                'long' if technical_prediction.get('prediction', 0.5) > 0.5 else 'short'
-            )
+            # Calculate stop loss levels with proper error handling
+            try:
+                current_price = float(market_features['Close'].iloc[-1])
+                stop_levels = self.calculate_stop_loss(
+                    current_price,
+                    risk_metrics,
+                    'long' if technical_prediction.get('prediction', 0.5) > 0.5 else 'short'
+                )
+            except (IndexError, ValueError) as e:
+                self.logger.error(f"Error calculating stop levels: {e}")
+                stop_levels = None
 
             return {
                 'technical_score': technical_prediction.get('prediction', 0.5),
@@ -379,10 +413,12 @@ class PredictionModel:
                 'position_size': position_size,
                 'risk_metrics': risk_metrics,
                 'stop_levels': stop_levels,
+                'reasoning': ai_analysis.get('reasoning', 'Technical analysis only'),
+                'analysis_source': 'ai_enhanced' if self.openai_client else 'technical_only',
                 'indicators': {
-                    'rsi': market_features.get('RSI_14', pd.Series([])).iloc[-1],
-                    'macd': market_features.get('MACD', pd.Series([])).iloc[-1],
-                    'atr': market_features.get('ATR', pd.Series([])).iloc[-1]
+                    'rsi': float(market_features.get('RSI_14', pd.Series([])).iloc[-1]),
+                    'macd': float(market_features.get('MACD', pd.Series([])).iloc[-1]),
+                    'atr': float(market_features.get('ATR', pd.Series([])).iloc[-1])
                 }
             }
 
@@ -486,7 +522,7 @@ class PredictionModel:
         )
 
     async def _get_openai_analysis(self, market_context: str) -> Dict[str, Any]:
-        """Get market analysis from OpenAI asynchronously"""
+        """Get market analysis from OpenAI with improved error handling"""
         try:
             if not self.openai_client:
                 return {
@@ -496,26 +532,43 @@ class PredictionModel:
                     'reasoning': 'OpenAI client not configured'
                 }
 
-            response = await asyncio.to_thread(
-                self.openai_client.chat.completions.create,
-                model="gpt-4o",
-                messages=[
-                    {
-                        "role": "system",
-                        "content": (
-                            "You are an expert crypto market analyst. Analyze the given market data "
-                            "and provide a trading signal with confidence score. Respond in JSON format."
-                        )
-                    },
-                    {
-                        "role": "user",
-                        "content": f"Analyze this market data and provide trading signals:\n{market_context}"
-                    }
-                ],
-                response_format={"type": "json_object"}
-            )
+            retries = 3
+            for attempt in range(retries):
+                try:
+                    response = await asyncio.to_thread(
+                        self.openai_client.chat.completions.create,
+                        model="gpt-4o",  # the newest OpenAI model is "gpt-4o" which was released May 13, 2024
+                        messages=[
+                            {
+                                "role": "system",
+                                "content": (
+                                    "You are an expert crypto market analyst. Analyze the given market data "
+                                    "and provide a trading signal with confidence score. Respond in JSON format."
+                                )
+                            },
+                            {
+                                "role": "user",
+                                "content": f"Analyze this market data and provide trading signals:\n{market_context}"
+                            }
+                        ],
+                        response_format={"type": "json_object"}
+                    )
 
-            return json.loads(response.choices[0].message.content)
+                    return json.loads(response.choices[0].message.content)
+
+                except Exception as e:
+                    self.logger.warning(f"OpenAI analysis attempt {attempt + 1} failed: {e}")
+                    if attempt == retries - 1:
+                        raise
+                    await asyncio.sleep(1 * (attempt + 1))  # Exponential backoff
+
+            # If all retries failed, return a fallback response
+            return {
+                'signal': 'hold',
+                'confidence': 0.5,
+                'sentiment': 0.5,
+                'reasoning': 'Analysis failed after all retries'
+            }
 
         except Exception as e:
             self.logger.error(f"OpenAI analysis error: {str(e)}")
