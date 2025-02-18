@@ -41,11 +41,20 @@ class TradingDashboard:
         """Calculate performance metrics from trade history"""
         try:
             if not self.trade_history:
+                self.performance_metrics = {
+                    'total_trades': 0,
+                    'win_rate': 0,
+                    'total_profit': 0,
+                    'daily_profit': 0,
+                    'daily_change': 0,
+                    'active_positions': 0,
+                    'last_updated': datetime.now().isoformat()
+                }
                 return
-            
+                
             df = pd.DataFrame(self.trade_history)
             total_trades = len(df)
-            successful_trades = len(df[df['success'] == True])
+            successful_trades = df['success'].sum()
             win_rate = successful_trades / total_trades if total_trades > 0 else 0
             
             if 'price' in df.columns and 'take_profit' in df.columns:
@@ -66,17 +75,24 @@ class TradingDashboard:
         except Exception as e:
             self.logger.error(f"Error calculating metrics: {str(e)}")
 
-    @st.cache_data
+    @st.cache_data(ttl=60)
     def load_trade_history(self):
         """Load trade history with caching"""
-        if self.data_cache is None or (datetime.now() - self.last_update).seconds > 60:
-            self.data_cache = pd.DataFrame(self.trade_history)
-            self.last_update = datetime.now()
-        return self.data_cache
+        try:
+            if self.trade_history:
+                return pd.DataFrame(self.trade_history)
+            return pd.DataFrame()
+        except Exception as e:
+            self.logger.error(f"Error loading trade history: {str(e)}")
+            return pd.DataFrame()
 
     def render_dashboard(self):
         """Render modern dashboard with enhanced metrics"""
         try:
+            if not hasattr(self, 'trade_history'):
+                st.error("Trading data not initialized")
+                return
+                
             st.title("🌟 AurumBot Trading Dashboard")
             
             if (datetime.now() - self.last_update).seconds > 60:
