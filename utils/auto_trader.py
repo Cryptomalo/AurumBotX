@@ -343,7 +343,7 @@ class AutoTrader:
                     self.logger.error(f"Error notification failed: {str(notify_error)}")
             return {'success': False, 'error': str(e)}
 
-    async def run(self, interval: int = 3600):
+    async def run(self, interval: int = 300):  # Ridotto a 5 minuti
         """Main trading loop"""
         self.logger.info(f"Starting trading bot for {self.symbol}")
         self.logger.info(f"Initial balance: {self.initial_balance}")
