@@ -125,7 +125,7 @@ def show_main_app():
     # Tab contenuti
     with tab1:
         if st.session_state.bot and st.session_state.data_loader:
-            df = load_market_data(st.session_state.bot.symbol)
+            df = await load_market_data(st.session_state.bot.symbol)
             if df is not None:
                 chart = create_candlestick_chart(df)
                 if chart:
@@ -178,14 +178,14 @@ def create_candlestick_chart(df):
         logger.error(f"Errore creazione grafico: {str(e)}")
         return None
 
-def load_market_data(symbol, period='1d'):
+async def load_market_data(symbol, period='1d'):
     """Carica i dati di mercato in modo sicuro"""
     try:
         if not st.session_state.data_loader:
             return None
 
-        df = st.session_state.data_loader.get_historical_data(symbol, period)
-        if df is not None and not df.empty:
+        df = await st.session_state.data_loader.get_historical_data(symbol, period)
+        if df is not None and len(df) > 0:
             st.session_state.market_data = df
             return df
         return None
