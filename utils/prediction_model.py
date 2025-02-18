@@ -21,49 +21,12 @@ class PredictionModel:
     def __init__(self):
         self.logger = logging.getLogger(__name__)
         self.models = {}
-        
-    def predict(self, data):
-        """Synchronous prediction method with retry logic"""
-        max_retries = 3
-        retry_delay = 1
-        
-        for attempt in range(max_retries):
-            try:
-                if not self.models:
-                    return {'prediction': 0.5, 'confidence': 0.5}
-                    
-                time.sleep(retry_delay * attempt)  # Exponential backoff
-                features = self._prepare_features(data)
-                weighted_pred = 0
-                
-                for name, model in self.models.items():
-                    pred = model.predict(features)
-                    weighted_pred += pred[0] if len(pred) > 0 else 0.5
-                    
-                weighted_pred /= len(self.models) if self.models else 1
-                return {'prediction': weighted_pred, 'confidence': 0.7}
-                
-            except Exception as e:
-                self.logger.error(f"Prediction error: {str(e)}")
-                if attempt == max_retries - 1:
-                    return {'prediction': 0.5, 'confidence': 0.5}
-            
-            for name, model in self.models.items():
-                pred = model.predict(features)
-                weighted_pred += pred[0] if len(pred) > 0 else 0.5
-                
-            weighted_pred /= len(self.models) if self.models else 1
-            return {'prediction': weighted_pred, 'confidence': 0.7}
-            
-        except Exception as e:
-            self.logger.error(f"Prediction error: {str(e)}")
-            return {'prediction': 0.5, 'confidence': 0.5}
         self.scaler = StandardScaler()
         self.feature_importance = {}
         self.metrics = {}
         self.indicators = TechnicalIndicators()
         self.openai_client = None
-        
+
         # DeepSeek integration
         try:
             from deepseek import DeepSeekLLM, DeepSeekCoder, DeepSeekMath
@@ -81,6 +44,32 @@ class PredictionModel:
 
         # Required columns for the model
         self.required_columns = ['Open', 'High', 'Low', 'Close', 'Volume']
+
+    def predict(self, data):
+        """Synchronous prediction method with retry logic"""
+        max_retries = 3
+        retry_delay = 1
+
+        for attempt in range(max_retries):
+            try:
+                if not self.models:
+                    return {'prediction': 0.5, 'confidence': 0.5}
+
+                time.sleep(retry_delay * attempt)  # Exponential backoff
+                features = self._prepare_features(data)
+                weighted_pred = 0
+
+                for name, model in self.models.items():
+                    pred = model.predict(features)
+                    weighted_pred += pred[0] if len(pred) > 0 else 0.5
+
+                weighted_pred /= len(self.models) if self.models else 1
+                return {'prediction': weighted_pred, 'confidence': 0.7}
+
+            except Exception as e:
+                self.logger.error(f"Prediction error: {str(e)}")
+                if attempt == max_retries - 1:
+                    return {'prediction': 0.5, 'confidence': 0.5}
 
     def _validate_dataframe(self, df: Any) -> bool:
         """Validate that input is a valid DataFrame with required columns"""
