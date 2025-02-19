@@ -1,0 +1,8 @@
+{
+    "version": "1.0",
+    "timestamp": "2025-02-19",
+    "trading_pair": "SOL/USDT",
+    "initial_balance": 1000,
+    "risk_per_trade": 0.02,
+    "testnet": true
+}
