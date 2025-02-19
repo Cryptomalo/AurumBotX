@@ -12,6 +12,7 @@ import json
 from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession
 from sqlalchemy.orm import sessionmaker
 import asyncpg
+import re
 
 logger = logging.getLogger(__name__)
 
@@ -45,13 +46,24 @@ class DatabaseManager:
         self.pool_recycle = 1800
         self.initialized = True
 
+    def _clean_db_url(self, url: str) -> str:
+        """Clean database URL by removing unsupported parameters"""
+        # Remove sslmode if present
+        url = re.sub(r'\?sslmode=[^&]+', '', url)
+        # Remove other SSL parameters if present
+        url = re.sub(r'&ssl=[^&]+', '', url)
+        return url
+
     async def initialize_async(self, connection_string: str) -> bool:
         """Initialize async database connection"""
         try:
             logger.info("Initializing async database connection...")
 
+            # Clean the connection string
+            clean_connection_string = self._clean_db_url(connection_string)
+
             # Convert SQLAlchemy URL to asyncpg format
-            asyncpg_url = connection_string.replace('postgresql://', 'postgresql+asyncpg://')
+            asyncpg_url = clean_connection_string.replace('postgresql://', 'postgresql+asyncpg://')
 
             self.async_engine = create_async_engine(
                 asyncpg_url,
