@@ -96,4 +96,4 @@ else:
 # Aggiornamento automatico
 st.empty()
 if st.button("Aggiorna"):
-    st.experimental_rerun()
+    st.rerun()  # Uso st.rerun() invece di st.experimental_rerun()

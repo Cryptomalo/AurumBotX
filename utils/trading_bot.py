@@ -20,18 +20,16 @@ class WebSocketHandler:
         self.last_heartbeat: float = time.time()
         self.heartbeat_interval: int = 30
         self.reconnect_lock: threading.Lock = threading.Lock()
-        self.heartbeat_thread: Optional[threading.Thread] = None
         self.should_run: bool = True
         self.db_manager = DatabaseManager()
-        self._initialize_db()
 
-    async def _initialize_db(self) -> None:
-        """Initialize database connection"""
+    async def initialize(self) -> None:
+        """Initialize the handler with database connection"""
         try:
             await self.db_manager.initialize()
-            logger.info("Database connection established successfully")
+            logger.info("WebSocket handler initialized successfully")
         except Exception as e:
-            logger.error(f"Database initialization failed: {str(e)}")
+            logger.error(f"Initialization error: {str(e)}")
             raise
 
     async def connect_websocket(self) -> bool:
@@ -44,7 +42,9 @@ class WebSocketHandler:
                 "wss://stream.binance.com:9443/ws/!ticker@arr",
                 ping_interval=20,
                 ping_timeout=10,
-                close_timeout=10
+                close_timeout=10,
+                max_size=2**23,  # 8MB max message size
+                compression=None
             )
             self.connected = True
             self.last_heartbeat = time.time()
@@ -65,7 +65,7 @@ class WebSocketHandler:
                 message = await self.ws.recv()
                 await self._on_message(message)
             except websockets.exceptions.ConnectionClosed:
-                self.logger.error("WebSocket connection closed unexpectedly")
+                logger.error("WebSocket connection closed unexpectedly")
                 self.connected = False
                 await self.handle_websocket_error()
                 break
@@ -86,11 +86,10 @@ class WebSocketHandler:
                         trading_data = TradingData(
                             symbol=ticker['s'],
                             price=float(ticker['c']),
-                            volume=float(ticker['v'])
+                            volume=float(ticker['v']),
+                            timestamp=datetime.now()
                         )
-                        async with self.db_manager.get_session() as session:
-                            session.add(trading_data)
-                            await session.commit()
+                        await self.db_manager.save_trading_data(trading_data)
 
         except json.JSONDecodeError as e:
             logger.error(f"JSON decoding error: {str(e)}")
@@ -134,11 +133,13 @@ class WebSocketHandler:
         if self.ws:
             await self.ws.close()
         self.connected = False
+        await self.db_manager.cleanup()
         logger.info("WebSocket handler cleaned up")
 
 async def main():
     handler = WebSocketHandler()
     try:
+        await handler.initialize()
         if await handler.connect_websocket():
             logger.info("Trading bot started successfully")
             while handler.check_connection():
@@ -147,6 +148,8 @@ async def main():
             logger.error("Failed to establish WebSocket connection")
     except KeyboardInterrupt:
         logger.info("Shutting down...")
+    except Exception as e:
+        logger.error(f"Error: {str(e)}")
     finally:
         await handler.cleanup()
 

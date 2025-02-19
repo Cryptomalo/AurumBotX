@@ -6,7 +6,7 @@ from sqlalchemy.ext.asyncio import create_async_engine, AsyncEngine, AsyncSessio
 from sqlalchemy.ext.asyncio import async_sessionmaker
 from sqlalchemy import text
 from urllib.parse import urlparse, parse_qs
-from utils.models import Base
+from utils.models import Base, TradingData
 
 class DatabaseManager:
     def __init__(self, max_retries: int = 3, retry_delay: int = 5):
@@ -19,46 +19,29 @@ class DatabaseManager:
 
     async def initialize(self, database_url: Optional[str] = None) -> bool:
         """Initialize database connection with optimized pooling and retry logic"""
-        self.logger.info("Initializing database connection with connection pooling...")
+        self.logger.info("Initializing database connection...")
         retry_count = 0
-        max_retries = 3
 
-        while retry_count < max_retries:
+        while retry_count < self.max_retries:
             try:
                 if not database_url:
                     database_url = os.environ.get('DATABASE_URL')
                     if not database_url:
                         raise ValueError("DATABASE_URL not set")
 
-                # Parse database URL and handle SSL parameters
-                parsed_url = urlparse(database_url)
-                query_params = parse_qs(parsed_url.query)
-
-                # Convert to async URL and handle SSL
-                base_url = database_url.split('?')[0].replace('postgresql://', 'postgresql+asyncpg://')
-
-                # Configure SSL parameters correctly for asyncpg
-                ssl_mode = None
-                if 'sslmode' in query_params:
-                    ssl_mode = query_params['sslmode'][0]
-                    self.logger.debug(f"SSL mode configured: {ssl_mode}")
-
-                # Create engine with proper configuration
-                connect_args = {}
-                if ssl_mode:
-                    connect_args['ssl'] = ssl_mode == 'require'
+                # Convert to async URL if needed
+                if not database_url.startswith('postgresql+asyncpg://'):
+                    database_url = database_url.replace('postgresql://', 'postgresql+asyncpg://')
 
                 self.engine = create_async_engine(
-                    base_url,
+                    database_url,
                     echo=False,
                     pool_size=5,
                     max_overflow=10,
                     pool_pre_ping=True,
-                    pool_recycle=3600,
-                    connect_args=connect_args
+                    pool_recycle=3600
                 )
 
-                # Create session maker
                 self.session_maker = async_sessionmaker(
                     self.engine,
                     expire_on_commit=False,
@@ -68,7 +51,6 @@ class DatabaseManager:
                 # Create tables if they don't exist
                 async with self.engine.begin() as conn:
                     await conn.run_sync(Base.metadata.create_all)
-                    self.logger.info("Database tables created/verified successfully")
 
                 # Verify connection
                 if await self.verify_connection():
@@ -77,7 +59,7 @@ class DatabaseManager:
                     return True
 
                 retry_count += 1
-                if retry_count < max_retries:
+                if retry_count < self.max_retries:
                     await asyncio.sleep(self.retry_delay * (2 ** retry_count))
                 else:
                     self.logger.error("Failed to establish database connection after all retries")
@@ -85,33 +67,50 @@ class DatabaseManager:
 
             except Exception as e:
                 self.logger.error(f"Database initialization error: {str(e)}")
-                self.logger.debug(f"Full error details: {repr(e)}")
                 retry_count += 1
-                if retry_count < max_retries:
+                if retry_count < self.max_retries:
                     await asyncio.sleep(self.retry_delay * (2 ** retry_count))
                 else:
                     return False
 
         return False
 
-    async def verify_connection(self) -> bool:
-        """Verify database connection with retries"""
+    async def save_trading_data(self, trading_data: TradingData) -> bool:
+        """Save trading data to database with retry logic"""
+        if not self.is_connected:
+            self.logger.error("Database not connected")
+            return False
+
         for attempt in range(self.max_retries):
             try:
-                async with self.get_session() as session:
-                    await session.execute(text("SELECT 1"))
+                async with self.session_maker() as session:
+                    async with session.begin():
+                        session.add(trading_data)
                     await session.commit()
-                    return True
-
+                return True
             except Exception as e:
-                self.logger.warning(f"Connection attempt {attempt + 1} failed: {str(e)}")
+                self.logger.error(f"Error saving trading data (attempt {attempt + 1}): {str(e)}")
                 if attempt < self.max_retries - 1:
-                    await asyncio.sleep(self.retry_delay * (attempt + 1))  # Exponential backoff
+                    await asyncio.sleep(self.retry_delay * (2 ** attempt))
                     continue
-                else:
-                    self.logger.error("All connection attempts failed")
-                    return False
+                return False
 
+    async def verify_connection(self) -> bool:
+        """Verify database connection with retries"""
+        if not self.session_maker:
+            return False
+
+        for attempt in range(self.max_retries):
+            try:
+                async with self.session_maker() as session:
+                    await session.execute(text("SELECT 1"))
+                    return True
+            except Exception as e:
+                self.logger.warning(f"Connection verification failed (attempt {attempt + 1}): {str(e)}")
+                if attempt < self.max_retries - 1:
+                    await asyncio.sleep(self.retry_delay * (attempt + 1))
+                else:
+                    return False
         return False
 
     async def get_session(self) -> AsyncSession:
