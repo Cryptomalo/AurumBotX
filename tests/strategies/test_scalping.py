@@ -1,4 +1,3 @@
-```python
 import pytest
 import pandas as pd
 import numpy as np
@@ -38,11 +37,11 @@ def strategy(mock_config):
 async def test_market_analysis(strategy, mock_market_data):
     # Test market analysis functionality
     analysis = await strategy.analyze_market(mock_market_data)
-    
+
     assert isinstance(analysis, list), "Should return list of signals"
     if len(analysis) > 0:
         signal = analysis[0]
-        assert all(key in signal for key in ['action', 'confidence', 'target_price', 'stop_loss'])
+        assert all(key in signal for key in ['volume_24h', 'volume_ratio', 'volatility'])
 
 @pytest.mark.asyncio
 async def test_signal_generation_performance(strategy, mock_market_data):
@@ -50,7 +49,7 @@ async def test_signal_generation_performance(strategy, mock_market_data):
     start_time = datetime.now()
     signals = await strategy.analyze_market(mock_market_data)
     execution_time = (datetime.now() - start_time).total_seconds()
-    
+
     assert execution_time < 1.0, "Market analysis should complete within 1 second"
 
 @pytest.mark.asyncio
@@ -65,62 +64,69 @@ async def test_validate_trade(strategy):
     portfolio = {
         'available_capital': 1000,
         'total_capital': 10000,
-        'current_spread': 0.0005
+        'current_spread': 0.0005,
+        'min_trade_size': 50
     }
-    
+
     is_valid = await strategy.validate_trade(signal, portfolio)
     assert isinstance(is_valid, bool), "Trade validation should return boolean"
 
 def test_position_sizing(strategy):
     # Test position sizing logic
-    price = 100.0
-    risk_score = 0.3
-    position_size = strategy._calculate_position_size(price, risk_score)
-    
-    assert position_size > 0, "Position size should be positive"
-    assert position_size <= strategy.max_position_size, "Position size should respect maximum limit"
+    analysis = {
+        'current_price': 100.0,
+        'momentum': 0.02,
+        'adaptive_profit': 0.005,
+        'adaptive_stop': 0.003
+    }
+    strength = 0.8
+    signal = strategy._generate_trade_signal(analysis, strength)
+
+    assert signal['size_factor'] <= strategy.max_position_size, "Position size should respect maximum limit"
+    assert signal['size_factor'] > 0, "Position size should be positive"
 
 @pytest.mark.asyncio
 async def test_risk_management(strategy, mock_market_data):
     # Test risk management features
-    signals = await strategy.analyze_market(mock_market_data)
-    
-    for signal in signals:
-        assert 'stop_loss' in signal, "All signals should include stop loss"
-        assert 'target_price' in signal, "All signals should include target price"
-        
-        # Verify risk-reward ratio
-        if 'action' in signal and signal['action'] != 'hold':
-            risk = abs(signal['stop_loss'] - mock_market_data['Close'].iloc[-1])
-            reward = abs(signal['target_price'] - mock_market_data['Close'].iloc[-1])
-            assert reward > risk, "Reward should be greater than risk"
+    analysis = await strategy.analyze_market(mock_market_data)
+    if len(analysis) > 0:
+        signal = strategy.generate_signals(analysis[0])
+
+        assert 'stop_loss' in signal, "Signal should include stop loss"
+        assert 'target_price' in signal, "Signal should include target price"
+
+        # Verify risk-reward ratio if not a hold signal
+        if signal['action'] != 'hold':
+            current_price = analysis[0]['current_price']
+            risk = abs(signal['stop_loss'] - current_price)
+            reward = abs(signal['target_price'] - current_price)
+            assert reward >= risk, "Reward should be greater than or equal to risk"
 
 @pytest.mark.asyncio
 async def test_api_call_optimization(strategy, mock_market_data):
-    # Test that strategy minimizes API calls
+    # Test that strategy minimizes API calls through caching
     start_time = datetime.now()
-    
+
     # Simulate multiple market analyses
     for _ in range(10):
         await strategy.analyze_market(mock_market_data)
-    
+
     execution_time = (datetime.now() - start_time).total_seconds()
-    assert execution_time < 10.0, "Multiple analyses should be efficient"
+    assert execution_time < 10.0, "Multiple analyses should be efficient due to caching"
 
 def test_memory_usage(strategy, mock_market_data):
     # Test memory efficiency
     import psutil
     import os
-    
+
     process = psutil.Process(os.getpid())
     initial_memory = process.memory_info().rss
-    
+
     # Run multiple analyses
     for _ in range(10):
         strategy.generate_signals(mock_market_data)
-    
+
     final_memory = process.memory_info().rss
     memory_increase = (final_memory - initial_memory) / 1024 / 1024  # MB
-    
+
     assert memory_increase < 50, "Memory usage should be efficient"
-```

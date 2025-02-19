@@ -1,4 +1,3 @@
-```python
 import pytest
 import pandas as pd
 import numpy as np
@@ -28,7 +27,7 @@ async def test_analyze_market_with_insufficient_liquidity(strategy):
         'pairAddress': '0x123',
         'tokenAddress': '0x456'
     }
-    
+
     signals = await strategy.analyze_market(market_data)
     assert len(signals) == 0, "Should reject low liquidity pairs"
 
@@ -41,10 +40,10 @@ async def test_analyze_market_with_valid_pair(strategy):
         'tokenAddress': '0x456',
         'price': 1.0
     }
-    
+
     signals = await strategy.analyze_market(market_data)
     assert len(signals) > 0, "Should generate signals for valid pairs"
-    
+
     signal = signals[0]
     assert 'action' in signal
     assert 'confidence' in signal
@@ -63,7 +62,7 @@ async def test_validate_trade_with_insufficient_balance(strategy):
         'balance': 0.5,  # Less than position size
         'min_trade_size': 0.1
     }
-    
+
     is_valid = await strategy.validate_trade(signal, portfolio)
     assert not is_valid, "Should reject trades with insufficient balance"
 
@@ -80,7 +79,7 @@ async def test_validate_trade_with_valid_conditions(strategy):
         'balance': 1.0,
         'min_trade_size': 0.01
     }
-    
+
     is_valid = await strategy.validate_trade(signal, portfolio)
     assert is_valid, "Should accept valid trades"
 
@@ -89,7 +88,7 @@ async def test_position_size_calculation(strategy):
     # Test position size calculation
     price = 100.0
     risk_score = 0.3
-    
+
     position_size = strategy._calculate_position_size(price, risk_score)
     assert position_size > 0, "Position size should be positive"
     assert position_size <= strategy.max_position_size, "Position size should respect maximum limit"
@@ -102,15 +101,17 @@ async def test_pair_safety_checks(strategy):
         'pair': '0x456',
         'liquidity': 10000
     }
-    
+
     is_safe = await strategy._is_pair_safe(pair)
     assert isinstance(is_safe, bool), "Safety check should return boolean"
 
 def test_cost_optimization(strategy):
     # Test that strategy implements cost optimization
     # Check caching
-    assert hasattr(strategy, 'scanned_pairs'), "Should implement pair caching"
-    
+    assert hasattr(strategy, '_contract_cache'), "Should implement contract caching"
+    assert hasattr(strategy, '_holder_cache'), "Should implement holder caching"
+    assert hasattr(strategy, '_tax_cache'), "Should implement tax caching"
+
     # Check batch processing
-    assert hasattr(strategy, '_filter_opportunities'), "Should implement batch processing"
-```
+    assert hasattr(strategy, '_batch_queue'), "Should implement batch processing"
+    assert hasattr(strategy, 'batch_size'), "Should have configurable batch size"
