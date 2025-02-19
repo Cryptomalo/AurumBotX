@@ -72,8 +72,7 @@ class DatabaseManager:
                 pool_timeout=self.pool_timeout,
                 pool_recycle=self.pool_recycle,
                 pool_pre_ping=True,
-                json_serializer=lambda obj: json.dumps(obj, default=str),
-                json_deserializer=json.loads
+                echo=False
             )
 
             # Test connection
@@ -96,29 +95,21 @@ class DatabaseManager:
             raise
 
     def initialize(self, connection_string: str) -> bool:
-        """Initialize synchronous database connection with proper pooling"""
+        """Initialize synchronous database connection"""
         try:
-            logger.info("Initializing database connection...")
+            logger.info("Initializing synchronous database connection...")
 
-            if self.engine is not None:
-                try:
-                    with self.engine.connect() as conn:
-                        conn.execute(text("SELECT 1"))
-                        logger.info("Reusing existing database connection")
-                        return True
-                except:
-                    self.engine = None
+            clean_connection_string = self._clean_db_url(connection_string)
 
             self.engine = create_engine(
-                connection_string,
+                clean_connection_string,
                 poolclass=QueuePool,
                 pool_size=self.pool_size,
                 max_overflow=self.max_overflow,
                 pool_timeout=self.pool_timeout,
                 pool_recycle=self.pool_recycle,
                 pool_pre_ping=True,
-                json_serializer=lambda obj: json.dumps(obj, default=str),
-                json_deserializer=json.loads
+                echo=False
             )
 
             # Test connection
@@ -126,7 +117,7 @@ class DatabaseManager:
                 conn.execute(text("SELECT 1"))
 
             self.Session = sessionmaker(bind=self.engine)
-            logger.info("Database connection established successfully")
+            logger.info("Synchronous database connection established successfully")
             return True
 
         except Exception as e:
