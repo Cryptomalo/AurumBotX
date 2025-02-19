@@ -21,6 +21,8 @@ class ScalpingStrategy(BaseStrategy):
         self.rsi_overbought = config.get('rsi_overbought', 65)
         self.volume_anomaly_threshold = 2.0
         self.min_profit_factor = 1.5
+        self.max_position_size = config.get('max_position_size', 0.2)  # 20% del portfolio
+        self.risk_per_trade = config.get('risk_per_trade', 0.02)  # 2% risk per trade
 
         # Cache configuration
         self._indicator_cache = TTLCache(maxsize=100, ttl=60)  # 1 minute cache
@@ -173,13 +175,19 @@ class ScalpingStrategy(BaseStrategy):
             target_price = current_price * (1 - adaptive_profit)
             stop_loss = current_price * (1 + adaptive_stop)
 
+        # Calculate position size based on risk and confidence
+        position_size = min(
+            strength * self.max_position_size,  # Scale by signal strength
+            self.risk_per_trade / (adaptive_stop)  # Limit by risk
+        )
+
         return {
             'action': action,
             'confidence': strength,
             'target_price': target_price,
             'stop_loss': stop_loss,
             'trailing_stop': self.trailing_stop,
-            'size_factor': strength * 0.8  # Reduced position size for safety
+            'size_factor': position_size  # Now properly calculated
         }
 
     def _get_default_signal(self) -> Dict[str, Any]:
@@ -214,7 +222,7 @@ class ScalpingStrategy(BaseStrategy):
 
             # Risk management
             risk_per_trade = abs(signal['target_price'] - signal['stop_loss']) * required_capital
-            max_risk = portfolio.get('total_capital', 0) * 0.01  # 1% max risk per trade
+            max_risk = portfolio.get('total_capital', 0) * self.risk_per_trade  # Use configured risk per trade
 
             # Market condition validation
             current_spread = portfolio.get('current_spread', 0.001)
