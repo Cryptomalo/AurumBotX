@@ -50,6 +50,27 @@ def login_page():
         if st.button("Connect Wallet", use_container_width=True):
             connect_wallet()
 
+def market_page():
+    """Market dashboard page"""
+    st.title("📊 Market Dashboard")
+
+    # Layout for main metrics
+    col1, col2, col3, col4 = st.columns(4)
+
+    with col1:
+        st.metric("Bitcoin Price", "$45,234.56", "+2.3%")
+    with col2:
+        st.metric("24h Volume", "$1.2B", "-5.1%")
+    with col3:
+        st.metric("Active Trades", "3", "+1")
+    with col4:
+        st.metric("P&L Today", "+$234.12", "")
+
+    # Market charts
+    fig = go.Figure()
+    # TODO: Add real-time data from Binance
+    st.plotly_chart(fig, use_container_width=True)
+
 def initialize_session_state():
     """Initialize session state variables"""
     if 'authenticated' not in st.session_state:
