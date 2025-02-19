@@ -11,13 +11,23 @@ class TradingData(Base):
     __tablename__ = 'trading_data'
 
     id = Column(Integer, primary_key=True)
-    symbol = Column(String, nullable=False)
+    symbol = Column(String, nullable=False, index=True)
     price = Column(Float, nullable=False)
     volume = Column(Float, nullable=False)
-    timestamp = Column(DateTime, default=datetime.utcnow)
+    timestamp = Column(DateTime, default=datetime.utcnow, index=True)
 
     def __repr__(self):
         return f"<TradingData(symbol='{self.symbol}', price={self.price}, volume={self.volume})>"
+
+    @property
+    def as_dict(self):
+        return {
+            'id': self.id,
+            'symbol': self.symbol,
+            'price': self.price,
+            'volume': self.volume,
+            'timestamp': self.timestamp.isoformat()
+        }
 
 def get_database_session() -> scoped_session:
     """Create database session with connection pooling and proper error handling"""

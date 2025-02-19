@@ -1,5 +1,6 @@
 import logging
 import asyncio
+import os
 from typing import Optional, Dict, Any
 from sqlalchemy.ext.asyncio import create_async_engine, AsyncEngine, AsyncSession
 from sqlalchemy.ext.asyncio import async_sessionmaker
@@ -16,11 +17,16 @@ class DatabaseManager:
         self.retry_delay = retry_delay
         self.is_connected = False
 
-    async def initialize(self, database_url: str) -> bool:
+    async def initialize(self, database_url: Optional[str] = None) -> bool:
         """Initialize database connection with optimized pooling"""
         self.logger.info("Initializing database connection with connection pooling...")
 
         try:
+            if not database_url:
+                database_url = os.environ.get('DATABASE_URL')
+                if not database_url:
+                    raise ValueError("DATABASE_URL not set")
+
             # Parse database URL and handle SSL parameters
             parsed_url = urlparse(database_url)
             query_params = parse_qs(parsed_url.query)
@@ -56,10 +62,10 @@ class DatabaseManager:
                 class_=AsyncSession
             )
 
-            # Create tables
+            # Create tables if they don't exist
             async with self.engine.begin() as conn:
                 await conn.run_sync(Base.metadata.create_all)
-                self.logger.info("Database tables created successfully")
+                self.logger.info("Database tables created/verified successfully")
 
             # Verify connection
             if await self.verify_connection():
@@ -78,7 +84,7 @@ class DatabaseManager:
         """Verify database connection with retries"""
         for attempt in range(self.max_retries):
             try:
-                async with self.session_maker() as session:
+                async with self.get_session() as session:
                     await session.execute(text("SELECT 1"))
                     await session.commit()
                     return True
@@ -96,8 +102,8 @@ class DatabaseManager:
 
     async def get_session(self) -> AsyncSession:
         """Get a database session with automatic reconnection"""
-        if not self.is_connected:
-            await self.verify_connection()
+        if not self.session_maker:
+            raise RuntimeError("Database not initialized. Call initialize() first.")
         return self.session_maker()
 
     async def execute_query(self, query: str, params: Optional[Dict[str, Any]] = None) -> Any:

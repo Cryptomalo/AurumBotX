@@ -2,8 +2,10 @@ import logging
 import asyncio
 from datetime import datetime
 import os
-from utils.database import DatabaseManager
-from utils.dex_trading import DexSniper
+import signal
+import sys
+from typing import Optional, Dict, Any
+from utils.database_manager import DatabaseManager
 
 # Setup logging
 log_filename = f'test_bot_{datetime.now().strftime("%Y%m%d_%H%M%S")}.log'
@@ -12,76 +14,79 @@ logging.basicConfig(
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
     handlers=[
         logging.FileHandler(log_filename),
-        logging.StreamHandler()
+        logging.StreamHandler(sys.stdout)
     ])
 logger = logging.getLogger(__name__)
 
-async def test_database():
-    """Test database connectivity"""
-    try:
-        logger.info("Testing database connection...")
-        db_manager = DatabaseManager()
+class TestBot:
+    def __init__(self):
+        logger.info("Initializing TestBot...")
+        self.db_manager = None
+        self.should_run = True
+        self.setup_signal_handlers()
+        logger.info("TestBot initialized successfully")
 
-        # Initialize with DATABASE_URL
-        db_url = os.getenv('DATABASE_URL')
-        if not db_url:
-            logger.error("DATABASE_URL not set")
-            return False
+    def setup_signal_handlers(self) -> None:
+        """Configure signal handlers for graceful shutdown"""
+        signal.signal(signal.SIGINT, self.handle_shutdown)
+        signal.signal(signal.SIGTERM, self.handle_shutdown)
+        logger.info("Signal handlers configured")
 
-        if db_manager.initialize(db_url):
-            logger.info("Database connection successful")
+    def handle_shutdown(self, signum: int, frame: Any) -> None:
+        """Handle graceful shutdown"""
+        logger.info("Received shutdown signal...")
+        self.should_run = False
+
+    async def initialize_components(self) -> bool:
+        """Initialize components with retry"""
+        try:
+            logger.info("Initializing components...")
+            # Initialize database connection
+            self.db_manager = DatabaseManager()
+            if not await self.db_manager.initialize():
+                logger.error("Database initialization failed")
+                return False
+
+            logger.info("All components initialized successfully")
             return True
-        else:
-            logger.error("Failed to initialize database")
+
+        except Exception as e:
+            logger.error(f"Error initializing components: {str(e)}")
             return False
 
-    except Exception as e:
-        logger.error(f"Database test failed: {str(e)}")
-        return False
+    async def run_tests(self) -> bool:
+        """Run all tests"""
+        try:
+            logger.info("Starting test suite...")
 
-async def test_dex_sniper():
-    """Test DEX sniper functionality"""
-    try:
-        logger.info("Testing DEX sniper...")
-        sniper = DexSniper(testnet=True)
+            # Initialize components
+            if not await self.initialize_components():
+                logger.error("Component initialization failed")
+                return False
 
-        # Test analysis
-        result = await sniper.analyze_opportunity(
-            token_address="0xtest",
-            pair_address="0xpair"
-        )
+            # Test database queries
+            try:
+                test_query = "SELECT current_timestamp"
+                await self.db_manager.execute_query(test_query)
+                logger.info("Database query test passed")
+            except Exception as e:
+                logger.error(f"Database query test failed: {str(e)}")
+                return False
 
-        if result:
-            logger.info("DEX sniper analysis successful")
+            logger.info("All tests completed successfully")
             return True
-        else:
-            logger.error("DEX sniper analysis failed")
+
+        except Exception as e:
+            logger.error(f"Test execution failed: {str(e)}")
             return False
+        finally:
+            if self.db_manager:
+                await self.db_manager.cleanup()
 
-    except Exception as e:
-        logger.error(f"DEX sniper test failed: {str(e)}")
-        return False
-
-async def run_tests():
-    """Run all tests"""
-    try:
-        # Test database
-        if not await test_database():
-            logger.error("Database tests failed")
-            return False
-
-        # Test DEX sniper
-        if not await test_dex_sniper():
-            logger.error("DEX sniper tests failed")
-            return False
-
-        logger.info("All tests completed successfully")
-        return True
-
-    except Exception as e:
-        logger.error(f"Test execution failed: {str(e)}")
-        return False
+async def main():
+    bot = TestBot()
+    success = await bot.run_tests()
+    sys.exit(0 if success else 1)
 
 if __name__ == "__main__":
-    success = asyncio.run(run_tests())
-    exit(0 if success else 1)
+    asyncio.run(main())
