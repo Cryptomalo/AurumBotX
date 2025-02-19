@@ -2,31 +2,46 @@ import streamlit as st
 import pandas as pd
 import plotly.graph_objects as go
 from datetime import datetime, timedelta
-import asyncio
 import json
 import logging
 from typing import Dict, Any, Optional
 from binance.client import Client
 from utils.database_manager import DatabaseManager
-from utils.trading_bot import WebSocketHandler
 from utils.auto_trader import AutoTrader
 from utils.strategies.strategy_manager import StrategyManager
 
-# Page configuration
+# Configure page
 st.set_page_config(
     page_title="AurumBot Pro",
     page_icon="🤖",
     layout="wide",
-    initial_sidebar_state="expanded"
+    initial_sidebar_state="expanded",
 )
 
-# Configure logging
-logging.basicConfig(
-    level=logging.INFO,
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
-    filename='streamlit_app.log'
-)
-logger = logging.getLogger(__name__)
+# Styling
+st.markdown("""
+    <style>
+    .stApp {
+        background-color: #0E1117;
+    }
+    .tradingview-widget-container {
+        height: 400px !important;
+    }
+    .market-card {
+        background-color: #1E1E1E;
+        padding: 20px;
+        border-radius: 10px;
+        border: 1px solid #2D2D2D;
+    }
+    .metric-card {
+        background-color: #1E1E1E;
+        padding: 15px;
+        border-radius: 8px;
+        margin: 5px;
+        border: 1px solid #2D2D2D;
+    }
+    </style>
+""", unsafe_allow_html=True)
 
 def connect_wallet():
     """Connect to cryptocurrency wallet"""
@@ -35,159 +50,225 @@ def connect_wallet():
     st.rerun()
 
 def login_page():
-    """Clean wallet-based login page"""
-    st.markdown(
-        """
-        <style>
-        .main {
-            background-color: #0E1117;
-        }
-        .login-container {
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            height: 100vh;
-        }
-        </style>
-        """,
-        unsafe_allow_html=True
-    )
-
+    """Modern wallet-based login page"""
     col1, col2, col3 = st.columns([1,2,1])
     with col2:
-        st.markdown(
-            """
-            <div style='text-align: center; padding: 2rem;'>
-                <h1>🤖 AurumBot Pro</h1>
-                <p style='font-size: 1.2em; color: #4CAF50;'>Advanced Crypto Trading Platform</p>
+        st.markdown("""
+            <div style='text-align: center; margin-top: 100px;'>
+                <h1 style='color: #00FF94; font-size: 3em;'>🤖 AurumBot</h1>
+                <p style='font-size: 1.5em; color: #888888;'>AI-Powered Crypto Trading</p>
             </div>
-            """, 
-            unsafe_allow_html=True
-        )
+        """, unsafe_allow_html=True)
 
-        st.markdown(
-            """
-            <div style='background-color: #1C1C1C; padding: 2rem; border-radius: 10px; text-align: center;'>
-                <h3>Connect Your Wallet</h3>
-                <p>Start trading with intelligent market analysis</p>
+        st.markdown("""
+            <div style='background: linear-gradient(45deg, #1E1E1E, #2D2D2D);
+                      padding: 30px;
+                      border-radius: 15px;
+                      margin-top: 50px;
+                      text-align: center;
+                      border: 1px solid #3D3D3D;'>
+                <h2 style='color: #FFFFFF;'>Connect Your Wallet</h2>
+                <p style='color: #888888;'>Start trading with AI-powered insights</p>
             </div>
-            """,
-            unsafe_allow_html=True
-        )
+        """, unsafe_allow_html=True)
 
-        if st.button("Connect Wallet", use_container_width=True):
+        if st.button("🔐 Connect Wallet", use_container_width=True):
             connect_wallet()
 
-def dashboard_page():
-    """Main trading dashboard"""
-    st.title("Trading Dashboard")
+def render_ai_insights():
+    """Render AI trading insights section"""
+    st.subheader("🤖 AI Market Insights")
 
-    # Top metrics row
-    col1, col2, col3, col4 = st.columns(4)
+    col1, col2 = st.columns(2)
+
     with col1:
-        st.metric(
-            "Portfolio Value",
-            "$50,234.56",
-            "+2.3%",
-            help="Total value of your crypto portfolio"
-        )
+        st.markdown("""
+            <div class='market-card'>
+                <h4>Market Sentiment Analysis</h4>
+                <div style='display: flex; justify-content: space-between; margin-top: 20px;'>
+                    <div>
+                        <h5>BTC/USDT</h5>
+                        <p style='color: #00FF94;'>Strong Buy (85%)</p>
+                    </div>
+                    <div>
+                        <h5>ETH/USDT</h5>
+                        <p style='color: #FFB700;'>Neutral (52%)</p>
+                    </div>
+                </div>
+            </div>
+        """, unsafe_allow_html=True)
+
     with col2:
-        st.metric(
-            "24h Trading Volume",
-            "$1.2M",
-            "-5.1%",
-            help="Your trading volume in the last 24 hours"
-        )
-    with col3:
-        st.metric(
-            "Active Positions",
-            "3",
-            help="Number of open trading positions"
-        )
-    with col4:
-        st.metric(
-            "Today's P&L",
-            "+$234.12",
-            "+5.2%",
-            help="Profit/Loss for today's trades"
-        )
+        st.markdown("""
+            <div class='market-card'>
+                <h4>AI Price Predictions (24h)</h4>
+                <div style='display: flex; justify-content: space-between; margin-top: 20px;'>
+                    <div>
+                        <h5>BTC Target</h5>
+                        <p style='color: #00FF94;'>$48,500 (+5.2%)</p>
+                    </div>
+                    <div>
+                        <h5>ETH Target</h5>
+                        <p style='color: #00FF94;'>$3,200 (+4.1%)</p>
+                    </div>
+                </div>
+            </div>
+        """, unsafe_allow_html=True)
 
-    # Main content area
-    col_chart, col_trades = st.columns([2, 1])
+def render_trading_interface():
+    """Render the main trading interface"""
+    col1, col2 = st.columns([7,3])
 
-    with col_chart:
-        st.subheader("Market Analysis")
+    with col1:
+        # Advanced Chart
+        st.subheader("📈 Advanced Trading Chart")
 
-        # Crypto selector
-        selected_crypto = st.selectbox(
-            "Select Cryptocurrency",
-            ["BTC/USDT", "ETH/USDT", "SOL/USDT"],
-            index=0
-        )
+        # Chart settings
+        chart_settings = st.columns([2,2,2,2])
+        with chart_settings[0]:
+            pair = st.selectbox("Trading Pair", ["BTC/USDT", "ETH/USDT", "SOL/USDT"])
+        with chart_settings[1]:
+            timeframe = st.select_slider("Timeframe", ["1m", "5m", "15m", "1h", "4h", "1d"], value="1h")
+        with chart_settings[2]:
+            indicator = st.multiselect("Indicators", ["RSI", "MACD", "Bollinger Bands"], default=["RSI"])
+        with chart_settings[3]:
+            chart_type = st.selectbox("Chart Type", ["Candlestick", "Line", "Heikin-Ashi"])
 
-        # Timeframe selector
-        timeframe = st.select_slider(
-            "Timeframe",
-            options=["1H", "4H", "1D", "1W"],
-            value="4H"
-        )
+        # Generate chart
+        fig = go.Figure(data=[go.Candlestick(
+            x=[datetime.now() - timedelta(hours=x) for x in range(100)],
+            open=[45000 + x*10 for x in range(100)],
+            high=[45100 + x*10 for x in range(100)],
+            low=[44900 + x*10 for x in range(100)],
+            close=[45050 + x*10 for x in range(100)]
+        )])
 
-        # Price chart with technical indicators
-        fig = go.Figure()
-        fig.add_trace(go.Candlestick(
-            x=[datetime.now() - timedelta(hours=x) for x in range(24)],
-            open=[45000 + x*10 for x in range(24)],
-            high=[45100 + x*10 for x in range(24)],
-            low=[44900 + x*10 for x in range(24)],
-            close=[45050 + x*10 for x in range(24)]
-        ))
         fig.update_layout(
-            height=400,
+            height=600,
             margin=dict(l=0, r=0, t=0, b=0),
-            yaxis_title="Price (USDT)",
-            xaxis_title="Time"
+            paper_bgcolor="#1E1E1E",
+            plot_bgcolor="#1E1E1E",
+            font=dict(color="#CCCCCC"),
+            yaxis=dict(gridcolor="#333333"),
+            xaxis=dict(gridcolor="#333333")
         )
+
         st.plotly_chart(fig, use_container_width=True)
 
-        # Trading signals
-        st.subheader("Trading Signals")
-        signals_col1, signals_col2 = st.columns(2)
-        with signals_col1:
-            st.markdown("### Technical Analysis")
-            st.markdown("🟢 **RSI**: Oversold (30)")
-            st.markdown("🔴 **MACD**: Bearish Crossover")
-            st.markdown("🟡 **Moving Averages**: Neutral")
+    with col2:
+        st.subheader("💫 Quick Trade")
+        with st.form("trade_form"):
+            st.selectbox("Trading Pair", ["BTC/USDT", "ETH/USDT", "SOL/USDT"], key="trade_pair")
+            cols = st.columns(2)
+            with cols[0]:
+                st.radio("Side", ["Buy", "Sell"], key="trade_side")
+            with cols[1]:
+                st.radio("Type", ["Market", "Limit"], key="trade_type")
 
-        with signals_col2:
-            st.markdown("### AI Predictions")
-            st.markdown("🤖 **Sentiment**: Bullish (75%)")
-            st.markdown("📈 **Price Target**: $46,500")
-            st.markdown("⏱️ **Timeframe**: 24h")
+            amount = st.number_input("Amount", min_value=0.0, step=0.001, format="%.3f")
+            if st.session_state.get("trade_type") == "Limit":
+                price = st.number_input("Limit Price", min_value=0.0, step=0.1, format="%.2f")
 
-    with col_trades:
-        st.subheader("Active Positions")
-        positions = pd.DataFrame({
-            'Pair': ['BTC/USDT', 'ETH/USDT', 'SOL/USDT'],
-            'Type': ['Long', 'Short', 'Long'],
-            'Entry': ['$44,230', '$2,890', '$110.5'],
-            'Current': ['$45,100', '$2,850', '$112.3'],
-            'P/L': ['+2.3%', '-1.4%', '+1.6%']
-        })
-        st.dataframe(positions, use_container_width=True)
+            submit = st.form_submit_button("Place Order", use_container_width=True)
+            if submit:
+                st.success("Order placed successfully!")
 
-        st.subheader("Quick Trade")
-        trade_pair = st.selectbox("Trading Pair", ["BTC/USDT", "ETH/USDT", "SOL/USDT"])
-        trade_type = st.radio("Order Type", ["Market", "Limit"])
-        trade_side = st.radio("Side", ["Buy", "Sell"])
+def render_portfolio_metrics():
+    """Render portfolio metrics and performance"""
+    st.subheader("📊 Portfolio Overview")
 
-        col_amount, col_price = st.columns(2)
-        with col_amount:
-            amount = st.number_input("Amount", min_value=0.0, step=0.01)
-        with col_price:
-            if trade_type == "Limit":
-                price = st.number_input("Price", min_value=0.0, step=0.01)
+    # Key metrics
+    cols = st.columns(4)
+    metrics = [
+        {"label": "Portfolio Value", "value": "$50,234.56", "delta": "+2.3%"},
+        {"label": "24h PnL", "value": "$1,234.56", "delta": "+4.2%"},
+        {"label": "Active Trades", "value": "5", "delta": "+2"},
+        {"label": "Win Rate", "value": "73%", "delta": "+5%"}
+    ]
 
-        st.button("Place Order", type="primary", use_container_width=True)
+    for col, metric in zip(cols, metrics):
+        with col:
+            st.metric(
+                label=metric["label"],
+                value=metric["value"],
+                delta=metric["delta"]
+            )
+
+def render_auto_trading():
+    """Render auto-trading configuration"""
+    st.subheader("⚡ Auto-Trading")
+
+    col1, col2 = st.columns(2)
+
+    with col1:
+        st.markdown("""
+            <div class='market-card'>
+                <h4>Strategy Configuration</h4>
+                <div style='margin-top: 20px;'>
+        """, unsafe_allow_html=True)
+
+        strategy = st.selectbox("Trading Strategy", 
+            ["AI Momentum", "Smart Grid", "Volatility Breakout"])
+        risk_level = st.slider("Risk Level", 1, 10, 5)
+        max_trades = st.number_input("Max Concurrent Trades", 1, 10, 3)
+
+        st.markdown("</div></div>", unsafe_allow_html=True)
+
+    with col2:
+        st.markdown("""
+            <div class='market-card'>
+                <h4>Active Bot Status</h4>
+                <div style='margin-top: 20px;'>
+        """, unsafe_allow_html=True)
+
+        st.write("🟢 Bot Status: Running")
+        st.write("📈 Active Pairs: BTC/USDT, ETH/USDT")
+        st.write("⚡ Last Trade: 5 minutes ago")
+        st.write("💰 Today's Bot PnL: +$234.56")
+
+        st.markdown("</div></div>", unsafe_allow_html=True)
+
+def dashboard():
+    """Main dashboard after login"""
+    # Sidebar
+    with st.sidebar:
+        st.title("🤖 AurumBot Pro")
+
+        # Wallet info
+        if st.session_state.wallet_address:
+            st.markdown("""
+                <div style='background: #1E1E1E; padding: 15px; border-radius: 10px; margin-bottom: 20px;'>
+                    <p style='color: #888888; margin-bottom: 5px;'>Connected Wallet</p>
+                    <code style='color: #00FF94;'>
+                        {}...{}
+                    </code>
+                </div>
+            """.format(
+                st.session_state.wallet_address[:6],
+                st.session_state.wallet_address[-4:]
+            ), unsafe_allow_html=True)
+
+        # Navigation
+        st.markdown("### Navigation")
+        nav = st.radio("", ["Trading", "Portfolio", "Auto-Trading", "Settings"])
+
+        st.markdown("---")
+        if st.button("📤 Disconnect Wallet"):
+            st.session_state.authenticated = False
+            st.session_state.wallet_address = None
+            st.rerun()
+
+    # Main content
+    if nav == "Trading":
+        render_trading_interface()
+        render_ai_insights()
+    elif nav == "Portfolio":
+        render_portfolio_metrics()
+    elif nav == "Auto-Trading":
+        render_auto_trading()
+    elif nav == "Settings":
+        st.subheader("⚙️ Settings")
+        # Add settings interface here
 
 def initialize_session_state():
     """Initialize session state variables"""
@@ -202,22 +283,7 @@ def main():
     if not st.session_state.authenticated:
         login_page()
     else:
-        # Sidebar
-        with st.sidebar:
-            st.title("🤖 AurumBot Pro")
-            if st.session_state.wallet_address:
-                st.markdown(f"**Connected Wallet**")
-                st.code(f"{st.session_state.wallet_address[:6]}...{st.session_state.wallet_address[-4:]}")
-
-            st.markdown("---")
-
-            if st.button("Disconnect Wallet"):
-                st.session_state.authenticated = False
-                st.session_state.wallet_address = None
-                st.rerun()
-
-        # Main content
-        dashboard_page()
+        dashboard()
 
 if __name__ == "__main__":
     main()
