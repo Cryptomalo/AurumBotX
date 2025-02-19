@@ -1,135 +1,189 @@
-
-import streamlit as st
+import os
 import logging
 import sys
-from datetime import datetime
+import asyncio
+from datetime import datetime, timedelta
+from utils.database import DatabaseManager, get_db, get_async_db
+from utils.websocket_handler import WebSocketHandler
+from utils.prediction_model import PredictionModel
 from utils.data_loader import CryptoDataLoader
+from utils.strategies.scalping import ScalpingStrategy
+import pandas as pd
 
 # Setup logging
 logging.basicConfig(
-    level=logging.DEBUG,
+    level=logging.INFO,
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
     handlers=[
         logging.StreamHandler(sys.stdout),
-        logging.FileHandler('streamlit_test.log', mode='w')
+        logging.FileHandler('system_test.log', mode='w')
     ]
 )
 logger = logging.getLogger(__name__)
 
-def main():
+async def test_database():
+    """Test database connectivity and operations"""
     try:
-        logger.info("Starting minimal test app")
-        
-        # Basic page config
-        st.set_page_config(
-            page_title="AurumBot Test",
-            layout="wide"
-        )
-        
-        st.title("🤖 AurumBot Test")
-        st.write("Test di funzionalità base")
+        logger.info("Test 1: Database Connection")
+        db_manager = DatabaseManager()
 
-        # Initialize data loader
-        data_loader = CryptoDataLoader()
-        
-        # Test cryptocurrency data loading
-        btc_price = data_loader.get_current_price("BTC-USD")
-        if btc_price:
-            st.success(f"✅ Data Loader funzionante - Prezzo BTC: ${btc_price:,.2f}")
-        else:
-            st.error("❌ Errore nel caricamento dei dati")
+        # Test sync connection
+        db_url = os.getenv('DATABASE_URL')
+        if not db_url:
+            logger.error("DATABASE_URL not set")
+            return False
+
+        sync_result = db_manager.initialize(db_url)
+        if not sync_result:
+            logger.error("Sync database connection failed")
+            return False
+        logger.info("✅ Sync database connection successful")
+
+        # Test async connection
+        async_result = await db_manager.initialize_async(db_url)
+        if not async_result:
+            logger.error("Async database connection failed")
+            return False
+        logger.info("✅ Async database connection successful")
+
+        return True
 
     except Exception as e:
-        logger.error(f"Error in app: {str(e)}", exc_info=True)
-        st.error(f"Si è verificato un errore: {str(e)}")
+        logger.error(f"Database test error: {str(e)}")
+        return False
 
-if __name__ == "__main__":
-    main()
-import streamlit as st
-import logging
-import sys
+async def test_websocket():
+    """Test WebSocket connection and data streaming"""
+    try:
+        logger.info("Test 2: WebSocket Connection")
+        ws_handler = WebSocketHandler()
 
-# Setup logging
-logging.basicConfig(
-    level=logging.DEBUG,
-    format='%(asctime)s - %(levelname)s - %(message)s',
-    handlers=[
-        logging.StreamHandler(sys.stdout),
-        logging.FileHandler('streamlit_test.log')
-    ]
-)
-logger = logging.getLogger(__name__)
+        # Test connection
+        if not await ws_handler.initialize():
+            logger.error("WebSocket initialization failed")
+            return False
 
-logger.info("Starting minimal test app")
+        # Test connection status
+        if not ws_handler.is_connected():
+            logger.error("WebSocket not connected")
+            return False
 
-try:
-    # Basic title
-    st.title("Test App")
-    st.write("If you see this message, Streamlit is working!")
+        logger.info("✅ WebSocket connection successful")
 
-    logger.info("Basic UI elements rendered")
+        # Test message sending
+        test_message = {"type": "subscribe", "symbol": "BTCUSDT"}
+        if not await ws_handler.send_message(test_message):
+            logger.error("Failed to send test message")
+            return False
 
-except Exception as e:
-    logger.error(f"Error in test app: {str(e)}", exc_info=True)
-    st.error("An error occurred")import logging
-from datetime import datetime, timedelta
-import asyncio
-from utils.backtesting import Backtester
-from utils.strategies.scalping import ScalpingStrategy
+        logger.info("✅ WebSocket message sending successful")
+        await ws_handler.cleanup()
+        return True
 
-# Configure logging
-logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger(__name__)
+    except Exception as e:
+        logger.error(f"WebSocket test error: {str(e)}")
+        return False
+
+async def test_prediction_model():
+    """Test prediction model with real market data"""
+    try:
+        logger.info("Test 3: Prediction Model")
+        model = PredictionModel()
+        data_loader = CryptoDataLoader()
+
+        # Get real market data
+        market_data = await data_loader.get_historical_data("BTCUSDT", "1h", limit=100)
+        if market_data.empty:
+            logger.error("Failed to load market data")
+            return False
+
+        # Test model training
+        metrics = await model.train_async(market_data)
+        if not metrics:
+            logger.error("Model training failed")
+            return False
+        logger.info("✅ Model training successful")
+
+        # Test prediction
+        prediction = await model.predict_async(market_data)
+        if not prediction:
+            logger.error("Prediction failed")
+            return False
+
+        logger.info(f"✅ Prediction successful: {prediction}")
+        return True
+
+    except Exception as e:
+        logger.error(f"Prediction model test error: {str(e)}")
+        return False
+
+async def test_trading_strategy():
+    """Test trading strategy with real market data"""
+    try:
+        logger.info("Test 4: Trading Strategy")
+        strategy = ScalpingStrategy({
+            'volume_threshold': 500000,
+            'min_volatility': 0.001,
+            'profit_target': 0.003,
+            'initial_stop_loss': 0.002,
+            'trailing_stop': 0.001,
+            'testnet': True
+        })
+
+        data_loader = CryptoDataLoader()
+
+        # Get recent market data
+        market_data = await data_loader.get_historical_data("BTCUSDT", "1m", limit=100)
+        if market_data.empty:
+            logger.error("Failed to load strategy test data")
+            return False
+
+        # Test strategy signals
+        signals = await strategy.generate_signals(market_data)
+        if not signals:
+            logger.error("Strategy signal generation failed")
+            return False
+
+        logger.info(f"✅ Strategy signals generated successfully: {len(signals)} signals")
+        return True
+
+    except Exception as e:
+        logger.error(f"Trading strategy test error: {str(e)}")
+        return False
 
 async def main():
-    # Initialize strategy with test configuration
-    strategy = ScalpingStrategy({
-        'volume_threshold': 500000,  # Ridotto per avere più segnali
-        'min_volatility': 0.001,    # Ridotto al 0.1%
-        'profit_target': 0.003,     # Target profit al 0.3%
-        'initial_stop_loss': 0.002, # Stop loss al 0.2%
-        'trailing_stop': 0.001,     # Trailing stop al 0.1%
-        'testnet': True
-    })
-
-    # Set up backtester with longer timeframe
-    symbol = "BTC-USDT"
-    initial_balance = 10000
-    start_date = datetime.now() - timedelta(days=7)  # Ridotto a 7 giorni per test più precisi
-    end_date = datetime.now()
-
-    backtester = Backtester(
-        symbol=symbol,
-        strategy=strategy,
-        initial_balance=initial_balance,
-        start_date=start_date,
-        end_date=end_date
-    )
-
-    # Run backtest
+    """Run all system tests"""
     try:
-        results = await backtester.run_backtest()
+        logger.info("Starting system tests...")
 
-        # Print results
-        print("\nBacktest Results:")
-        print(f"Strategy: {results.strategy_name}")
-        print(f"Symbol: {results.symbol}")
-        print(f"Period: {results.start_date} to {results.end_date}")
-        print(f"Initial Balance: ${results.initial_balance:,.2f}")
-        print(f"Final Balance: ${results.final_balance:,.2f}")
-        print(f"Total Profit/Loss: ${results.profit_loss:,.2f}")
-        print(f"Win Rate: {results.win_rate:.2%}")
-        print(f"Total Trades: {results.total_trades}")
-        print(f"Sharpe Ratio: {results.sharpe_ratio:.2f}")
-        print(f"Max Drawdown: {results.max_drawdown:.2%}")
+        # Database test
+        if not await test_database():
+            logger.error("❌ Database tests failed")
+            return
+        logger.info("✅ All database tests passed")
 
-        # Additional performance metrics
-        print("\nPerformance Metrics:")
-        for metric, value in results.performance_metrics.items():
-            print(f"{metric}: {value:.2f}")
+        # WebSocket test
+        if not await test_websocket():
+            logger.error("❌ WebSocket tests failed")
+            return
+        logger.info("✅ All WebSocket tests passed")
+
+        # Prediction model test
+        if not await test_prediction_model():
+            logger.error("❌ Prediction model tests failed")
+            return
+        logger.info("✅ All prediction model tests passed")
+
+        # Trading strategy test
+        if not await test_trading_strategy():
+            logger.error("❌ Trading strategy tests failed")
+            return
+        logger.info("✅ All trading strategy tests passed")
+
+        logger.info("✅ All system tests completed successfully")
 
     except Exception as e:
-        logger.error(f"Backtesting error: {str(e)}")
+        logger.error(f"System test error: {str(e)}")
 
 if __name__ == "__main__":
     asyncio.run(main())

@@ -31,6 +31,10 @@ args = "Streamlit Interface"
 task = "workflow.run"
 args = "Trading Bot"
 
+[[workflows.workflow.tasks]]
+task = "workflow.run"
+args = "System Tests"
+
 [[workflows.workflow]]
 name = "Streamlit Interface"
 author = "agent"
@@ -59,6 +63,20 @@ task = "packager.installForAll"
 [[workflows.workflow.tasks]]
 task = "shell.exec"
 args = "python3 start_trading.py"
+
+[[workflows.workflow]]
+name = "System Tests"
+author = "agent"
+
+[workflows.workflow.metadata]
+agentRequireRestartOnSave = false
+
+[[workflows.workflow.tasks]]
+task = "packager.installForAll"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "python3 utils/test_suite.py"
 
 [[ports]]
 localPort = 3000
