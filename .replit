@@ -17,10 +17,10 @@ mode = "parallel"
 
 [[workflows.workflow.tasks]]
 task = "workflow.run"
-args = "Trading Bot"
+args = "Trading System"
 
 [[workflows.workflow]]
-name = "Trading Bot"
+name = "Trading System"
 mode = "parallel"
 author = "agent"
 

@@ -5,6 +5,7 @@ from sqlalchemy.ext.asyncio import create_async_engine, AsyncEngine, AsyncSessio
 from sqlalchemy.ext.asyncio import async_sessionmaker
 from sqlalchemy import text
 from urllib.parse import urlparse, parse_qs
+from utils.models import Base
 
 class DatabaseManager:
     def __init__(self, max_retries: int = 3, retry_delay: int = 5):
@@ -54,6 +55,11 @@ class DatabaseManager:
                 expire_on_commit=False,
                 class_=AsyncSession
             )
+
+            # Create tables
+            async with self.engine.begin() as conn:
+                await conn.run_sync(Base.metadata.create_all)
+                self.logger.info("Database tables created successfully")
 
             # Verify connection
             if await self.verify_connection():

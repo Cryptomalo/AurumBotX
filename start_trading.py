@@ -4,8 +4,6 @@ import os
 import signal
 from datetime import datetime
 from utils.trading_bot import WebSocketHandler
-from sqlalchemy import create_engine
-from sqlalchemy.orm import sessionmaker
 
 # Configure logging
 log_filename = f'trading_bot_{datetime.now().strftime("%Y%m%d_%H%M%S")}.log'
@@ -34,14 +32,7 @@ class TradingBot:
 
     async def start(self):
         try:
-            db_url = os.getenv('DATABASE_URL')
-            if not db_url:
-                raise ValueError("DATABASE_URL not set")
-
-            engine = create_engine(db_url)
-            Session = sessionmaker(bind=engine)
-
-            self.handler = WebSocketHandler(logger=logger, db=Session())
+            self.handler = WebSocketHandler()
 
             if await self.handler.connect_websocket():
                 logger.info("Trading bot started successfully")
