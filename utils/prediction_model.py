@@ -115,34 +115,15 @@ class PredictionModel:
             self.logger.error(f"Error creating features: {str(e)}")
             raise
 
-    def prepare_data(self, data: Any, target_column: str = 'Close',
+    def prepare_data(self, df: pd.DataFrame, target_column: str = 'Close',
                      prediction_horizon: int = 5) -> tuple:
         """Prepare data for training with improved validation"""
         try:
             # Convert dict to DataFrame if necessary
-            if isinstance(data, dict):
-                # Handle scalar values
-                if all(not isinstance(v, (list, np.ndarray)) for v in data.values()):
-                    # Convert scalar dict to single-row DataFrame
-                    df = pd.DataFrame([data])
-                    # Ensure all required columns are present
-                    for col in self.required_columns:
-                        if col not in df.columns:
-                            df[col] = 0.0  # Default value for missing columns
-                else:
-                    df = pd.DataFrame(data)
-
-                # Ensure proper index
-                if 'timestamp' in data:
-                    df.index = pd.to_datetime(data['timestamp'])
-                else:
-                    df.index = pd.date_range(end=datetime.now(), periods=len(df), freq='1min')
-            elif isinstance(data, pd.DataFrame):
-                df = data.copy()
-                if df.index.empty:
-                    df.index = pd.date_range(end=datetime.now(), periods=len(df), freq='1min')
-            else:
-                raise ValueError(f"Unsupported data type: {type(data)}")
+            if isinstance(df, dict):
+                df = pd.DataFrame(df)
+            elif not isinstance(df, pd.DataFrame):
+                raise ValueError(f"Unsupported data type: {type(df)}")
 
             if not self._validate_dataframe(df):
                 raise ValueError("Invalid DataFrame structure")
@@ -154,15 +135,27 @@ class PredictionModel:
             if target_column not in df.columns:
                 raise ValueError(f"Target column '{target_column}' not found")
 
+            # Ensure numeric type for target column
+            df[target_column] = pd.to_numeric(df[target_column], errors='coerce')
+
+            # Create target variables
             df['target'] = df[target_column].shift(-prediction_horizon)
             df['target_returns'] = df['target'].pct_change(prediction_horizon)
 
             # Select features with validation
             feature_columns = [col for col in df.columns
-                               if col not in ['target', 'target_returns'] + self.required_columns]
+                            if col not in ['target', 'target_returns'] + self.required_columns
+                            and pd.api.types.is_numeric_dtype(df[col])]  # Only select numeric columns
 
             if not feature_columns:
-                raise ValueError("No valid feature columns found after preparation")
+                raise ValueError("No valid numeric feature columns found after preparation")
+
+            # Convert all feature columns to numeric, replacing non-numeric with NaN
+            for col in feature_columns:
+                df[col] = pd.to_numeric(df[col], errors='coerce')
+
+            # Drop rows with NaN values
+            df = df.dropna(subset=feature_columns + ['target_returns'])
 
             X = df[feature_columns].iloc[:-prediction_horizon]
             y = df['target_returns'].iloc[:-prediction_horizon]
