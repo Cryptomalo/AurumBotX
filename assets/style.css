@@ -110,7 +110,6 @@
     border-color: #daa520;
 }
 
-
 /* Charts styling */
 .js-plotly-plot {
     background: rgba(26, 32, 44, 0.8) !important;
@@ -226,15 +225,6 @@ h1, h2, h3 {
         font-size: 0.9rem;
     }
 }
-
-/* Tema oro per AurumBot */
-.sidebar .stButton button {
-    background: linear-gradient(135deg, #ffd700 0%, #daa520 100%);
-    color: #000000;
-    border: none;
-    font-weight: 600;
-}
-
 
 /* Signal cards */
 .signal-card {
