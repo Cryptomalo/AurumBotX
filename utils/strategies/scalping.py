@@ -4,6 +4,7 @@ import numpy as np
 from utils.strategies.base_strategy import BaseStrategy
 import logging
 import asyncio
+from cachetools import TTLCache
 
 logger = logging.getLogger(__name__)
 
@@ -20,6 +21,11 @@ class ScalpingStrategy(BaseStrategy):
         self.rsi_overbought = config.get('rsi_overbought', 65)
         self.volume_anomaly_threshold = 2.0
         self.min_profit_factor = 1.5
+
+        # Cache configuration
+        self._indicator_cache = TTLCache(maxsize=100, ttl=60)  # 1 minute cache
+        self._analysis_cache = TTLCache(maxsize=50, ttl=30)    # 30 seconds cache
+
         self.logger = logger
 
     async def analyze_market(
@@ -27,59 +33,50 @@ class ScalpingStrategy(BaseStrategy):
         market_data: pd.DataFrame, 
         sentiment_data: Optional[Dict] = None
     ) -> List[Dict[str, Any]]:
-        """Analisi di mercato ultra-rapida con rilevamento anomalie"""
+        """Analisi di mercato ultra-rapida con rilevamento anomalie e caching"""
         try:
             if market_data is None or market_data.empty:
                 return []
 
-            # Standardizzazione colonne
-            volume = market_data.get('Volume', market_data.get('volume'))
-            close = market_data.get('Close', market_data.get('close'))
-            high = market_data.get('High', market_data.get('high'))
-            low = market_data.get('Low', market_data.get('low'))
+            # Check cache first
+            cache_key = f"{market_data.index[-1]}"
+            cached_analysis = self._analysis_cache.get(cache_key)
+            if cached_analysis:
+                return cached_analysis
 
-            # Analisi volume avanzata
-            volume_sma = volume.rolling(window=5).mean()
-            volume_std = volume.rolling(window=5).std()
-            volume_ratio = volume.iloc[-1] / volume_sma.iloc[-1]
-            volume_anomaly = (volume.iloc[-1] - volume_sma.iloc[-1]) / volume_std.iloc[-1]
-            volume_trend = volume.pct_change(3).mean()
+            # Standardizzazione colonne con validazione
+            required_columns = ['Volume', 'Close', 'High', 'Low']
+            available_columns = {col.lower(): col for col in market_data.columns}
 
-            # Analisi volatilità e momentum
-            volatility = close.pct_change().rolling(window=5).std().iloc[-1] * np.sqrt(288)
-            momentum = close.pct_change(periods=3).iloc[-1]
-            price_trend = close.pct_change(3).ewm(span=3).mean().iloc[-1]
+            volume = market_data[available_columns.get('volume', 'Volume')]
+            close = market_data[available_columns.get('close', 'Close')]
+            high = market_data[available_columns.get('high', 'High')]
+            low = market_data[available_columns.get('low', 'Low')]
+
+            # Batch calculation of technical indicators
+            indicators = await self._calculate_indicators(volume, close, high, low)
 
             current_price = close.iloc[-1]
 
-            # Calcolo livelli dinamici
-            recent_high = high.rolling(window=12).max().iloc[-1]
-            recent_low = low.rolling(window=12).min().iloc[-1]
-            price_range = recent_high - recent_low
-
-            # Take profit adattivo
-            adaptive_profit_target = max(self.profit_target, volatility * 0.5)
-            adaptive_stop_loss = min(self.initial_stop_loss, volatility * 0.3)
-
-            # Integrazione sentiment
-            sentiment_score = sentiment_data.get('sentiment_score', 0.5) if sentiment_data else 0.5
-
             analysis = [{
                 'volume_24h': volume.iloc[-1],
-                'volume_ratio': volume_ratio,
-                'volume_trend': volume_trend,
-                'volume_anomaly': volume_anomaly,
-                'volatility': volatility,
-                'momentum': momentum,
-                'price_trend': price_trend,
+                'volume_ratio': indicators['volume_ratio'],
+                'volume_trend': indicators['volume_trend'],
+                'volume_anomaly': indicators['volume_anomaly'],
+                'volatility': indicators['volatility'],
+                'momentum': indicators['momentum'],
+                'price_trend': indicators['price_trend'],
                 'current_price': current_price,
-                'nearest_resistance': recent_high,
-                'nearest_support': recent_low,
-                'price_range': price_range,
-                'adaptive_profit': adaptive_profit_target,
-                'adaptive_stop': adaptive_stop_loss,
-                'sentiment_score': sentiment_score
+                'nearest_resistance': indicators['recent_high'],
+                'nearest_support': indicators['recent_low'],
+                'price_range': indicators['price_range'],
+                'adaptive_profit': max(self.profit_target, indicators['volatility'] * 0.5),
+                'adaptive_stop': min(self.initial_stop_loss, indicators['volatility'] * 0.3),
+                'sentiment_score': sentiment_data.get('sentiment_score', 0.5) if sentiment_data else 0.5
             }]
+
+            # Cache the results
+            self._analysis_cache[cache_key] = analysis
 
             return analysis
 
@@ -87,120 +84,166 @@ class ScalpingStrategy(BaseStrategy):
             self.logger.error(f"Market analysis error: {str(e)}")
             return []
 
-    def generate_signals(self, analysis: Dict[str, Any]) -> Dict[str, Any]:
-        """Generazione segnali ultra-veloce con conferme multiple"""
+    async def _calculate_indicators(self, volume: pd.Series, close: pd.Series, 
+                                 high: pd.Series, low: pd.Series) -> Dict[str, float]:
+        """Calcolo ottimizzato degli indicatori tecnici con caching"""
         try:
-            signal = {
-                'action': 'hold',
-                'confidence': 0.0,
-                'target_price': None,
-                'stop_loss': None,
-                'size_factor': 0.0
+            cache_key = f"{close.index[-1]}"
+            cached_indicators = self._indicator_cache.get(cache_key)
+            if cached_indicators:
+                return cached_indicators
+
+            # Parallel calculation of indicators
+            volume_sma = volume.rolling(window=5).mean()
+            volume_std = volume.rolling(window=5).std()
+
+            indicators = {
+                'volume_ratio': volume.iloc[-1] / volume_sma.iloc[-1],
+                'volume_anomaly': (volume.iloc[-1] - volume_sma.iloc[-1]) / volume_std.iloc[-1],
+                'volume_trend': volume.pct_change(3).mean(),
+                'volatility': close.pct_change().rolling(window=5).std().iloc[-1] * np.sqrt(288),
+                'momentum': close.pct_change(periods=3).iloc[-1],
+                'price_trend': close.pct_change(3).ewm(span=3).mean().iloc[-1],
+                'recent_high': high.rolling(window=12).max().iloc[-1],
+                'recent_low': low.rolling(window=12).min().iloc[-1]
             }
 
-            # Analisi volume anomalo
-            volume_spike = analysis.get('volume_anomaly', 0) > 2.0
-            volume_trend_positive = analysis.get('volume_trend', 0) > 0
+            indicators['price_range'] = indicators['recent_high'] - indicators['recent_low']
 
-            # Check volatilità e momentum
-            volatility_ok = analysis.get('volatility', 0) > self.min_volatility * 0.7
-            strong_momentum = abs(analysis.get('momentum', 0)) > self.min_volatility
+            # Cache the results
+            self._indicator_cache[cache_key] = indicators
 
-            # Calcolo score trend con pesi
-            trend_factors = [
-                (1 if analysis.get('price_trend', 0) > 0 else -1) * 2.0,  # Maggior peso al trend
-                (1 if analysis.get('momentum', 0) > 0 else -1) * 1.5,
-                (1 if analysis.get('volume_trend', 0) > 0 else -1),
-                (1 if analysis.get('sentiment_score', 0.5) > 0.6 else -1) * 1.2  # Integrazione sentiment
-            ]
+            return indicators
 
-            trend_score = sum(trend_factors) / 5.7  # Normalizzato tra -1 e 1
+        except Exception as e:
+            self.logger.error(f"Error calculating indicators: {str(e)}")
+            return {}
 
-            # Calcolo forza segnale con più indicatori
-            signal_strength = min(1.0, (
-                (analysis.get('volume_ratio', 1) - 1) * 0.15 +
-                (analysis.get('volatility', 0) / self.min_volatility) * 0.15 +
-                abs(analysis.get('momentum', 0)) * 0.2 +
-                analysis.get('sentiment_score', 0.5) * 0.2
-            ))
+    def generate_signals(self, analysis: Dict[str, Any]) -> Dict[str, Any]:
+        """Generazione segnali ultra-veloce con validazione migliorata"""
+        try:
+            if not analysis:
+                return self._get_default_signal()
 
-            # Generazione segnali con condizioni ottimizzate
-            if (volume_spike or (volatility_ok and volume_trend_positive)) and strong_momentum:
-                current_price = analysis.get('current_price', 0)
-                adaptive_profit = analysis.get('adaptive_profit', self.profit_target)
-                adaptive_stop = analysis.get('adaptive_stop', self.initial_stop_loss)
+            # Validazione input
+            required_fields = ['volume_anomaly', 'volatility', 'momentum', 'current_price']
+            if not all(field in analysis for field in required_fields):
+                self.logger.warning("Missing required fields in analysis")
+                return self._get_default_signal()
 
-                # Determina azione basata su score trend
-                if trend_score > 0.3:  # Soglia ridotta per più segnali
-                    action = 'buy'
-                    target_price = current_price * (1 + adaptive_profit)
-                    stop_loss = current_price * (1 - adaptive_stop)
-                elif trend_score < -0.3:
-                    action = 'sell'
-                    target_price = current_price * (1 - adaptive_profit)
-                    stop_loss = current_price * (1 + adaptive_stop)
-                else:
-                    return signal
+            # Score calculation with weights
+            weights = {
+                'volume': 0.3,
+                'volatility': 0.2,
+                'momentum': 0.25,
+                'sentiment': 0.25
+            }
 
-                # Verifica rapporto rischio/rendimento
-                risk = abs(current_price - stop_loss)
-                reward = abs(current_price - target_price)
-                if reward / risk >= self.min_profit_factor:
-                    signal.update({
-                        'action': action,
-                        'confidence': signal_strength,
-                        'target_price': target_price,
-                        'stop_loss': stop_loss,
-                        'trailing_stop': self.trailing_stop,
-                        'size_factor': signal_strength
-                    })
+            scores = {
+                'volume': min(1.0, analysis['volume_ratio'] if analysis.get('volume_ratio', 0) > 0 else 0),
+                'volatility': min(1.0, analysis['volatility'] / self.min_volatility if analysis['volatility'] > 0 else 0),
+                'momentum': min(1.0, abs(analysis['momentum']) * 2),
+                'sentiment': analysis.get('sentiment_score', 0.5)
+            }
 
-            return signal
+            signal_strength = sum(score * weights[key] for key, score in scores.items())
+
+            if signal_strength > 0.6:  # Threshold for signal generation
+                return self._generate_trade_signal(analysis, signal_strength)
+
+            return self._get_default_signal()
 
         except Exception as e:
             self.logger.error(f"Signal generation error: {str(e)}")
-            return {
-                'action': 'hold',
-                'confidence': 0.0,
-                'target_price': None,
-                'stop_loss': None,
-                'size_factor': 0.0
-            }
+            return self._get_default_signal()
+
+    def _generate_trade_signal(self, analysis: Dict[str, Any], strength: float) -> Dict[str, Any]:
+        """Generate optimized trade signal"""
+        current_price = analysis['current_price']
+        adaptive_profit = analysis['adaptive_profit']
+        adaptive_stop = analysis['adaptive_stop']
+
+        # Determine trade direction
+        if analysis['momentum'] > 0:
+            action = 'buy'
+            target_price = current_price * (1 + adaptive_profit)
+            stop_loss = current_price * (1 - adaptive_stop)
+        else:
+            action = 'sell'
+            target_price = current_price * (1 - adaptive_profit)
+            stop_loss = current_price * (1 + adaptive_stop)
+
+        return {
+            'action': action,
+            'confidence': strength,
+            'target_price': target_price,
+            'stop_loss': stop_loss,
+            'trailing_stop': self.trailing_stop,
+            'size_factor': strength * 0.8  # Reduced position size for safety
+        }
+
+    def _get_default_signal(self) -> Dict[str, Any]:
+        """Return default hold signal"""
+        return {
+            'action': 'hold',
+            'confidence': 0.0,
+            'target_price': None,
+            'stop_loss': None,
+            'size_factor': 0.0
+        }
 
     async def validate_trade(self, signal: Dict[str, Any], portfolio: Dict[str, Any]) -> bool:
-        """Validates a potential scalping trade"""
+        """Validates a potential scalping trade with enhanced risk management"""
         try:
             if signal['action'] == 'hold':
                 return False
 
-            # Verify available capital
-            required_capital = portfolio.get('available_capital', 0) * signal['size_factor']
-            min_trade_size = 50  # Minimum trade size
-
-            if required_capital < min_trade_size:
+            # Input validation
+            required_fields = ['action', 'confidence', 'target_price', 'stop_loss', 'size_factor']
+            if not all(field in signal for field in required_fields):
+                self.logger.warning("Invalid signal format")
                 return False
 
-            # Calculate potential risk
+            # Portfolio validation
+            required_capital = portfolio.get('available_capital', 0) * signal['size_factor']
+            min_trade_size = portfolio.get('min_trade_size', 50)
+
+            if required_capital < min_trade_size:
+                self.logger.info(f"Insufficient capital for minimum trade size: {min_trade_size}")
+                return False
+
+            # Risk management
             risk_per_trade = abs(signal['target_price'] - signal['stop_loss']) * required_capital
             max_risk = portfolio.get('total_capital', 0) * 0.01  # 1% max risk per trade
 
-            # Verify spread
+            # Market condition validation
             current_spread = portfolio.get('current_spread', 0.001)
             min_profit_after_fees = self.profit_target * 2
 
-            return risk_per_trade <= max_risk and current_spread < min_profit_after_fees
+            if risk_per_trade > max_risk:
+                self.logger.info(f"Trade risk {risk_per_trade} exceeds maximum allowed {max_risk}")
+                return False
+
+            if current_spread >= min_profit_after_fees:
+                self.logger.info(f"Spread {current_spread} too high compared to target profit {min_profit_after_fees}")
+                return False
+
+            return True
 
         except Exception as e:
             self.logger.error(f"Trade validation error: {str(e)}")
             return False
 
     async def execute_trade(self, signal: Dict[str, Any]) -> Dict[str, Any]:
-        """Executes a scalping trade based on the signal"""
+        """Executes a scalping trade with enhanced error handling"""
         try:
             if signal['action'] == 'hold':
                 return {'success': False, 'reason': 'No trade signal'}
 
-            # Simulate trade execution for testnet
+            # Validate input
+            if not all(k in signal for k in ['action', 'confidence', 'target_price', 'stop_loss']):
+                raise ValueError("Invalid signal format")
+
             execution = {
                 'success': True,
                 'action': signal['action'],
@@ -212,7 +255,7 @@ class ScalpingStrategy(BaseStrategy):
                 'confidence': signal.get('confidence', 0.0)
             }
 
-            # Update performance metrics
+            # Update metrics
             self.update_performance(execution)
 
             return execution
