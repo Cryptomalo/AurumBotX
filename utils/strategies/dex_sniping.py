@@ -8,6 +8,8 @@ from typing import Dict, List, Optional, Any
 import pandas as pd
 from utils.strategies.base_strategy import BaseStrategy
 from cachetools import TTLCache
+from functools import lru_cache
+import time
 
 logger = logging.getLogger(__name__)
 
@@ -15,58 +17,197 @@ class DexSnipingStrategy(BaseStrategy):
     def __init__(self, config: Dict[str, Any]):
         super().__init__("DEX Sniping", config)
         self.w3 = Web3(Web3.HTTPProvider(config['rpc_url']))
-        self.min_liquidity = config.get('min_liquidity', 5)  # In ETH/BNB
-        self.max_buy_tax = config.get('max_buy_tax', 10)  # 10%
-        self.min_holders = config.get('min_holders', 50)
+        # Parametri ottimizzati
+        self.min_liquidity = config.get('min_liquidity', 2)  # Ridotto da 5 a 2 ETH
+        self.max_buy_tax = config.get('max_buy_tax', 8)     # Ridotto da 10 a 8%
+        self.min_holders = config.get('min_holders', 30)    # Ridotto da 50 a 30
         self.dex_url = "https://api.dexscreener.com/latest/dex"
-        self.last_scan = datetime.now()
-        self.scanned_pairs = set()
         self.testnet = config.get('testnet', True)
 
-        # Cache configuration
-        self._contract_cache = TTLCache(maxsize=1000, ttl=3600)  # 1 hour cache
-        self._holder_cache = TTLCache(maxsize=1000, ttl=300)     # 5 minutes cache
-        self._tax_cache = TTLCache(maxsize=1000, ttl=300)        # 5 minutes cache
+        # Cache ottimizzata con TTL più brevi
+        self._contract_cache = TTLCache(maxsize=500, ttl=1800)  # 30 min (ridotto da 1h)
+        self._holder_cache = TTLCache(maxsize=500, ttl=180)    # 3 min (ridotto da 5m)
+        self._tax_cache = TTLCache(maxsize=500, ttl=180)       # 3 min (ridotto da 5m)
 
-        # Batch processing configuration
-        self.batch_size = config.get('batch_size', 50)
-        self.batch_interval = config.get('batch_interval', 10)  # seconds
+        # Configurazione batch migliorata
+        self.batch_size = config.get('batch_size', 25)         # Ridotto da 50 a 25
+        self.batch_interval = config.get('batch_interval', 5)   # Ridotto da 10s a 5s
         self._batch_queue = []
         self._last_batch_time = datetime.now()
+
+        # Rate limiting
+        self._request_timestamps = []
+        self.max_requests_per_minute = 30
+        self.request_window = 60  # secondi
+
+    @lru_cache(maxsize=100)
+    def _get_contract_abi(self, address: str) -> Dict:
+        """Cache ABI per contratti frequentemente utilizzati"""
+        try:
+            # Implementare logica ABI caching
+            return {}
+        except Exception as e:
+            logger.error(f"ABI retrieval error: {e}")
+            return {}
 
     async def analyze_market(
         self,
         market_data: pd.DataFrame,
-        sentiment_data: Optional[Dict[str, Any]] = None
+        sentiment_data: Optional[Dict] = None
     ) -> List[Dict[str, Any]]:
-        """Analyzes DEX market for sniping opportunities with optimized batch processing"""
+        """Analyzes DEX market with improved efficiency"""
         try:
+            if not self._can_make_request():
+                logger.warning("Rate limit reached, skipping market analysis")
+                return []
+
             new_pairs = await self.scan_new_pairs()
+            if not new_pairs:
+                return []
+
             signals = []
+            batch_results = await asyncio.gather(
+                *[self._analyze_pair(pair) for pair in new_pairs],
+                return_exceptions=True
+            )
 
-            # Process pairs in batches to reduce API calls
-            for i in range(0, len(new_pairs), self.batch_size):
-                batch = new_pairs[i:i + self.batch_size]
-                validated_pairs = await asyncio.gather(
-                    *[self.validate_pair(pair) for pair in batch]
-                )
-
-                for pair, is_valid in zip(batch, validated_pairs):
-                    if is_valid:
-                        signals.append({
-                            'action': 'SNIPE',
-                            'pair_address': pair['pair'],
-                            'token_address': pair['token'],
-                            'liquidity': pair['liquidity'],
-                            'confidence': pair['confidence'],
-                            'timestamp': datetime.now().isoformat()
-                        })
+            for result in batch_results:
+                if isinstance(result, dict) and result.get('is_valid'):
+                    signals.append({
+                        'action': 'SNIPE',
+                        'pair_address': result['pair'],
+                        'token_address': result['token'],
+                        'liquidity': result['liquidity'],
+                        'confidence': result['confidence'],
+                        'timestamp': datetime.now().isoformat()
+                    })
 
             return signals
 
         except Exception as e:
             logger.error(f"DEX market analysis error: {e}")
             return []
+
+    async def _analyze_pair(self, pair: Dict) -> Dict[str, Any]:
+        """Analyze single pair with optimized validation"""
+        try:
+            if not await self.validate_pair(pair):
+                return {'is_valid': False}
+
+            confidence = await self._calculate_confidence(pair)
+            if confidence < 0.7:
+                return {'is_valid': False}
+
+            return {
+                'is_valid': True,
+                'pair': pair['pair'],
+                'token': pair['token'],
+                'liquidity': pair['liquidity'],
+                'confidence': confidence
+            }
+
+        except Exception as e:
+            logger.error(f"Pair analysis error: {e}")
+            return {'is_valid': False}
+
+    def _can_make_request(self) -> bool:
+        """Check rate limiting with sliding window"""
+        current_time = time.time()
+        self._request_timestamps = [
+            ts for ts in self._request_timestamps 
+            if current_time - ts <= self.request_window
+        ]
+
+        if len(self._request_timestamps) >= self.max_requests_per_minute:
+            return False
+
+        self._request_timestamps.append(current_time)
+        return True
+
+    async def validate_trade(self, signal: Dict[str, Any], portfolio: Dict[str, Any]) -> bool:
+        """Validates trading signal with enhanced risk management"""
+        try:
+            # Input validation
+            if not all(k in signal for k in ['action', 'confidence', 'pair_address']):
+                return False
+
+            # Portfolio checks
+            min_trade_amount = self.config.get('min_trade_amount', 0.05)  # Ridotto da 0.1
+            if portfolio.get('balance', 0) < min_trade_amount:
+                logger.info(f"Insufficient balance for minimum trade: {min_trade_amount}")
+                return False
+
+            # Risk management
+            max_position_size = portfolio.get('balance') * self.config.get('max_position_size', 0.05)
+            if signal.get('amount', 0) > max_position_size:
+                return False
+
+            return True
+
+        except Exception as e:
+            logger.error(f"Trade validation error: {str(e)}")
+            return False
+
+    async def execute_trade(self, signal: Dict[str, Any]) -> Dict[str, Any]:
+        """Execute trade with improved error handling and gas optimization"""
+        try:
+            if self.testnet:
+                return self._get_test_execution(signal)
+
+            # Add to batch queue
+            self._batch_queue.append(signal)
+            current_time = datetime.now()
+
+            # Process batch if conditions met
+            if (len(self._batch_queue) >= self.batch_size or 
+                (current_time - self._last_batch_time).total_seconds() >= self.batch_interval):
+                return await self._process_batch()
+
+            return {
+                'success': True,
+                'pending': True,
+                'batch_size': len(self._batch_queue)
+            }
+
+        except Exception as e:
+            logger.error(f"Trade execution error: {e}")
+            return {'success': False, 'error': str(e)}
+
+    def _get_test_execution(self, signal: Dict[str, Any]) -> Dict[str, Any]:
+        """Generate test execution response"""
+        return {
+            'success': True,
+            'tx_hash': f"0x{signal['pair_address'][-8:]}",
+            'timestamp': datetime.now().isoformat(),
+            'token': signal['token_address'],
+            'amount': signal.get('amount', 0),
+            'testnet': True
+        }
+
+    async def _process_batch(self) -> Dict[str, Any]:
+        """Process batched trades efficiently"""
+        if not self._batch_queue:
+            return {'success': True, 'message': 'No trades to process'}
+
+        try:
+            batch = self._batch_queue
+            self._batch_queue = []
+            self._last_batch_time = datetime.now()
+
+            # Execute batch transaction
+            tx_hash = await self._send_batch_transaction(batch)
+
+            return {
+                'success': bool(tx_hash),
+                'tx_hash': tx_hash,
+                'batch_size': len(batch),
+                'timestamp': datetime.now().isoformat()
+            }
+
+        except Exception as e:
+            logger.error(f"Batch processing error: {e}")
+            return {'success': False, 'error': str(e)}
+
 
     async def validate_pair(self, pair: Dict[str, Any]) -> bool:
         """Validates a trading pair with caching"""
@@ -157,12 +298,8 @@ class DexSnipingStrategy(BaseStrategy):
                 return True
 
             # Rate limiting check
-            current_time = datetime.now()
-            if hasattr(self, '_last_contract_check'):
-                time_diff = (current_time - self._last_contract_check).total_seconds()
-                if time_diff < 0.2:  # Max 5 requests per second
-                    await asyncio.sleep(0.2 - time_diff)
-            self._last_contract_check = current_time
+            if not self._can_make_request():
+                return False
 
             code = await asyncio.to_thread(self.w3.eth.get_code, address)
             if not code or len(code) < 2:
@@ -265,100 +402,6 @@ class DexSnipingStrategy(BaseStrategy):
         except Exception as e:
             logger.error(f"Tax info error: {e}")
             return {'buy_tax': 100.0, 'sell_tax': 100.0}
-
-    async def validate_trade(self, signal: Dict[str, Any], portfolio: Dict[str, Any]) -> bool:
-        """Validates trading signal with enhanced risk management"""
-        try:
-            # Basic validation
-            if not all(k in signal for k in ['action', 'confidence', 'pair_address', 'token_address']):
-                logger.warning("Invalid signal format")
-                return False
-
-            # Portfolio validation
-            min_trade_amount = self.config.get('min_trade_amount', 0.1)
-            if portfolio.get('balance', 0) < min_trade_amount:
-                logger.info(f"Insufficient balance for minimum trade: {min_trade_amount}")
-                return False
-
-            # Confidence check
-            min_confidence = self.config.get('min_confidence', 0.7)
-            if signal.get('confidence', 0) < min_confidence:
-                logger.info(f"Confidence too low: {signal.get('confidence')}")
-                return False
-
-            # Risk management checks
-            max_position_size = portfolio.get('balance') * self.config.get('max_position_size', 0.1)
-            if signal.get('amount', 0) > max_position_size:
-                logger.info(f"Position size exceeds maximum: {max_position_size}")
-                return False
-
-            return True
-
-        except Exception as e:
-            logger.error(f"Trade validation error: {e}")
-            return False
-
-    async def execute_trade(self, signal: Dict[str, Any]) -> Dict[str, Any]:
-        """Executes trade with enhanced error handling and gas optimization"""
-        try:
-            if self.testnet:
-                return {
-                    'success': True,
-                    'tx_hash': f"0x{signal['pair_address'][-8:]}",
-                    'timestamp': datetime.now().isoformat(),
-                    'token': signal['token_address'],
-                    'amount': signal.get('amount', 0),
-                    'testnet': True
-                }
-
-            # Add to batch queue
-            self._batch_queue.append(signal)
-            current_time = datetime.now()
-
-            # Process batch if conditions met
-            if (len(self._batch_queue) >= self.batch_size or 
-                (current_time - self._last_batch_time).total_seconds() >= self.batch_interval):
-                return await self._process_batch()
-
-            return {
-                'success': True,
-                'pending': True,
-                'batch_size': len(self._batch_queue),
-                'testnet': False
-            }
-
-        except Exception as e:
-            logger.error(f"Trade execution error: {e}")
-            return {
-                'success': False,
-                'error': str(e),
-                'testnet': self.testnet
-            }
-
-    async def _process_batch(self) -> Dict[str, Any]:
-        """Processes batched trades"""
-        try:
-            if not self._batch_queue:
-                return {'success': True, 'message': 'No trades to process'}
-
-            batch = self._batch_queue
-            self._batch_queue = []
-            self._last_batch_time = datetime.now()
-
-            # Execute batch transaction
-            tx_hash = await self._send_batch_transaction(batch)
-
-            return {
-                'success': bool(tx_hash),
-                'tx_hash': tx_hash,
-                'batch_size': len(batch),
-                'timestamp': datetime.now().isoformat(),
-                'testnet': False
-            }
-
-        except Exception as e:
-            logger.error(f"Batch processing error: {e}")
-            return {'success': False, 'error': str(e)}
 
     async def _send_batch_transaction(self, batch: List[Dict]) -> Optional[str]:
         """Sends optimized batch transaction"""
