@@ -7,11 +7,11 @@ from sqlalchemy.orm import sessionmaker, relationship, Session
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.pool import QueuePool
 from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession
-import asyncpg
 import os
 import logging
 import re
 from typing import Optional, Generator, Dict, Any
+import asyncpg
 
 logger = logging.getLogger(__name__)
 
@@ -46,21 +46,76 @@ class DatabaseManager:
         self.pool_recycle = 1800
         self.initialized = True
 
+    def _parse_db_url(self, url: str) -> Dict[str, str]:
+        """Parse database URL into components"""
+        # Handle both postgresql:// and postgresql+asyncpg:// formats
+        pattern = r'postgres(?:ql)?(?:\+(?:asyncpg|psycopg2))?:\/\/([^:]+):([^@]+)@([^:]+):(\d+)\/([^?]+)'
+        match = re.match(pattern, url)
+
+        if not match:
+            raise ValueError(f"Invalid database URL format. Expected format: postgresql[+driver]://user:password@host:port/dbname")
+
+        return {
+            'user': match.group(1),
+            'password': match.group(2),
+            'host': match.group(3),
+            'port': match.group(4),
+            'database': match.group(5)
+        }
+
     def _clean_db_url(self, url: str) -> str:
         """Clean database URL by removing unsupported parameters"""
-        url = re.sub(r'\?sslmode=[^&]+', '', url)
-        url = re.sub(r'&ssl=[^&]+', '', url)
+        # Remove SSL parameters
+        url = re.sub(r'\?.*$', '', url)
         return url
+
+    async def initialize_async(self, connection_string: str) -> bool:
+        """Initialize async database connection"""
+        try:
+            logger.info("Initializing async database connection...")
+
+            # Parse the connection string
+            try:
+                db_params = self._parse_db_url(connection_string)
+                logger.info(f"Successfully parsed database URL. Host: {db_params['host']}, Database: {db_params['database']}")
+            except ValueError as e:
+                logger.error(f"Failed to parse database URL: {str(e)}")
+                raise
+
+            # Create asyncpg pool
+            try:
+                self.pool = await asyncpg.create_pool(
+                    user=db_params['user'],
+                    password=db_params['password'],
+                    database=db_params['database'],
+                    host=db_params['host'],
+                    port=db_params['port'],
+                    min_size=self.pool_size,
+                    max_size=self.pool_size + self.max_overflow
+                )
+
+                # Test connection
+                async with self.pool.acquire() as conn:
+                    await conn.execute('SELECT 1')
+
+                logger.info("Async database connection established successfully")
+                return True
+
+            except Exception as e:
+                logger.error(f"Failed to create connection pool: {str(e)}")
+                raise
+
+        except Exception as e:
+            logger.error(f"Async database initialization error: {str(e)}")
+            self.pool = None
+            raise
 
     def initialize(self, connection_string: str) -> bool:
         """Initialize synchronous database connection"""
         try:
             logger.info("Initializing synchronous database connection...")
-
-            # Clean the connection string
             clean_connection_string = self._clean_db_url(connection_string)
 
-            # Create engine with proper configuration
             self.engine = create_engine(
                 clean_connection_string,
                 poolclass=QueuePool,
@@ -77,7 +132,7 @@ class DatabaseManager:
                 conn.execute(text("SELECT 1"))
 
             self.Session = sessionmaker(bind=self.engine)
-            logger.info("Database connection established successfully")
+            logger.info("Synchronous database connection established successfully")
             return True
 
         except Exception as e:
@@ -86,44 +141,22 @@ class DatabaseManager:
             self.Session = None
             raise
 
-    async def initialize_async(self, connection_string: str) -> bool:
-        """Initialize async database connection using asyncpg"""
+async def get_async_db():
+    """Get async database connection from pool"""
+    db = DatabaseManager()
+    if not db.pool:
+        db_url = os.getenv('DATABASE_URL')
+        if not db_url:
+            raise ValueError("DATABASE_URL environment variable not set")
+        await db.initialize_async(db_url)
+
+    async with db.pool.acquire() as conn:
         try:
-            logger.info("Initializing async database connection...")
-
-            # Parse connection string to get components
-            import re
-            pattern = r'postgresql(?:\+psycopg2)?:\/\/([^:]+):([^@]+)@([^:]+):(\d+)\/(.+)'
-            match = re.match(pattern, connection_string)
-            if not match:
-                raise ValueError("Invalid connection string format")
-
-            user, password, host, port, database = match.groups()
-
-            # Create asyncpg pool
-            self.pool = await asyncpg.create_pool(
-                user=user,
-                password=password,
-                database=database,
-                host=host,
-                port=port,
-                min_size=self.pool_size,
-                max_size=self.pool_size + self.max_overflow
-            )
-
-            # Test connection
-            async with self.pool.acquire() as conn:
-                await conn.execute('SELECT 1')
-
-            logger.info("Async database connection established successfully")
-            return True
-
+            yield conn
         except Exception as e:
-            logger.error(f"Async database initialization error: {str(e)}")
-            self.pool = None
+            logger.error(f"Async database error: {str(e)}")
             raise
 
-# Database session generators
 def get_db() -> Generator[Session, None, None]:
     """Get synchronous database session"""
     db = DatabaseManager()
@@ -144,22 +177,6 @@ def get_db() -> Generator[Session, None, None]:
     finally:
         session.close()
 
-async def get_async_db():
-    """Get async database connection from pool"""
-    db = DatabaseManager()
-    if not db.pool:
-        db_url = os.getenv('DATABASE_URL')
-        if not db_url:
-            raise ValueError("DATABASE_URL environment variable not set")
-        await db.initialize_async(db_url)
-
-    async with db.pool.acquire() as conn:
-        try:
-            yield conn
-        except Exception as e:
-            logger.error(f"Async database error: {str(e)}")
-            raise
-
 # Initialize database
 async def init_db():
     """Initialize database schema"""
@@ -170,12 +187,14 @@ async def init_db():
             raise ValueError("DATABASE_URL environment variable not set")
 
         db = DatabaseManager()
-        if not await db.initialize_async(db_url):
-            raise SQLAlchemyError("Failed to initialize database")
 
-        # Create tables using sync engine for now
+        # Initialize async connection first
+        if not await db.initialize_async(db_url):
+            raise SQLAlchemyError("Failed to initialize async database connection")
+
+        # Initialize sync connection for table creation
         if not db.initialize(db_url):
-            raise SQLAlchemyError("Failed to initialize sync engine")
+            raise SQLAlchemyError("Failed to initialize sync database connection")
 
         Base.metadata.create_all(db.engine)
         logger.info("Database tables created successfully")
