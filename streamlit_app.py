@@ -227,6 +227,8 @@ def initialize_session_state():
         st.session_state.authenticated = False
     if 'wallet_address' not in st.session_state:
         st.session_state.wallet_address = None
+    if 'current_page' not in st.session_state:
+        st.session_state.current_page = "Market Analysis"
 
 def main():
     initialize_session_state()
@@ -235,7 +237,8 @@ def main():
         login_page()
     else:
         # Top navigation bar with wallet info
-        st.markdown("""
+        wallet_display = f"{st.session_state.wallet_address[:6]}...{st.session_state.wallet_address[-4:]}"
+        st.markdown(f"""
             <div class='nav-bar'>
                 <div style='display: flex; gap: 20px;'>
                     <a href='#' style='color: white; text-decoration: none; padding: 10px 20px; background: #2D2D2D; border-radius: 10px;'>Market Analysis</a>
@@ -244,31 +247,27 @@ def main():
                 </div>
                 <div>
                     <code style='color: #00FF94; background: #1E1E1E; padding: 5px 10px; border-radius: 5px;'>
-                        {st.session_state.wallet_address[:6]}...{st.session_state.wallet_address[-4:]}
+                        {wallet_display}
                     </code>
                     <button style='margin-left: 10px; background: #FF4B4B; color: white; border: none; padding: 5px 10px; border-radius: 5px;' onclick='window.location.reload()'>Disconnect</button>
                 </div>
             </div>
-        """.format(
-            st.session_state.wallet_address[:6],
-            st.session_state.wallet_address[-4:]
-        ), unsafe_allow_html=True)
-
-        # Store navigation state
-        if 'current_page' not in st.session_state:
-            st.session_state.current_page = "Market Analysis"
+        """, unsafe_allow_html=True)
 
         # Navigation buttons
         col1, col2, col3 = st.columns(3)
         with col1:
             if st.button("Market Analysis", use_container_width=True):
                 st.session_state.current_page = "Market Analysis"
+                st.rerun()
         with col2:
             if st.button("Trading", use_container_width=True):
                 st.session_state.current_page = "Trading"
+                st.rerun()
         with col3:
             if st.button("Bot Control", use_container_width=True):
                 st.session_state.current_page = "Bot Control"
+                st.rerun()
 
         # Render content based on navigation
         if st.session_state.current_page == "Market Analysis":
