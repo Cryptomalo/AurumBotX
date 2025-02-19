@@ -113,14 +113,15 @@ class AutoTrader:
         self._start_config_backup()
 
     def _create_mock_prediction_model(self):
-        """Create a mock prediction model for development"""
-        return type('MockPredictionModel', (), {
-            'analyze_market_with_ai': lambda self, df, social_data: {
-                'technical_score': 0.6,
-                'confidence': 0.8,
-                'suggested_position_size': 1.0
-            }
-        })()
+        """Create a mock prediction model for development with proper async methods"""
+        class MockPredictionModel:
+            async def analyze_market_with_ai(self, df, social_data):
+                return {
+                    'technical_score': 0.6,
+                    'confidence': 0.8,
+                    'suggested_position_size': 1.0
+                }
+        return MockPredictionModel()
 
     def calculate_market_volatility(self, df) -> float:
         """Calculate market volatility using standard deviation"""
@@ -307,7 +308,8 @@ class AutoTrader:
                             'size': position_size,
                             'order_id': order.get('id')
                         }
-                        await self.notifier.send_notification(notification)
+                        if hasattr(self.notifier, 'send_notification'):
+                            await self.notifier.send_notification(notification)
                     except Exception as e:
                         self.logger.error(f"Notification error (non-critical): {str(e)}")
 

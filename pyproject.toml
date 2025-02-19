@@ -72,6 +72,7 @@ dependencies = [
     "psutil>=7.0.0",
     "binance>=0.3",
     "websocket>=0.2.1",
+    "cachetools>=4.2.4",
 ]
 
 [[tool.uv.index]]
