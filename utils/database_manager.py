@@ -25,65 +25,74 @@ class DatabaseManager:
 
         while retry_count < max_retries:
             try:
-
-        try:
-            if not database_url:
-                database_url = os.environ.get('DATABASE_URL')
                 if not database_url:
-                    raise ValueError("DATABASE_URL not set")
+                    database_url = os.environ.get('DATABASE_URL')
+                    if not database_url:
+                        raise ValueError("DATABASE_URL not set")
 
-            # Parse database URL and handle SSL parameters
-            parsed_url = urlparse(database_url)
-            query_params = parse_qs(parsed_url.query)
+                # Parse database URL and handle SSL parameters
+                parsed_url = urlparse(database_url)
+                query_params = parse_qs(parsed_url.query)
 
-            # Convert to async URL and handle SSL
-            base_url = database_url.split('?')[0].replace('postgresql://', 'postgresql+asyncpg://')
+                # Convert to async URL and handle SSL
+                base_url = database_url.split('?')[0].replace('postgresql://', 'postgresql+asyncpg://')
 
-            # Configure SSL parameters correctly for asyncpg
-            ssl_mode = None
-            if 'sslmode' in query_params:
-                ssl_mode = query_params['sslmode'][0]
-                self.logger.debug(f"SSL mode configured: {ssl_mode}")
+                # Configure SSL parameters correctly for asyncpg
+                ssl_mode = None
+                if 'sslmode' in query_params:
+                    ssl_mode = query_params['sslmode'][0]
+                    self.logger.debug(f"SSL mode configured: {ssl_mode}")
 
-            # Create engine with proper configuration
-            connect_args = {}
-            if ssl_mode:
-                connect_args['ssl'] = ssl_mode == 'require'
+                # Create engine with proper configuration
+                connect_args = {}
+                if ssl_mode:
+                    connect_args['ssl'] = ssl_mode == 'require'
 
-            self.engine = create_async_engine(
-                base_url,
-                echo=False,
-                pool_size=5,
-                max_overflow=10,
-                pool_pre_ping=True,
-                pool_recycle=3600,
-                connect_args=connect_args
-            )
+                self.engine = create_async_engine(
+                    base_url,
+                    echo=False,
+                    pool_size=5,
+                    max_overflow=10,
+                    pool_pre_ping=True,
+                    pool_recycle=3600,
+                    connect_args=connect_args
+                )
 
-            # Create session maker
-            self.session_maker = async_sessionmaker(
-                self.engine,
-                expire_on_commit=False,
-                class_=AsyncSession
-            )
+                # Create session maker
+                self.session_maker = async_sessionmaker(
+                    self.engine,
+                    expire_on_commit=False,
+                    class_=AsyncSession
+                )
 
-            # Create tables if they don't exist
-            async with self.engine.begin() as conn:
-                await conn.run_sync(Base.metadata.create_all)
-                self.logger.info("Database tables created/verified successfully")
+                # Create tables if they don't exist
+                async with self.engine.begin() as conn:
+                    await conn.run_sync(Base.metadata.create_all)
+                    self.logger.info("Database tables created/verified successfully")
 
-            # Verify connection
-            if await self.verify_connection():
-                self.is_connected = True
-                self.logger.info("Database connection established successfully")
-                return True
+                # Verify connection
+                if await self.verify_connection():
+                    self.is_connected = True
+                    self.logger.info("Database connection established successfully")
+                    return True
 
-            return False
+                retry_count += 1
+                if retry_count < max_retries:
+                    await asyncio.sleep(self.retry_delay * (2 ** retry_count))
+                else:
+                    self.logger.error("Failed to establish database connection after all retries")
+                    return False
 
-        except Exception as e:
-            self.logger.error(f"Database initialization error: {str(e)}")
-            self.logger.debug(f"Full error details: {repr(e)}")
-            return False
+            except Exception as e:
+                self.logger.error(f"Database initialization error: {str(e)}")
+                self.logger.debug(f"Full error details: {repr(e)}")
+                retry_count += 1
+                if retry_count < max_retries:
+                    await asyncio.sleep(self.retry_delay * (2 ** retry_count))
+                else:
+                    return False
+
+        return False
 
     async def verify_connection(self) -> bool:
         """Verify database connection with retries"""

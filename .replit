@@ -11,17 +11,43 @@ run = ["sh", "-c", "python3 start_trading.py"]
 runButton = "Project"
 
 [[workflows.workflow]]
+name = "System Test"
+author = 39294082
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "python test_system.py"
+
+[[workflows.workflow]]
 name = "Project"
-author = "agent"
 mode = "parallel"
+author = "agent"
+
+[[workflows.workflow.tasks]]
+task = "workflow.run"
+args = "Streamlit Interface"
 
 [[workflows.workflow.tasks]]
 task = "workflow.run"
 args = "Trading Bot"
 
 [[workflows.workflow]]
+name = "Streamlit Interface"
+author = "agent"
+
+[workflows.workflow.metadata]
+agentRequireRestartOnSave = false
+
+[[workflows.workflow.tasks]]
+task = "packager.installForAll"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "streamlit run streamlit_app.py"
+waitForPort = 5000
+
+[[workflows.workflow]]
 name = "Trading Bot"
-mode = "parallel"
 author = "agent"
 
 [workflows.workflow.metadata]
@@ -33,111 +59,6 @@ task = "packager.installForAll"
 [[workflows.workflow.tasks]]
 task = "shell.exec"
 args = "python3 start_trading.py"
-
-[[workflows.workflow]]
-name = "Test WebSocket"
-author = 39294082
-
-[[workflows.workflow]]
-name = "Full Test Suite"
-author = 39294082
-
-[[workflows.workflow.tasks]]
-task = "shell.exec"
-args = "python -m pytest utils/test_*.py -v"
-
-[[workflows.workflow]]
-name = "Learning Tests"
-author = 39294082
-
-[[workflows.workflow.tasks]]
-task = "shell.exec"
-args = "python -m pytest utils/test_suite.py -v"
-
-[[workflows.workflow]]
-name = "Test Meme Strategy"
-author = "agent"
-
-[workflows.workflow.metadata]
-agentRequireRestartOnSave = false
-
-[[workflows.workflow.tasks]]
-task = "packager.installForAll"
-
-[[workflows.workflow.tasks]]
-task = "shell.exec"
-args = "python test_meme_strategy.py"
-
-[[workflows.workflow]]
-name = "Streamlit Dashboard"
-author = "agent"
-
-[workflows.workflow.metadata]
-agentRequireRestartOnSave = false
-
-[[workflows.workflow.tasks]]
-task = "packager.installForAll"
-
-[[workflows.workflow.tasks]]
-task = "shell.exec"
-args = "streamlit run app.py --server.port 5000 --server.address 0.0.0.0"
-waitForPort = 5000
-
-[[workflows.workflow]]
-name = "Test Notifications"
-author = "agent"
-
-[workflows.workflow.metadata]
-agentRequireRestartOnSave = false
-
-[[workflows.workflow.tasks]]
-task = "packager.installForAll"
-
-[[workflows.workflow.tasks]]
-task = "shell.exec"
-args = "python utils/test_notifications.py"
-
-[[workflows.workflow]]
-name = "Test Trading AI"
-author = "agent"
-
-[workflows.workflow.metadata]
-agentRequireRestartOnSave = false
-
-[[workflows.workflow.tasks]]
-task = "packager.installForAll"
-
-[[workflows.workflow.tasks]]
-task = "shell.exec"
-args = "python test_trading_ai.py"
-
-[[workflows.workflow]]
-name = "Test Sentiment"
-author = "agent"
-
-[workflows.workflow.metadata]
-agentRequireRestartOnSave = false
-
-[[workflows.workflow.tasks]]
-task = "packager.installForAll"
-
-[[workflows.workflow.tasks]]
-task = "shell.exec"
-args = "python utils/test_sentiment.py"
-
-[[workflows.workflow]]
-name = "Flask Server"
-author = "agent"
-
-[workflows.workflow.metadata]
-agentRequireRestartOnSave = false
-
-[[workflows.workflow.tasks]]
-task = "packager.installForAll"
-
-[[workflows.workflow.tasks]]
-task = "shell.exec"
-args = "python main.py"
 
 [[ports]]
 localPort = 3000

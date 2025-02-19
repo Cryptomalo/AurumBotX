@@ -69,6 +69,7 @@ dependencies = [
     "streamlit>=1.42.0",
     "pandas>=2.2.3",
     "plotly>=6.0.0",
+    "psutil>=7.0.0",
 ]
 
 [[tool.uv.index]]
