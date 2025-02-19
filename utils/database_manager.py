@@ -18,8 +18,13 @@ class DatabaseManager:
         self.is_connected = False
 
     async def initialize(self, database_url: Optional[str] = None) -> bool:
-        """Initialize database connection with optimized pooling"""
+        """Initialize database connection with optimized pooling and retry logic"""
         self.logger.info("Initializing database connection with connection pooling...")
+        retry_count = 0
+        max_retries = 3
+
+        while retry_count < max_retries:
+            try:
 
         try:
             if not database_url:
