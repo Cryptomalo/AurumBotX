@@ -33,13 +33,10 @@ async def check_database_connection() -> bool:
     """Verify database connection"""
     try:
         db = DatabaseManager()
-        connected = await db.initialize()
-        if connected:
-            logger.info("Database connection test successful")
-            await db.cleanup()
-            return True
-        logger.error("Database connection test failed")
-        return False
+        # Ensure initialize() returns a coroutine
+        await db.test_connection()
+        logger.info("Database connection test successful")
+        return True
     except Exception as e:
         logger.error(f"Database check failed: {str(e)}")
         return False
@@ -48,8 +45,9 @@ async def check_websocket_connection() -> bool:
     """Verify WebSocket connection"""
     try:
         handler = WebSocketHandler()
-        connected = await handler.connect_websocket()
-        if connected:
+        await handler.initialize()
+        # Test brief connection
+        if await handler.test_connection():
             logger.info("WebSocket connection test successful")
             await handler.cleanup()
             return True

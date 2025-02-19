@@ -59,7 +59,6 @@ task = "packager.installForAll"
 [[workflows.workflow.tasks]]
 task = "shell.exec"
 args = "python3 start_trading.py"
-waitForPort = 5000
 
 [[ports]]
 localPort = 3000
