@@ -1,96 +1,70 @@
 import logging
-import asyncio
 import os
-from typing import Optional, Dict, Any, List
-from sqlalchemy import create_engine, text
-from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession
+from typing import Optional, Dict, Any
+from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
-from sqlalchemy.pool import AsyncAdaptedQueuePool
+from sqlalchemy.pool import QueuePool
 from utils.models import Base, TradingData
 
 logger = logging.getLogger(__name__)
 
 class DatabaseManager:
+    _instance = None
+
+    def __new__(cls):
+        if cls._instance is None:
+            cls._instance = super(DatabaseManager, cls).__new__(cls)
+            cls._instance.initialized = False
+        return cls._instance
+
     def __init__(self):
+        if self.initialized:
+            return
+
         self.engine = None
-        self.SessionLocal = None
-        self.max_retries = 3
-        self.retry_delay = 1  # seconds
+        self.Session = None
+        self.initialized = True
 
-    async def initialize(self) -> bool:
-        """Initialize database connection with retry logic"""
-        retry_count = 0
-        while retry_count < self.max_retries:
-            try:
-                # Use environment variables for connection string
-                db_url = os.getenv('DATABASE_URL', 'postgresql+asyncpg://user:pass@localhost/dbname')
+    def initialize(self) -> bool:
+        try:
+            db_url = os.getenv('DATABASE_URL', 'sqlite:///trading.db')
 
-                self.engine = create_engine(
-                    db_url,
-                    pool_size=5,
-                    max_overflow=10,
-                    pool_timeout=30,
-                    pool_recycle=1800
-                )
+            self.engine = create_engine(
+                db_url,
+                poolclass=QueuePool,
+                pool_size=5,
+                max_overflow=10,
+                pool_timeout=30,
+                pool_recycle=1800
+            )
 
-                self.SessionLocal = sessionmaker(
-                    self.engine, class_=AsyncSession, expire_on_commit=False
-                )
-
-                # Test connection
-                async with self.SessionLocal() as session:
-                    await session.execute(text("SELECT 1"))
-
-                logger.info("Database connection established successfully")
-                return True
-
-            except Exception as e:
-                retry_count += 1
-                logger.error(f"Database connection attempt {retry_count} failed: {str(e)}")
-                if retry_count < self.max_retries:
-                    await asyncio.sleep(self.retry_delay * retry_count)
-                continue
-
-        logger.error("Failed to establish database connection after all retries")
-        return False
-
-    async def cleanup(self):
-        """Cleanup database resources"""
-        if self.engine:
-            await self.engine.dispose()
-            logger.info("Database connection closed")
-
-    def get_session(self) -> AsyncSession:
-        """Get a database session"""
-        if not self.SessionLocal:
-            raise RuntimeError("Database not initialized")
-        return self.SessionLocal()
-
-    async def execute_with_retry(self, operation, max_retries: int = 3) -> Any:
-        """Execute database operation with retry logic"""
-        for attempt in range(max_retries):
-            try:
-                async with self.get_session() as session:
-                    result = await operation(session)
-                    await session.commit()
-                    return result
-            except Exception as e:
-                logger.error(f"Database operation failed (attempt {attempt + 1}/{max_retries}): {str(e)}")
-                if attempt < max_retries - 1:
-                    await asyncio.sleep(self.retry_delay * (attempt + 1))
-                else:
-                    raise
-
-    async def save_trading_data(self, trading_data: TradingData) -> bool:
-        """Save trading data to database"""
-        async def _save_trading_data(session):
-            session.add(trading_data)
+            Base.metadata.create_all(self.engine)
+            self.Session = sessionmaker(bind=self.engine)
+            logger.info("Database initialized successfully")
             return True
-        return await self.execute_with_retry(_save_trading_data)
 
-    async def execute_query(self, query: str, params: Optional[Dict[str, Any]] = None) -> Any:
-        """Execute raw SQL query"""
-        async def _execute_query(session):
-            result = await session.execute(text(query), params or {})
-            return result
-        return await self.execute_with_retry(_execute_query)
+        except Exception as e:
+            logger.error(f"Database initialization error: {str(e)}")
+            return False
+
+    def save_trading_data(self, data: Dict[str, Any]) -> bool:
+        try:
+            if not self.Session:
+                if not self.initialize():
+                    return False
+
+            session = self.Session()
+            try:
+                trading_data = TradingData(**data)
+                session.add(trading_data)
+                session.commit()
+                return True
+            except Exception as e:
+                session.rollback()
+                logger.error(f"Error saving trading data: {str(e)}")
+                return False
+            finally:
+                session.close()
+        except Exception as e:
+            logger.error(f"Database operation error: {str(e)}")
+            return False

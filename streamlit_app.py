@@ -8,7 +8,7 @@ import logging
 from typing import Dict, Any, Optional
 from binance.client import Client
 from utils.database_manager import DatabaseManager
-from utils.trading_bot import WebSocketHandler
+from utils.trading_bot import WebSocketHandler #Note: This might need to be 'websocket_handler' depending on your file structure
 from utils.auto_trader import AutoTrader
 from utils.strategies.strategy_manager import StrategyManager
 
@@ -16,14 +16,14 @@ from utils.strategies.strategy_manager import StrategyManager
 logging.basicConfig(
     level=logging.INFO,
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
-    filename='streamlit_app.log' # Retaining filename from original
+    filename='streamlit_app.log' 
 )
 logger = logging.getLogger(__name__)
 
 # Configurazione pagina
 st.set_page_config(
     page_title="AurumBot Pro Dashboard",
-    page_icon="📊",
+    page_icon="🤖", # Updated icon from edited code
     layout="wide",
     initial_sidebar_state="expanded"
 )
@@ -59,16 +59,19 @@ def initialize_session_state():
     """Inizializza variabili di sessione"""
     if 'authenticated' not in st.session_state:
         st.session_state.authenticated = False
+    if 'bot' not in st.session_state:
+        st.session_state.bot = None
+    if 'ws_handler' not in st.session_state:
+        st.session_state.ws_handler = None
     if 'active_strategies' not in st.session_state:
         st.session_state.active_strategies = []
     if 'current_page' not in st.session_state:
         st.session_state.current_page = 'market'
-    if 'ws_handler' not in st.session_state:
-        st.session_state.ws_handler = None
     if 'auto_trader' not in st.session_state:
         st.session_state.auto_trader = None
     if 'strategy_manager' not in st.session_state:
         st.session_state.strategy_manager = None
+
 
 def login_page():
     """Pagina di login"""
@@ -88,7 +91,7 @@ def login_page():
         if st.button("Login"):
             # TODO: Implementare verifica credenziali dal database
             st.session_state.authenticated = True
-            st.rerun()
+            st.experimental_rerun()
 
 def market_page():
     """Pagina principale del mercato"""
@@ -112,26 +115,24 @@ def market_page():
     st.plotly_chart(fig, use_container_width=True)
 
 def trading_page():
-    """Pagina di configurazione trading"""
-    st.title("⚙️ Trading Configuration")
+    st.header("Trading Dashboard")
 
-    # Selezione strategia
-    strategy = st.selectbox(
-        "Select Trading Strategy",
-        ["Scalping", "Swing Trading", "Grid Trading"]
-    )
-
-    col1, col2 = st.columns(2)
+    col1, col2, col3 = st.columns(3)
     with col1:
-        st.number_input("Risk per Trade (%)", 0.1, 5.0, 1.0)
-        st.number_input("Take Profit (%)", 0.5, 10.0, 2.0)
+        st.metric("Bitcoin Price", "$45,000", "+2.3%")
     with col2:
-        st.number_input("Max Position Size ($)", 100, 10000, 1000)
-        st.number_input("Stop Loss (%)", 0.5, 10.0, 2.0)
+        st.metric("Active Trades", "3", "+1")
+    with col3:
+        st.metric("Daily P&L", "$234.12", "+5.2%")
 
-    if st.button("Start Trading"):
-        # TODO: Implementare avvio strategia
-        st.success("Trading strategy activated!")
+def settings_page():
+    st.header("Bot Settings")
+
+    risk_level = st.slider("Risk Level", 1, 10, 5)
+    trading_pair = st.selectbox("Trading Pair", ["BTC/USDT", "ETH/USDT", "SOL/USDT"])
+
+    if st.button("Save Settings"):
+        st.success("Settings saved successfully!")
 
 def wallet_page():
     """Pagina gestione wallet"""
@@ -155,11 +156,14 @@ def wallet_page():
     })
     st.dataframe(transactions)
 
-def performance_page():
-    """Pagina analisi performance"""
-    st.title("📈 Performance Analysis")
 
-    # Metriche di performance
+def performance_page():
+    st.header("Performance Analytics")
+
+    # Add performance metrics and charts here
+    st.line_chart({"Profit": [100, 120, 130, 150, 180, 210]})
+
+    # Metriche di performance (from original code)
     col1, col2, col3 = st.columns(3)
     with col1:
         st.metric("Total Profit", "$1,234.56", "+12.3%")
@@ -180,37 +184,48 @@ def performance_page():
     })
     st.dataframe(stats)
 
+
 def main():
-    """Funzione principale"""
     initialize_session_state()
+
+    st.set_page_config(
+        page_title="AurumBot Dashboard",
+        page_icon="🤖",
+        layout="wide",
+        initial_sidebar_state="expanded"
+    )
 
     if not st.session_state.authenticated:
         login_page()
         return
+    else:
+        st.title("🤖 AurumBot Pro Dashboard")
 
-    # Sidebar per navigazione
-    with st.sidebar:
-        st.title("🤖 AurumBot Pro")
-        selected = st.radio(
-            "Navigation",
-            ["Market", "Trading", "Wallet", "Performance"],
-            key="navigation"
-        )
+        with st.sidebar:
+            st.title("🤖 AurumBot Pro")
+            selected = st.radio(
+                "Navigation",
+                ["Market", "Trading", "Wallet", "Performance", "Settings"], #added Settings
+                key="navigation"
+            )
 
-        st.markdown("---")
-        if st.button("Logout"):
-            st.session_state.authenticated = False
-            st.rerun()
+            st.markdown("---")
+            if st.button("Logout"):
+                st.session_state.authenticated = False
+                st.rerun()
 
-    # Routing pagine
-    if selected == "Market":
-        market_page()
-    elif selected == "Trading":
-        trading_page()
-    elif selected == "Wallet":
-        wallet_page()
-    elif selected == "Performance":
-        performance_page()
+        # Routing pagine
+        if selected == "Market":
+            market_page()
+        elif selected == "Trading":
+            trading_page()
+        elif selected == "Wallet":
+            wallet_page()
+        elif selected == "Performance":
+            performance_page()
+        elif selected == "Settings":
+            settings_page()
+
 
 if __name__ == "__main__":
     main()

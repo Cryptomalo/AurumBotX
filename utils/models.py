@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, Float, DateTime, create_engine
+from sqlalchemy import Column, Integer, Float, String, DateTime, ForeignKey, Boolean, JSON
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker, scoped_session
 from datetime import datetime
@@ -11,13 +11,17 @@ class TradingData(Base):
     __tablename__ = 'trading_data'
 
     id = Column(Integer, primary_key=True)
-    symbol = Column(String, nullable=False, index=True)
-    price = Column(Float, nullable=False)
-    volume = Column(Float, nullable=False)
-    timestamp = Column(DateTime, default=datetime.utcnow, index=True)
+    timestamp = Column(DateTime, default=datetime.utcnow)
+    symbol = Column(String)
+    price = Column(Float)
+    volume = Column(Float)
+    side = Column(String)  # buy/sell
+    strategy = Column(String)
+    profit_loss = Column(Float, default=0.0)
+    metadata = Column(JSON)
 
     def __repr__(self):
-        return f"<TradingData(symbol='{self.symbol}', price={self.price}, volume={self.volume})>"
+        return f"<TradingData(symbol='{self.symbol}', price={self.price}, volume={self.volume}, side='{self.side}', strategy='{self.strategy}', profit_loss={self.profit_loss}, metadata={self.metadata})>"
 
     @property
     def as_dict(self):
@@ -26,8 +30,24 @@ class TradingData(Base):
             'symbol': self.symbol,
             'price': self.price,
             'volume': self.volume,
-            'timestamp': self.timestamp.isoformat()
+            'timestamp': self.timestamp.isoformat(),
+            'side': self.side,
+            'strategy': self.strategy,
+            'profit_loss': self.profit_loss,
+            'metadata': self.metadata
         }
+
+class TradingStrategy(Base):
+    __tablename__ = 'trading_strategies'
+
+    id = Column(Integer, primary_key=True)
+    name = Column(String)
+    description = Column(String)
+    parameters = Column(JSON)
+    is_active = Column(Boolean, default=True)
+    created_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, onupdate=datetime.utcnow)
+
 
 def get_database_session() -> scoped_session:
     """Create database session with connection pooling and proper error handling"""
