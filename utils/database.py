@@ -102,6 +102,24 @@ def get_db() -> Generator[Session, None, None]:
     finally:
         session.close()
 
+class SimulationResult(Base):
+    __tablename__ = "simulation_results"
+
+    id = Column(Integer, primary_key=True, index=True)
+    strategy_id = Column(Integer, ForeignKey("trading_strategies.id"))
+    symbol = Column(String, index=True)
+    start_date = Column(DateTime)
+    end_date = Column(DateTime)
+    initial_balance = Column(Float)
+    final_balance = Column(Float)
+    total_trades = Column(Integer)
+    win_rate = Column(Float)
+    sharpe_ratio = Column(Float)
+    max_drawdown = Column(Float)
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+    strategy = relationship("TradingStrategy", back_populates="simulations")
+
 class TradingStrategy(Base):
     __tablename__ = "trading_strategies"
 
