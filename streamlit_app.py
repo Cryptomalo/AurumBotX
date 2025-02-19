@@ -8,7 +8,6 @@ import threading
 from solana.rpc.api import Client
 from utils.auto_trader import AutoTrader
 from utils.strategies.strategy_manager import StrategyManager
-from components.chat import render_chat
 
 # Configure page
 st.set_page_config(
@@ -256,7 +255,7 @@ def main():
         """, unsafe_allow_html=True)
 
         # Navigation buttons
-        col1, col2, col3, col4 = st.columns(4)
+        col1, col2, col3 = st.columns(3)
         with col1:
             if st.button("Market Analysis", use_container_width=True):
                 st.session_state.current_page = "Market Analysis"
@@ -269,10 +268,6 @@ def main():
             if st.button("Bot Control", use_container_width=True):
                 st.session_state.current_page = "Bot Control"
                 st.rerun()
-        with col4:
-            if st.button("Chat", use_container_width=True):
-                st.session_state.current_page = "Chat"
-                st.rerun()
 
         # Render content based on navigation
         if st.session_state.current_page == "Market Analysis":
@@ -281,8 +276,6 @@ def main():
             render_trading_strategies()
         elif st.session_state.current_page == "Bot Control":
             render_bot_control()
-        elif st.session_state.current_page == "Chat":
-            render_chat()
 
 if __name__ == "__main__":
     main()
