@@ -1,183 +1,216 @@
 import streamlit as st
 import pandas as pd
-import plotly.express as px
 import plotly.graph_objects as go
 from datetime import datetime, timedelta
-from sqlalchemy import text
+import asyncio
+import json
 import logging
-from utils.models import get_database_session
+from typing import Dict, Any, Optional
+from binance.client import Client
+from utils.database_manager import DatabaseManager
 from utils.trading_bot import WebSocketHandler
+from utils.auto_trader import AutoTrader
+from utils.strategies.strategy_manager import StrategyManager
 
-# Configurazione logging
+# Configurazione logging (combining improved logging from edited and original)
 logging.basicConfig(
     level=logging.INFO,
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
-    filename='streamlit_app.log'
+    filename='streamlit_app.log' # Retaining filename from original
 )
 logger = logging.getLogger(__name__)
 
 # Configurazione pagina
 st.set_page_config(
-    page_title="AurumBot Trading Dashboard",
-    page_icon="📈",
+    page_title="AurumBot Pro Dashboard",
+    page_icon="📊",
     layout="wide",
     initial_sidebar_state="expanded"
 )
 
 # Stile CSS personalizzato
 st.markdown("""
-    <style>
+<style>
     .main {
-        padding: 0rem 1rem;
+        background-color: #0E1117;
+        color: #FAFAFA;
     }
     .stMetric {
-        background-color: #1c1c1c;
+        background-color: #1C1C1C;
         padding: 1rem;
+        border-radius: 10px;
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    }
+    .stButton>button {
+        background-color: #FF4B4B;
+        color: white;
         border-radius: 5px;
     }
-    </style>
+    .stSelectbox {
+        background-color: #1C1C1C;
+    }
+    div[data-testid="stDecoration"] {
+        background-image: linear-gradient(90deg, #FF4B4B, #FF9F1C);
+    }
+</style>
 """, unsafe_allow_html=True)
 
 def initialize_session_state():
-    """Inizializza le variabili di stato della sessione"""
-    if 'last_update' not in st.session_state:
-        st.session_state.last_update = datetime.now()
-    if 'selected_timeframe' not in st.session_state:
-        st.session_state.selected_timeframe = '24h'
+    """Inizializza variabili di sessione"""
+    if 'authenticated' not in st.session_state:
+        st.session_state.authenticated = False
+    if 'active_strategies' not in st.session_state:
+        st.session_state.active_strategies = []
+    if 'current_page' not in st.session_state:
+        st.session_state.current_page = 'market'
+    if 'ws_handler' not in st.session_state:
+        st.session_state.ws_handler = None
+    if 'auto_trader' not in st.session_state:
+        st.session_state.auto_trader = None
+    if 'strategy_manager' not in st.session_state:
+        st.session_state.strategy_manager = None
 
-@st.cache_data(ttl=60)
-def load_trading_data(timeframe='24h'):
-    """Carica i dati dal database con gestione degli errori"""
-    try:
-        session = get_database_session()
-        interval = {
-            '1h': "INTERVAL '1 hour'",
-            '24h': "INTERVAL '24 hours'",
-            '7d': "INTERVAL '7 days'",
-            '30d': "INTERVAL '30 days'"
-        }
+def login_page():
+    """Pagina di login"""
+    st.title("🔐 Login AurumBot Pro")
 
-        query = text(f"""
-            SELECT 
-                symbol,
-                price,
-                volume,
-                timestamp
-            FROM trading_data 
-            WHERE timestamp > NOW() - {interval[timeframe]}
-            ORDER BY timestamp DESC
-        """)
+    col1, col2, col3 = st.columns([1,2,1])
+    with col2:
+        st.markdown("""
+        <div style='background-color: #1C1C1C; padding: 2rem; border-radius: 10px;'>
+            <h3>Accedi alla tua Dashboard</h3>
+        </div>
+        """, unsafe_allow_html=True)
 
-        df = pd.read_sql(query, session.bind)
-        session.remove()
-        return df
-    except Exception as e:
-        logger.error(f"Errore nel caricamento dei dati: {str(e)}")
-        return pd.DataFrame()
+        username = st.text_input("Username")
+        password = st.text_input("Password", type="password")
 
-def create_price_chart(data, symbol):
-    """Crea grafico prezzi interattivo"""
+        if st.button("Login"):
+            # TODO: Implementare verifica credenziali dal database
+            st.session_state.authenticated = True
+            st.rerun()
+
+def market_page():
+    """Pagina principale del mercato"""
+    st.title("📊 Market Dashboard")
+
+    # Layout a colonne per metriche principali
+    col1, col2, col3, col4 = st.columns(4)
+
+    with col1:
+        st.metric("Bitcoin Price", "$45,234.56", "+2.3%")
+    with col2:
+        st.metric("24h Volume", "$1.2B", "-5.1%")
+    with col3:
+        st.metric("Active Trades", "3", "+1")
+    with col4:
+        st.metric("P&L Today", "+$234.12", "")
+
+    # Grafici di mercato
     fig = go.Figure()
-    fig.add_trace(
-        go.Candlestick(
-            x=data['timestamp'],
-            open=data['price'],
-            high=data['price'],
-            low=data['price'],
-            close=data['price'],
-            name='Prezzo'
-        )
-    )
-    fig.update_layout(
-        title=f'Andamento Prezzo {symbol}',
-        yaxis_title='Prezzo (USDT)',
-        template='plotly_dark',
-        height=500
-    )
-    return fig
+    # TODO: Aggiungere dati real-time da Binance
+    st.plotly_chart(fig, use_container_width=True)
 
-def create_volume_chart(data, symbol):
-    """Crea grafico volume interattivo"""
-    fig = go.Figure()
-    fig.add_trace(
-        go.Bar(
-            x=data['timestamp'],
-            y=data['volume'],
-            name='Volume'
-        )
+def trading_page():
+    """Pagina di configurazione trading"""
+    st.title("⚙️ Trading Configuration")
+
+    # Selezione strategia
+    strategy = st.selectbox(
+        "Select Trading Strategy",
+        ["Scalping", "Swing Trading", "Grid Trading"]
     )
-    fig.update_layout(
-        title=f'Volume Trading {symbol}',
-        yaxis_title='Volume (USDT)',
-        template='plotly_dark',
-        height=300
-    )
-    return fig
+
+    col1, col2 = st.columns(2)
+    with col1:
+        st.number_input("Risk per Trade (%)", 0.1, 5.0, 1.0)
+        st.number_input("Take Profit (%)", 0.5, 10.0, 2.0)
+    with col2:
+        st.number_input("Max Position Size ($)", 100, 10000, 1000)
+        st.number_input("Stop Loss (%)", 0.5, 10.0, 2.0)
+
+    if st.button("Start Trading"):
+        # TODO: Implementare avvio strategia
+        st.success("Trading strategy activated!")
+
+def wallet_page():
+    """Pagina gestione wallet"""
+    st.title("💰 Wallet Management")
+
+    col1, col2 = st.columns(2)
+    with col1:
+        st.markdown("### Available Balance")
+        st.markdown("### $10,000.00")
+    with col2:
+        st.markdown("### Active Positions")
+        st.markdown("### 2 Positions")
+
+    # Lista transazioni
+    st.markdown("### Recent Transactions")
+    transactions = pd.DataFrame({
+        'Date': ['2025-02-19 10:30', '2025-02-19 09:15'],
+        'Type': ['BUY', 'SELL'],
+        'Amount': ['0.1 BTC', '0.05 ETH'],
+        'Price': ['$44,230', '$2,890']
+    })
+    st.dataframe(transactions)
+
+def performance_page():
+    """Pagina analisi performance"""
+    st.title("📈 Performance Analysis")
+
+    # Metriche di performance
+    col1, col2, col3 = st.columns(3)
+    with col1:
+        st.metric("Total Profit", "$1,234.56", "+12.3%")
+    with col2:
+        st.metric("Win Rate", "68%", "+5%")
+    with col3:
+        st.metric("Average Trade", "$45.67", "")
+
+    # Grafico PnL
+    st.markdown("### Profit and Loss Over Time")
+    # TODO: Implementare grafico PnL
+
+    # Statistiche dettagliate
+    st.markdown("### Detailed Statistics")
+    stats = pd.DataFrame({
+        'Metric': ['Total Trades', 'Profitable Trades', 'Loss Trades', 'Largest Win', 'Largest Loss'],
+        'Value': ['156', '106', '50', '$234.56', '-$123.45']
+    })
+    st.dataframe(stats)
 
 def main():
-    """Funzione principale dell'applicazione"""
+    """Funzione principale"""
     initialize_session_state()
 
-    # Sidebar
-    st.sidebar.title("🤖 AurumBot")
-    timeframe = st.sidebar.selectbox(
-        "Intervallo temporale",
-        options=['1h', '24h', '7d', '30d'],
-        index=1
-    )
+    if not st.session_state.authenticated:
+        login_page()
+        return
 
-    # Header principale
-    st.title("📊 Trading Dashboard")
+    # Sidebar per navigazione
+    with st.sidebar:
+        st.title("🤖 AurumBot Pro")
+        selected = st.radio(
+            "Navigation",
+            ["Market", "Trading", "Wallet", "Performance"],
+            key="navigation"
+        )
 
-    # Carica dati
-    data = load_trading_data(timeframe)
+        st.markdown("---")
+        if st.button("Logout"):
+            st.session_state.authenticated = False
+            st.rerun()
 
-    if not data.empty:
-        # Metriche principali
-        col1, col2, col3, col4 = st.columns(4)
-        with col1:
-            st.metric("Simboli Monitorati", len(data['symbol'].unique()))
-        with col2:
-            st.metric("Transazioni", len(data))
-        with col3:
-            latest_price = data.iloc[0]['price'] if not data.empty else 0
-            st.metric("Ultimo Prezzo", f"${latest_price:,.2f}")
-        with col4:
-            last_update = data['timestamp'].max()
-            st.metric("Ultimo Aggiornamento", last_update.strftime('%H:%M:%S'))
-
-        # Selezione simbolo
-        symbol = st.selectbox("Seleziona Simbolo", sorted(data['symbol'].unique()))
-
-        # Filtra dati per simbolo
-        symbol_data = data[data['symbol'] == symbol].copy()
-
-        if not symbol_data.empty:
-            # Grafici
-            st.plotly_chart(create_price_chart(symbol_data, symbol), use_container_width=True)
-            st.plotly_chart(create_volume_chart(symbol_data, symbol), use_container_width=True)
-
-            # Statistiche dettagliate
-            with st.expander("📈 Statistiche Dettagliate"):
-                stats_col1, stats_col2 = st.columns(2)
-                with stats_col1:
-                    price_change = symbol_data['price'].iloc[0] - symbol_data['price'].iloc[-1]
-                    price_change_pct = (price_change / symbol_data['price'].iloc[-1]) * 100
-                    st.metric(
-                        "Variazione Prezzo",
-                        f"${price_change:.2f}",
-                        f"{price_change_pct:.1f}%"
-                    )
-                with stats_col2:
-                    volume_total = symbol_data['volume'].sum()
-                    st.metric("Volume Totale", f"${volume_total:,.2f}")
-    else:
-        st.info("📊 Raccolta dati in corso... Il trading bot sta inizializzando il monitoraggio del mercato.")
-
-    # Aggiornamento automatico
-    if (datetime.now() - st.session_state.last_update).seconds > 60:
-        st.session_state.last_update = datetime.now()
-        st.rerun()
+    # Routing pagine
+    if selected == "Market":
+        market_page()
+    elif selected == "Trading":
+        trading_page()
+    elif selected == "Wallet":
+        wallet_page()
+    elif selected == "Performance":
+        performance_page()
 
 if __name__ == "__main__":
     main()

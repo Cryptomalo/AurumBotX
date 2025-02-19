@@ -1,8 +1,8 @@
 import logging
 import asyncio
 import os
-from typing import Optional
-from sqlalchemy import create_engine
+from typing import Optional, Dict, Any, List
+from sqlalchemy import create_engine, text
 from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.pool import AsyncAdaptedQueuePool
@@ -40,7 +40,7 @@ class DatabaseManager:
 
                 # Test connection
                 async with self.SessionLocal() as session:
-                    await session.execute("SELECT 1")
+                    await session.execute(text("SELECT 1"))
 
                 logger.info("Database connection established successfully")
                 return True
@@ -67,7 +67,7 @@ class DatabaseManager:
             raise RuntimeError("Database not initialized")
         return self.SessionLocal()
 
-    async def execute_with_retry(self, operation, max_retries: int = 3):
+    async def execute_with_retry(self, operation, max_retries: int = 3) -> Any:
         """Execute database operation with retry logic"""
         for attempt in range(max_retries):
             try:
@@ -83,12 +83,14 @@ class DatabaseManager:
                     raise
 
     async def save_trading_data(self, trading_data: TradingData) -> bool:
+        """Save trading data to database"""
         async def _save_trading_data(session):
             session.add(trading_data)
             return True
         return await self.execute_with_retry(_save_trading_data)
 
     async def execute_query(self, query: str, params: Optional[Dict[str, Any]] = None) -> Any:
+        """Execute raw SQL query"""
         async def _execute_query(session):
             result = await session.execute(text(query), params or {})
             return result

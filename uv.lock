@@ -356,6 +356,14 @@ wheels = [
 ]
 
 [[package]]
+name = "binance"
+version = "0.3"
+source = { registry = "https://pypi.org/simple" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/23/b4/566165409e9c851128988a990aba6bf14ebdf37fd847d0047ad16ae3d11b/binance-0.3-py2.py3-none-any.whl", hash = "sha256:9bdcfac96a5c2713f8a018d9f19a21317bf25ab5f9e12a542d8a6f08f73189c9", size = 3839 },
+]
+
+[[package]]
 name = "bitarray"
 version = "3.0.0"
 source = { registry = "https://pypi.org/simple" }
@@ -3001,6 +3009,7 @@ dependencies = [
     { name = "base58" },
     { name = "bcrypt" },
     { name = "beautifulsoup4" },
+    { name = "binance" },
     { name = "ccxt" },
     { name = "cryptography" },
     { name = "deepseek-ai" },
@@ -3072,6 +3081,7 @@ requires-dist = [
     { name = "base58", specifier = ">=2.1.1" },
     { name = "bcrypt", specifier = ">=4.2.1" },
     { name = "beautifulsoup4", specifier = "==4.13.3" },
+    { name = "binance", specifier = ">=0.3" },
     { name = "ccxt", specifier = ">=4.4.57" },
     { name = "cryptography", specifier = ">=44.0.0" },
     { name = "deepseek-ai", specifier = ">=0.0.1" },
