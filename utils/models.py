@@ -18,7 +18,7 @@ class TradingData(Base):
     side = Column(String)  # buy/sell
     strategy = Column(String)
     profit_loss = Column(Float, default=0.0)
-    metadata = Column(JSON)
+    trade_metadata = Column(JSON)
 
     def __repr__(self):
         return f"<TradingData(symbol='{self.symbol}', price={self.price}, volume={self.volume}, side='{self.side}', strategy='{self.strategy}', profit_loss={self.profit_loss}, metadata={self.metadata})>"

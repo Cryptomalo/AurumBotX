@@ -31,7 +31,6 @@ class DatabaseManager:
 
             self.engine = create_engine(
                 db_url,
-                poolclass=QueuePool,
                 pool_size=5,
                 max_overflow=10,
                 pool_timeout=30,
