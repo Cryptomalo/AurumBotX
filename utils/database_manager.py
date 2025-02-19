@@ -25,9 +25,8 @@ class DatabaseManager:
                 # Use environment variables for connection string
                 db_url = os.getenv('DATABASE_URL', 'postgresql+asyncpg://user:pass@localhost/dbname')
 
-                self.engine = create_async_engine(
+                self.engine = create_engine(
                     db_url,
-                    poolclass=AsyncAdaptedQueuePool,
                     pool_size=5,
                     max_overflow=10,
                     pool_timeout=30,

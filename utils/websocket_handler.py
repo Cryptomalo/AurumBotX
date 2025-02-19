@@ -47,7 +47,7 @@ class WebSocketHandler:
             logger.error(f"Failed to initialize WebSocket manager: {e}")
             raise
 
-    def setup_socket(self):
+    def connect_websocket(self):
         """Setup WebSocket with enhanced error handling and authentication"""
         try:
             logger.info("Setting up WebSocket connection...")
