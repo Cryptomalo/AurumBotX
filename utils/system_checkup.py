@@ -26,13 +26,17 @@ async def check_memory_usage():
 
 async def check_websocket_connections():
     """Verify WebSocket connections are properly managed"""
-    handler = WebSocketHandler(logger)
     try:
-        await handler.connect_websocket()
-        connections = handler.get_active_connections()
-        logger.info(f"Active WebSocket connections: {len(connections)}")
-        await handler.cleanup()
-        return True
+        db = DatabaseManager()
+        handler = WebSocketHandler(logger=logger, db=db)
+        connected = await handler.connect_websocket()
+        if connected:
+            logger.info("WebSocket connection test successful")
+            await handler.cleanup()
+            return True
+        else:
+            logger.error("WebSocket connection test failed")
+            return False
     except Exception as e:
         logger.error(f"WebSocket check failed: {str(e)}")
         return False
@@ -78,7 +82,6 @@ async def run_system_checkup():
         logger.error(f"Database connection error: {str(e)}")
         checks["Database Connection"] = False
 
-
     # Test 3: Sentiment Analysis
     logger.info("\nTest 3: Sentiment Analysis")
     sentiment_analyzer = SentimentAnalyzer()
@@ -86,10 +89,10 @@ async def run_system_checkup():
         try:
             sentiment = await sentiment_analyzer.analyze_sentiment(symbol)
             logger.info(f"Sentiment for {symbol}: {sentiment}")
+            checks[f"Sentiment Analysis {symbol}"] = True
         except Exception as e:
             logger.error(f"Sentiment analysis failed for {symbol}: {str(e)}")
             checks[f"Sentiment Analysis {symbol}"] = False
-
 
     # Test 4: Prediction Model
     logger.info("\nTest 4: Prediction Model")
@@ -100,6 +103,7 @@ async def run_system_checkup():
             if data is not None:
                 prediction = await prediction_model.analyze_market_with_ai(data, {})
                 logger.info(f"Prediction for {symbol}: {prediction}")
+                checks[f"Prediction {symbol}"] = True
             else:
                 logger.error(f"Prediction failed for {symbol}: No data available")
                 checks[f"Prediction {symbol}"] = False
@@ -114,6 +118,7 @@ async def run_system_checkup():
         try:
             signals = await trading.generate_trading_signals(symbol)
             logger.info(f"Generated signals for {symbol}: {signals}")
+            checks[f"Trading Signals {symbol}"] = True
         except Exception as e:
             logger.error(f"Signal generation failed for {symbol}: {str(e)}")
             checks[f"Trading Signals {symbol}"] = False

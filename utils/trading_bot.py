@@ -8,10 +8,13 @@ import os
 from datetime import datetime
 from typing import Dict, List, Optional, Any, Union
 import openai
-from utils.database import DatabaseManager
+from sqlalchemy import create_engine
+from sqlalchemy.orm import sessionmaker, scoped_session
+from sqlalchemy.pool import QueuePool
 from utils.indicators import TechnicalIndicators
 import pandas as pd
 import numpy as np
+from utils.models import TradingData, init_db
 
 logger = logging.getLogger(__name__)
 
@@ -30,37 +33,50 @@ class WebSocketHandler:
         self.db = db
         self.last_batch_process: float = time.time()
         self._initialize_db()
-        self.technical_indicators: TechnicalIndicators = TechnicalIndicators()
+        self.technical_indicators = TechnicalIndicators()
         self._message_buffer: List[Dict] = []
         self.buffer_size: int = 1000
-        self.batch_interval: float = 1.0  # seconds
-        self.testnet: bool = True  # Add testnet attribute
+        self.batch_interval: float = 1.0
+        self.testnet: bool = True
 
         # OpenAI setup for error correction
         self.openai_client = openai.OpenAI()
 
     def _initialize_db(self) -> None:
-        """Initialize database connection using DatabaseManager"""
+        """Initialize database connection with connection pooling"""
         try:
-            if isinstance(self.db, DatabaseManager):
-                db_url = os.getenv('DATABASE_URL')
-                if not db_url:
-                    raise ValueError("DATABASE_URL environment variable not set")
+            db_url = os.getenv('DATABASE_URL')
+            if not db_url:
+                raise ValueError("DATABASE_URL environment variable not set")
 
-                if not self.db.initialize(db_url):
-                    raise Exception("Failed to initialize database connection")
+            # Configure SQLAlchemy engine with connection pooling
+            self.engine = create_engine(
+                db_url,
+                poolclass=QueuePool,
+                pool_size=5,
+                max_overflow=10,
+                pool_timeout=30,
+                pool_pre_ping=True
+            )
 
-                self.logger.info("Database connection established successfully")
-                return
+            # Initialize database tables
+            init_db(self.engine)
 
-            self.logger.info("Using custom database handler")
+            # Create scoped session factory
+            self.Session = scoped_session(sessionmaker(bind=self.engine))
+
+            # Test connection
+            with self.engine.connect() as conn:
+                conn.execute("SELECT 1")
+
+            self.logger.info("Database connection established successfully")
 
         except Exception as e:
             self.logger.error(f"Database initialization error: {str(e)}")
             raise
 
     async def _preprocess_message(self, msg: Dict) -> Optional[Dict]:
-        """Preprocessa i messaggi con validazione"""
+        """Preprocess messages with validation"""
         try:
             if not isinstance(msg, dict):
                 raise ValueError("Invalid message format")
@@ -253,10 +269,25 @@ class WebSocketHandler:
             self.logger.error(f"Signal analysis error: {str(e)}")
 
     async def _handle_processed_batch(self, processed_data: List[Dict]) -> None:
-        """Gestisce il batch processato"""
+        """Handle processed batch with proper session management"""
         try:
-            if self.db and processed_data:
-                await self.db.insert_many(processed_data)
+            session = self.Session()
+            try:
+                for data in processed_data:
+                    trading_data = TradingData(
+                        symbol=data['symbol'],
+                        price=data['price'],
+                        volume=data['volume'],
+                        timestamp=datetime.fromtimestamp(data['timestamp'])
+                    )
+                    session.add(trading_data)
+                session.commit()
+                self.logger.info(f"Successfully saved {len(processed_data)} records")
+            except Exception as e:
+                session.rollback()
+                raise
+            finally:
+                session.close()
         except Exception as e:
             self.logger.error(f"Database insertion error: {e}")
 
@@ -296,21 +327,25 @@ class WebSocketHandler:
         self.connected = False
         self.logger.info("WebSocket handler cleaned up")
 
+
 # Example usage
 if __name__ == "__main__":
     logging.basicConfig(level=logging.INFO)
     logger = logging.getLogger(__name__)
 
     class MockDB:
-        def connect(self) -> None:
-            print("Connecting to mock database...")
-            pass
-        async def insert_many(self, data: List[Dict]) -> None:
+        def __init__(self, engine):
+            self.engine = engine
+
+        async def insert_many(self, session, data: List[Dict]) -> None:
             print(f"Inserting {len(data)} records into mock database...")
+            # Replace with actual database insertion logic using the session
             pass
 
     async def main() -> None:
-        db = MockDB()
+        db_url = os.getenv('DATABASE_URL', 'sqlite:///:memory:') #default to in memory DB if env var not set.
+        engine = create_engine(db_url)
+        db = MockDB(engine)
         handler = WebSocketHandler(logger, db)
 
         try:
