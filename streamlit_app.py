@@ -8,25 +8,25 @@ import logging
 from typing import Dict, Any, Optional
 from binance.client import Client
 from utils.database_manager import DatabaseManager
-from utils.trading_bot import WebSocketHandler #Note: This might need to be 'websocket_handler' depending on your file structure
+from utils.trading_bot import WebSocketHandler
 from utils.auto_trader import AutoTrader
 from utils.strategies.strategy_manager import StrategyManager
 
-# Configurazione logging (combining improved logging from edited and original)
+# Page configuration must be the first Streamlit command
+st.set_page_config(
+    page_title="AurumBot Pro Dashboard",
+    page_icon="🤖",
+    layout="wide",
+    initial_sidebar_state="expanded"
+)
+
+# Configurazione logging
 logging.basicConfig(
     level=logging.INFO,
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
     filename='streamlit_app.log' 
 )
 logger = logging.getLogger(__name__)
-
-# Configurazione pagina
-st.set_page_config(
-    page_title="AurumBot Pro Dashboard",
-    page_icon="🤖", # Updated icon from edited code
-    layout="wide",
-    initial_sidebar_state="expanded"
-)
 
 # Stile CSS personalizzato
 st.markdown("""
@@ -188,13 +188,6 @@ def performance_page():
 def main():
     initialize_session_state()
 
-    st.set_page_config(
-        page_title="AurumBot Dashboard",
-        page_icon="🤖",
-        layout="wide",
-        initial_sidebar_state="expanded"
-    )
-
     if not st.session_state.authenticated:
         login_page()
         return
@@ -205,7 +198,7 @@ def main():
             st.title("🤖 AurumBot Pro")
             selected = st.radio(
                 "Navigation",
-                ["Market", "Trading", "Wallet", "Performance", "Settings"], #added Settings
+                ["Market", "Trading", "Wallet", "Performance", "Settings"],
                 key="navigation"
             )
 
@@ -225,7 +218,6 @@ def main():
             performance_page()
         elif selected == "Settings":
             settings_page()
-
 
 if __name__ == "__main__":
     main()

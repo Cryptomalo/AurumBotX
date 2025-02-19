@@ -1,18 +1,19 @@
 [server]
-port = 8501
+port = 5000
 address = "0.0.0.0"
 enableCORS = false
 enableXsrfProtection = false
+headless = true
 
 [theme]
-primaryColor = "#F63366"
+primaryColor = "#FF4B4B"
 backgroundColor = "#0E1117"
 secondaryBackgroundColor = "#262730"
 textColor = "#FAFAFA"
 
 [browser]
 serverAddress = "0.0.0.0"
-serverPort = 8501
+serverPort = 5000
 gatherUsageStats = false
 
 [logger]
