@@ -91,7 +91,7 @@ def login_page():
         if st.button("Login"):
             # TODO: Implementare verifica credenziali dal database
             st.session_state.authenticated = True
-            st.experimental_rerun()
+            st.rerun()
 
 def market_page():
     """Pagina principale del mercato"""
