@@ -7,8 +7,11 @@ from sqlalchemy.orm import sessionmaker, relationship, Session
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.pool import QueuePool
 import os
-from typing import Optional, Generator
+from typing import Optional, Generator, Dict, Any
 import json
+from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession
+from sqlalchemy.orm import sessionmaker
+import asyncpg
 
 logger = logging.getLogger(__name__)
 
@@ -33,15 +36,55 @@ class DatabaseManager:
             return
 
         self.engine = None
+        self.async_engine = None
         self.Session = None
+        self.AsyncSession = None
         self.pool_size = 5
         self.max_overflow = 10
         self.pool_timeout = 30
         self.pool_recycle = 1800
         self.initialized = True
 
+    async def initialize_async(self, connection_string: str) -> bool:
+        """Initialize async database connection"""
+        try:
+            logger.info("Initializing async database connection...")
+
+            # Convert SQLAlchemy URL to asyncpg format
+            asyncpg_url = connection_string.replace('postgresql://', 'postgresql+asyncpg://')
+
+            self.async_engine = create_async_engine(
+                asyncpg_url,
+                pool_size=self.pool_size,
+                max_overflow=self.max_overflow,
+                pool_timeout=self.pool_timeout,
+                pool_recycle=self.pool_recycle,
+                pool_pre_ping=True,
+                json_serializer=lambda obj: json.dumps(obj, default=str),
+                json_deserializer=json.loads
+            )
+
+            # Test connection
+            async with self.async_engine.connect() as conn:
+                await conn.execute(text("SELECT 1"))
+
+            self.AsyncSession = sessionmaker(
+                self.async_engine, 
+                class_=AsyncSession,
+                expire_on_commit=False
+            )
+
+            logger.info("Async database connection established successfully")
+            return True
+
+        except Exception as e:
+            logger.error(f"Async database initialization error: {str(e)}")
+            self.async_engine = None
+            self.AsyncSession = None
+            raise
+
     def initialize(self, connection_string: str) -> bool:
-        """Initialize database connection with proper pooling"""
+        """Initialize synchronous database connection with proper pooling"""
         try:
             logger.info("Initializing database connection...")
 
@@ -80,8 +123,30 @@ class DatabaseManager:
             self.Session = None
             raise
 
+async def get_async_db() -> AsyncSession:
+    """Async database session generator with improved error handling"""
+    db_manager = DatabaseManager()
+    db_url = os.getenv('DATABASE_URL')
+
+    if not db_url:
+        raise ValueError("DATABASE_URL environment variable not set")
+
+    if not await db_manager.initialize_async(db_url):
+        raise SQLAlchemyError("Could not establish async database connection")
+
+    async with db_manager.AsyncSession() as session:
+        try:
+            yield session
+            await session.commit()
+        except Exception as e:
+            await session.rollback()
+            logger.error(f"Async session error: {str(e)}")
+            raise
+        finally:
+            await session.close()
+
 def get_db() -> Generator[Session, None, None]:
-    """Database session generator with improved error handling"""
+    """Synchronous database session generator with improved error handling"""
     db_manager = DatabaseManager()
     db_url = os.getenv('DATABASE_URL')
 
@@ -141,7 +206,7 @@ class TradingStrategy(Base):
               postgresql_where=text('is_public = true')),
     )
 
-def init_db():
+async def init_db():
     """Initialize database tables with proper error handling"""
     try:
         logger.info("Starting database initialization...")
@@ -150,11 +215,13 @@ def init_db():
             raise ValueError("DATABASE_URL environment variable not set")
 
         db_manager = DatabaseManager()
-        if not db_manager.initialize(db_url):
+        if not await db_manager.initialize_async(db_url):
             raise SQLAlchemyError("Failed to initialize database")
 
-        logger.info("Creating database tables...")
-        Base.metadata.create_all(db_manager.engine)
+        async with db_manager.async_engine.begin() as conn:
+            logger.info("Creating database tables...")
+            await conn.run_sync(Base.metadata.create_all)
+
         logger.info("Database tables created successfully")
         return True
 
@@ -164,7 +231,8 @@ def init_db():
 
 # Initialize database
 try:
-    init_db()
+    import asyncio
+    asyncio.run(init_db())
     logger.info("Database system initialized successfully")
 except Exception as e:
     logger.error(f"Failed to initialize database system: {e}")
