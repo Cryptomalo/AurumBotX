@@ -248,9 +248,9 @@ def dashboard():
                 st.session_state.wallet_address[-4:]
             ), unsafe_allow_html=True)
 
-        # Navigation
-        st.markdown("### Navigation")
-        nav = st.radio("", ["Trading", "Portfolio", "Auto-Trading", "Settings"])
+        # Simplified Navigation
+        st.markdown("### Menu")
+        nav = st.radio("", ["Trading", "Portfolio", "Auto-Trading"])
 
         st.markdown("---")
         if st.button("📤 Disconnect Wallet"):
@@ -258,7 +258,7 @@ def dashboard():
             st.session_state.wallet_address = None
             st.rerun()
 
-    # Main content
+    # Main content based on navigation
     if nav == "Trading":
         render_trading_interface()
         render_ai_insights()
@@ -266,9 +266,7 @@ def dashboard():
         render_portfolio_metrics()
     elif nav == "Auto-Trading":
         render_auto_trading()
-    elif nav == "Settings":
-        st.subheader("⚙️ Settings")
-        # Add settings interface here
+
 
 def initialize_session_state():
     """Initialize session state variables"""
