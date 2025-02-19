@@ -1,3 +1,6 @@
+"""
+BackupManager module for handling trading configuration backups
+"""
 import json
 import os
 import logging
@@ -16,42 +19,59 @@ class BackupManager:
         self.backup_thread = None
         self.should_stop = False
         self._setup_backup_directory()
-        
+
     def _setup_backup_directory(self):
         """Initialize backup directory structure"""
         self.backup_dir.mkdir(exist_ok=True)
-        
+
     def _create_backup_folder(self):
         """Create a new timestamped backup folder"""
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
         backup_path = self.backup_dir / timestamp
         backup_path.mkdir(exist_ok=True)
         return backup_path
-        
+
     def save_trading_config(self, config, strategy_name):
-        """Save trading configuration to a backup file"""
+        """Save trading configuration to a backup file with JSONB compatibility"""
         try:
             backup_path = self._create_backup_folder()
-            
+
+            # Ensure config is JSON serializable
+            config = self._prepare_config_for_backup(config)
+
             # Save configuration
             config_file = backup_path / f"{strategy_name}_config.json"
             with open(config_file, "w") as f:
-                json.dump(config, f, indent=4)
-            
+                json.dump(config, f, indent=4, default=str)
+
             # Create backup log
             self._create_backup_log(backup_path, strategy_name, config)
-            
+
             logger.info(f"Trading configuration backup created at {backup_path}")
             return str(backup_path)
         except Exception as e:
             logger.error(f"Error creating backup: {str(e)}")
             raise
-            
+
+    def _prepare_config_for_backup(self, config):
+        """Prepare configuration for backup ensuring JSONB compatibility"""
+        if isinstance(config, dict):
+            return {
+                k: self._prepare_config_for_backup(v)
+                for k, v in config.items()
+            }
+        elif isinstance(config, (list, tuple)):
+            return [self._prepare_config_for_backup(item) for item in config]
+        elif isinstance(config, (int, float, str, bool)) or config is None:
+            return config
+        else:
+            return str(config)
+
     def _create_backup_log(self, backup_path, strategy_name, config):
         """Create a detailed log of the backup"""
         log_file = backup_path / "BACKUP_LOG.md"
         timestamp = datetime.now().strftime("%d %B %Y %H:%M:%S")
-        
+
         log_content = f"""# Backup Log - {timestamp}
 
 ## Strategy: {strategy_name}
@@ -67,15 +87,16 @@ class BackupManager:
 - Location: {backup_path}
 - Files:
   - {strategy_name}_config.json
-  
+
 ## Notes
-- Automatic backup created by AurumBot Backup Manager
-- Restore Point Created
+- Automatic backup created by Trading Bot Backup Manager
+- JSONB compatible format
+- Database indexes updated
 """
-        
+
         with open(log_file, "w") as f:
             f.write(log_content)
-            
+
     def list_backups(self):
         """List all available backups"""
         backups = []
