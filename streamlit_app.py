@@ -20,7 +20,7 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
-# Configurazione logging
+# Configure logging
 logging.basicConfig(
     level=logging.INFO,
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
@@ -28,76 +28,32 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-# Stile CSS personalizzato
-st.markdown("""
-<style>
-    .main {
-        background-color: #0E1117;
-        color: #FAFAFA;
-    }
-    .stMetric {
-        background-color: #1C1C1C;
-        padding: 1rem;
-        border-radius: 10px;
-        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-    }
-    .stButton>button {
-        background-color: #FF4B4B;
-        color: white;
-        border-radius: 5px;
-    }
-    .stSelectbox {
-        background-color: #1C1C1C;
-    }
-    div[data-testid="stDecoration"] {
-        background-image: linear-gradient(90deg, #FF4B4B, #FF9F1C);
-    }
-</style>
-""", unsafe_allow_html=True)
-
-def initialize_session_state():
-    """Inizializza variabili di sessione"""
-    if 'authenticated' not in st.session_state:
-        st.session_state.authenticated = False
-    if 'bot' not in st.session_state:
-        st.session_state.bot = None
-    if 'ws_handler' not in st.session_state:
-        st.session_state.ws_handler = None
-    if 'active_strategies' not in st.session_state:
-        st.session_state.active_strategies = []
-    if 'current_page' not in st.session_state:
-        st.session_state.current_page = 'market'
-    if 'auto_trader' not in st.session_state:
-        st.session_state.auto_trader = None
-    if 'strategy_manager' not in st.session_state:
-        st.session_state.strategy_manager = None
-
+def connect_wallet():
+    """Connect to cryptocurrency wallet"""
+    st.session_state.wallet_address = "0x..." # This will be replaced with actual wallet connection
+    st.session_state.authenticated = True
+    st.rerun()
 
 def login_page():
-    """Pagina di login"""
+    """Wallet-based login page"""
     st.title("🔐 Login AurumBot Pro")
 
     col1, col2, col3 = st.columns([1,2,1])
     with col2:
         st.markdown("""
         <div style='background-color: #1C1C1C; padding: 2rem; border-radius: 10px;'>
-            <h3>Accedi alla tua Dashboard</h3>
+            <h3>Connect Your Wallet</h3>
         </div>
         """, unsafe_allow_html=True)
 
-        username = st.text_input("Username")
-        password = st.text_input("Password", type="password")
-
-        if st.button("Login"):
-            # TODO: Implementare verifica credenziali dal database
-            st.session_state.authenticated = True
-            st.rerun()
+        if st.button("Connect Wallet"):
+            connect_wallet()
 
 def market_page():
-    """Pagina principale del mercato"""
+    """Market dashboard page"""
     st.title("📊 Market Dashboard")
 
-    # Layout a colonne per metriche principali
+    # Layout for main metrics
     col1, col2, col3, col4 = st.columns(4)
 
     with col1:
@@ -109,9 +65,9 @@ def market_page():
     with col4:
         st.metric("P&L Today", "+$234.12", "")
 
-    # Grafici di mercato
+    # Market charts
     fig = go.Figure()
-    # TODO: Aggiungere dati real-time da Binance
+    # TODO: Add real-time data from Binance
     st.plotly_chart(fig, use_container_width=True)
 
 def trading_page():
@@ -135,8 +91,12 @@ def settings_page():
         st.success("Settings saved successfully!")
 
 def wallet_page():
-    """Pagina gestione wallet"""
+    """Wallet management page"""
     st.title("💰 Wallet Management")
+
+    # Display connected wallet address
+    st.markdown(f"### Connected Wallet")
+    st.code(st.session_state.wallet_address)
 
     col1, col2 = st.columns(2)
     with col1:
@@ -146,7 +106,7 @@ def wallet_page():
         st.markdown("### Active Positions")
         st.markdown("### 2 Positions")
 
-    # Lista transazioni
+    # Transaction list
     st.markdown("### Recent Transactions")
     transactions = pd.DataFrame({
         'Date': ['2025-02-19 10:30', '2025-02-19 09:15'],
@@ -156,14 +116,11 @@ def wallet_page():
     })
     st.dataframe(transactions)
 
-
 def performance_page():
     st.header("Performance Analytics")
 
-    # Add performance metrics and charts here
     st.line_chart({"Profit": [100, 120, 130, 150, 180, 210]})
 
-    # Metriche di performance (from original code)
     col1, col2, col3 = st.columns(3)
     with col1:
         st.metric("Total Profit", "$1,234.56", "+12.3%")
@@ -172,11 +129,9 @@ def performance_page():
     with col3:
         st.metric("Average Trade", "$45.67", "")
 
-    # Grafico PnL
     st.markdown("### Profit and Loss Over Time")
-    # TODO: Implementare grafico PnL
+    # TODO: Implement PnL chart
 
-    # Statistiche dettagliate
     st.markdown("### Detailed Statistics")
     stats = pd.DataFrame({
         'Metric': ['Total Trades', 'Profitable Trades', 'Loss Trades', 'Largest Win', 'Largest Loss'],
@@ -184,6 +139,24 @@ def performance_page():
     })
     st.dataframe(stats)
 
+def initialize_session_state():
+    """Initialize session state variables"""
+    if 'authenticated' not in st.session_state:
+        st.session_state.authenticated = False
+    if 'wallet_address' not in st.session_state:
+        st.session_state.wallet_address = None
+    if 'bot' not in st.session_state:
+        st.session_state.bot = None
+    if 'ws_handler' not in st.session_state:
+        st.session_state.ws_handler = None
+    if 'active_strategies' not in st.session_state:
+        st.session_state.active_strategies = []
+    if 'current_page' not in st.session_state:
+        st.session_state.current_page = 'market'
+    if 'auto_trader' not in st.session_state:
+        st.session_state.auto_trader = None
+    if 'strategy_manager' not in st.session_state:
+        st.session_state.strategy_manager = None
 
 def main():
     initialize_session_state()
@@ -196,6 +169,9 @@ def main():
 
         with st.sidebar:
             st.title("🤖 AurumBot Pro")
+            if st.session_state.wallet_address:
+                st.markdown(f"**Wallet**: {st.session_state.wallet_address[:6]}...{st.session_state.wallet_address[-4:]}")
+
             selected = st.radio(
                 "Navigation",
                 ["Market", "Trading", "Wallet", "Performance", "Settings"],
@@ -203,11 +179,12 @@ def main():
             )
 
             st.markdown("---")
-            if st.button("Logout"):
+            if st.button("Disconnect Wallet"):
                 st.session_state.authenticated = False
+                st.session_state.wallet_address = None
                 st.rerun()
 
-        # Routing pagine
+        # Page routing
         if selected == "Market":
             market_page()
         elif selected == "Trading":
