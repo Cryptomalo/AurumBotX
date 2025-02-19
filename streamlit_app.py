@@ -30,6 +30,25 @@ st.markdown("""
         border: 1px solid #3D3D3D;
         margin-bottom: 20px;
     }
+    .nav-pill {
+        background: linear-gradient(45deg, #2D2D2D, #3D3D3D);
+        padding: 10px 20px;
+        border-radius: 25px;
+        border: 1px solid #4D4D4D;
+        color: #FFFFFF;
+        text-align: center;
+        cursor: pointer;
+        transition: all 0.3s ease;
+    }
+    .nav-pill:hover {
+        background: linear-gradient(45deg, #3D3D3D, #4D4D4D);
+        transform: translateY(-2px);
+    }
+    .nav-pill.active {
+        background: linear-gradient(45deg, #00FF94, #00E0A0);
+        color: #0E1117;
+        font-weight: bold;
+    }
     .metric-value {
         color: #00FF94;
         font-size: 24px;
@@ -48,7 +67,6 @@ st.markdown("""
 
 def connect_wallet():
     """Connect Solana wallet"""
-    # This will be replaced with actual Solana wallet connection
     st.session_state.wallet_address = "GkDg...Rnq9"
     st.session_state.authenticated = True
     st.rerun()
@@ -228,39 +246,53 @@ def main():
     if not st.session_state.authenticated:
         login_page()
     else:
-        # Sidebar
-        with st.sidebar:
-            st.title("🚀 SolanaBot Pro")
-
-            if st.session_state.wallet_address:
-                st.markdown("""
-                    <div style='background: #1E1E1E; padding: 15px; border-radius: 10px; margin-bottom: 20px;'>
-                        <p style='color: #888888; margin-bottom: 5px;'>Connected Wallet</p>
-                        <code style='color: #00FF94;'>
-                            {}...{}
-                        </code>
+        # Wallet info in top right
+        col_wallet = st.columns([3, 1])
+        with col_wallet[1]:
+            st.markdown(f"""
+                <div style='text-align: right; padding: 10px;'>
+                    <span style='color: #888888;'>Connected: </span>
+                    <code style='color: #00FF94; background: #1E1E1E; padding: 5px 10px; border-radius: 5px;'>
+                        {st.session_state.wallet_address[:6]}...{st.session_state.wallet_address[-4:]}
+                    </code>
                     </div>
-                """.format(
-                    st.session_state.wallet_address[:6],
-                    st.session_state.wallet_address[-4:]
-                ), unsafe_allow_html=True)
+            """, unsafe_allow_html=True)
 
-            # Navigation
-            selected = st.radio("", ["Market Analysis", "Trading", "Bot Control"])
+        # Horizontal Navigation
+        st.markdown("<br>", unsafe_allow_html=True)
+        nav_cols = st.columns(4)
+        nav_options = ["Market Analysis", "Trading", "Bot Control"]
 
-            st.markdown("---")
-            if st.button("📤 Disconnect Wallet"):
-                st.session_state.authenticated = False
-                st.session_state.wallet_address = None
-                st.rerun()
+        if 'nav_selection' not in st.session_state:
+            st.session_state.nav_selection = "Market Analysis"
+
+        for i, option in enumerate(nav_options):
+            with nav_cols[i]:
+                if st.button(
+                    f"{option}",
+                    key=f"nav_{option}",
+                    use_container_width=True,
+                    help=f"View {option}"
+                ):
+                    st.session_state.nav_selection = option
+
+        # Add visual separator
+        st.markdown("<hr style='border: 1px solid #2D2D2D; margin: 20px 0;'>", unsafe_allow_html=True)
 
         # Main content based on navigation
-        if selected == "Market Analysis":
+        if st.session_state.nav_selection == "Market Analysis":
             render_meme_coin_charts()
-        elif selected == "Trading":
+        elif st.session_state.nav_selection == "Trading":
             render_trading_strategies()
-        elif selected == "Bot Control":
+        elif st.session_state.nav_selection == "Bot Control":
             render_bot_control()
+
+        # Logout button at bottom
+        st.markdown("<br>", unsafe_allow_html=True)
+        if st.button("📤 Disconnect Wallet", use_container_width=True):
+            st.session_state.authenticated = False
+            st.session_state.wallet_address = None
+            st.rerun()
 
 if __name__ == "__main__":
     main()
