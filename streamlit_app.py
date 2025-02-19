@@ -172,29 +172,14 @@ def main():
             if st.session_state.wallet_address:
                 st.markdown(f"**Wallet**: {st.session_state.wallet_address[:6]}...{st.session_state.wallet_address[-4:]}")
 
-            selected = st.radio(
-                "Navigation",
-                ["Market", "Trading", "Wallet", "Performance", "Settings"],
-                key="navigation"
-            )
-
             st.markdown("---")
             if st.button("Disconnect Wallet"):
                 st.session_state.authenticated = False
                 st.session_state.wallet_address = None
                 st.rerun()
 
-        # Page routing
-        if selected == "Market":
-            market_page()
-        elif selected == "Trading":
-            trading_page()
-        elif selected == "Wallet":
-            wallet_page()
-        elif selected == "Performance":
-            performance_page()
-        elif selected == "Settings":
-            settings_page()
+        # Always show market page as default after login
+        market_page()
 
 if __name__ == "__main__":
     main()
