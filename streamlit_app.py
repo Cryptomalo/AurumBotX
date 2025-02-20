@@ -8,6 +8,32 @@ import threading
 from solana.rpc.api import Client
 from utils.auto_trader import AutoTrader
 from utils.strategies.strategy_manager import StrategyManager
+from utils.database import DatabaseManager, init_db
+import logging
+import asyncio
+import nest_asyncio
+
+# Configure logging
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+    handlers=[
+        logging.StreamHandler(),
+        logging.FileHandler('streamlit_app.log')
+    ]
+)
+logger = logging.getLogger(__name__)
+
+# Initialize asyncio for Streamlit
+nest_asyncio.apply()
+
+# Initialize database
+try:
+    asyncio.run(init_db())
+    logger.info("Database initialized successfully")
+except Exception as e:
+    logger.error(f"Failed to initialize database: {e}")
+    st.error("Error connecting to database. Please check your connection settings.")
 
 # Configure page
 st.set_page_config(
@@ -17,41 +43,9 @@ st.set_page_config(
     initial_sidebar_state="collapsed",
 )
 
-# Hide Streamlit's default menu and footer
-st.markdown("""
-    <style>
-    #MainMenu {visibility: hidden;}
-    footer {visibility: hidden;}
-    .stApp {
-        background-color: #0E1117;
-    }
-    .trading-card {
-        background: linear-gradient(45deg, #1E1E1E, #2D2D2D);
-        padding: 20px;
-        border-radius: 15px;
-        border: 1px solid #3D3D3D;
-        margin-bottom: 20px;
-    }
-    .nav-bar {
-        background: linear-gradient(45deg, #1E1E1E, #2D2D2D);
-        padding: 15px;
-        border-radius: 15px;
-        border: 1px solid #3D3D3D;
-        margin-bottom: 20px;
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-    }
-    .bot-status-active {
-        color: #00FF94;
-        font-weight: bold;
-    }
-    .bot-status-inactive {
-        color: #FF4B4B;
-        font-weight: bold;
-    }
-    </style>
-""", unsafe_allow_html=True)
+# Load custom CSS
+with open('assets/style.css') as f:
+    st.markdown(f'<style>{f.read()}</style>', unsafe_allow_html=True)
 
 def connect_wallet():
     """Connect Solana wallet"""

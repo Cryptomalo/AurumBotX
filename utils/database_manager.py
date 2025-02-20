@@ -1,12 +1,14 @@
 import logging
 import os
 import re
-from typing import Optional, Dict, Any
+from typing import Optional, Dict, Any, Union
 from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.pool import QueuePool
 from utils.models import Base, TradingData
 import asyncpg
+import json
+from datetime import datetime
 
 logger = logging.getLogger(__name__)
 
@@ -33,48 +35,96 @@ class DatabaseManager:
     def _parse_db_url(self, url: str) -> Dict[str, str]:
         """Parse database URL into components"""
         try:
-            # Handle both postgresql:// and postgres:// formats
             if not url.startswith(('postgresql://', 'postgres://')):
                 raise ValueError("URL must start with postgresql:// or postgres://")
 
-            # Remove SSL mode if present
-            url = re.sub(r'\?.*$', '', url)
+            # Remove SSL mode and other parameters if present
+            base_url = url.split('?')[0]
 
-            # Support various URL formats
-            patterns = [
-                # Standard format: postgresql://user:pass@host:port/dbname
-                r'(?:postgresql|postgres):\/\/([^:]+):([^@]+)@([^:]+):(\d+)\/(.+)',
-                # Format without port: postgresql://user:pass@host/dbname
-                r'(?:postgresql|postgres):\/\/([^:]+):([^@]+)@([^\/]+)\/(.+)',
-                # Format with parameters: postgresql://user:pass@host:port/dbname?param=value
-                r'(?:postgresql|postgres):\/\/([^:]+):([^@]+)@([^:]+):(\d+)\/([^?]+)'
-            ]
+            # Standard format with port
+            pattern1 = r'(?:postgresql|postgres):\/\/([^:]+):([^@]+)@([^:]+):(\d+)\/(.+)'
+            # Format without port (use default 5432)
+            pattern2 = r'(?:postgresql|postgres):\/\/([^:]+):([^@]+)@([^\/]+)\/(.+)'
 
-            for pattern in patterns:
-                match = re.match(pattern, url)
-                if match:
-                    groups = match.groups()
-                    if len(groups) == 4:  # Format without port
-                        return {
-                            'user': groups[0],
-                            'password': groups[1],
-                            'host': groups[2],
-                            'port': '5432',  # Default PostgreSQL port
-                            'database': groups[3]
-                        }
-                    return {
-                        'user': groups[0],
-                        'password': groups[1],
-                        'host': groups[2],
-                        'port': groups[3],
-                        'database': groups[4]
-                    }
+            match = re.match(pattern1, base_url)
+            if match:
+                return {
+                    'user': match.group(1),
+                    'password': match.group(2),
+                    'host': match.group(3),
+                    'port': match.group(4),
+                    'database': match.group(5)
+                }
 
-            raise ValueError("Could not parse database URL")
+            match = re.match(pattern2, base_url)
+            if match:
+                return {
+                    'user': match.group(1),
+                    'password': match.group(2),
+                    'host': match.group(3),
+                    'port': '5432',
+                    'database': match.group(4)
+                }
+
+            raise ValueError("Invalid database URL format")
 
         except Exception as e:
             logger.error(f"Error parsing database URL: {str(e)}")
             raise ValueError(f"Invalid database URL format: {str(e)}")
+
+    async def save_trading_data(self, data: Union[Dict[str, Any], TradingData]) -> bool:
+        """Save trading data to database"""
+        try:
+            if not self.pool:
+                logger.error("Database connection not initialized")
+                return False
+
+            # Convert TradingData object to dictionary if necessary
+            if isinstance(data, TradingData):
+                data = data.to_dict()
+
+            async with self.pool.acquire() as conn:
+                # Create trading_data table if it doesn't exist
+                await conn.execute('''
+                    CREATE TABLE IF NOT EXISTS trading_data (
+                        id SERIAL PRIMARY KEY,
+                        symbol VARCHAR(20) NOT NULL,
+                        price DECIMAL NOT NULL,
+                        volume DECIMAL NOT NULL,
+                        timestamp TIMESTAMP NOT NULL,
+                        side VARCHAR(10),
+                        strategy VARCHAR(50),
+                        profit_loss DECIMAL DEFAULT 0.0,
+                        trade_metadata JSONB,
+                        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                    )
+                ''')
+
+                # Insert trading data
+                await conn.execute('''
+                    INSERT INTO trading_data (
+                        symbol, price, volume, timestamp, side, 
+                        strategy, profit_loss, trade_metadata, created_at
+                    )
+                    VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+                ''', 
+                data.get('symbol', 'UNKNOWN'),
+                float(data.get('price', 0)),
+                float(data.get('volume', 0)),
+                datetime.fromtimestamp(float(data.get('timestamp', datetime.now().timestamp()))),
+                data.get('side'),
+                data.get('strategy'),
+                float(data.get('profit_loss', 0.0)),
+                json.dumps(data.get('trade_metadata', {})),
+                datetime.now()
+                )
+
+                logger.info(f"Successfully saved trading data for {data.get('symbol')}")
+                return True
+
+        except Exception as e:
+            logger.error(f"Error saving trading data: {str(e)}")
+            return False
 
     async def initialize(self) -> bool:
         """Initialize database connection asynchronously"""
@@ -85,7 +135,6 @@ class DatabaseManager:
             if not db_url:
                 raise ValueError("DATABASE_URL environment variable not set")
 
-            # Parse connection parameters
             try:
                 db_params = self._parse_db_url(db_url)
                 logger.info(f"Successfully parsed database URL for database: {db_params['database']}")
@@ -93,7 +142,6 @@ class DatabaseManager:
                 logger.error(f"Database URL parsing failed: {str(e)}")
                 return False
 
-            # Create connection pool
             try:
                 self.pool = await asyncpg.create_pool(
                     user=db_params['user'],
@@ -119,21 +167,6 @@ class DatabaseManager:
         except Exception as e:
             logger.error(f"Database initialization error: {str(e)}")
             self.pool = None
-            return False
-
-    async def test_connection(self) -> bool:
-        """Test database connection"""
-        try:
-            if not self.pool:
-                return await self.initialize()
-
-            async with self.pool.acquire() as conn:
-                await conn.execute('SELECT 1')
-                logger.info("Database connection test successful")
-                return True
-
-        except Exception as e:
-            logger.error(f"Database connection test failed: {str(e)}")
             return False
 
     async def cleanup(self):
