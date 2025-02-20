@@ -25,6 +25,8 @@ class WebSocketHandler:
         self.max_reconnect_attempts = 10
         self.initialized = False
         self.active_streams = set()
+        self._loop = None
+        self._ws_task = None
 
     async def initialize(self) -> bool:
         """Initialize the WebSocket handler asynchronously"""
@@ -34,14 +36,16 @@ class WebSocketHandler:
 
             logger.info("Initializing WebSocket handler...")
             self.client = Client(self.api_key, self.api_secret, testnet=self.testnet)
+
+            # Initialize WebSocket manager without starting it immediately
             self.twm = ThreadedWebsocketManager(
                 api_key=self.api_key,
                 api_secret=self.api_secret,
                 testnet=self.testnet
             )
 
-            # Start the WebSocket manager
-            self.twm.start()
+            # Start WebSocket manager in a separate task
+            self._ws_task = asyncio.create_task(self._start_websocket())
             await asyncio.sleep(1)  # Give it time to establish connection
 
             self.initialized = True
@@ -53,31 +57,37 @@ class WebSocketHandler:
             logger.error(f"Failed to initialize WebSocket handler: {e}")
             return False
 
+    async def _start_websocket(self):
+        """Start WebSocket manager in a separate task"""
+        try:
+            self.twm.start()
+            while self.keep_running:
+                await asyncio.sleep(1)
+        except Exception as e:
+            logger.error(f"WebSocket manager error: {e}")
+            self.connected = False
+        finally:
+            if self.twm and self.twm.is_alive():
+                self.twm.stop()
+
+    def is_connected(self) -> bool:
+        """Check if WebSocket is connected"""
+        return self.connected and self.twm and self.twm.is_alive()
+
     async def test_connection(self) -> bool:
         """Test the WebSocket connection"""
         try:
             if not self.initialized:
-                await self.initialize()
-
-            if not self.is_connected():
-                success = await self.start()
-                if not success:
+                if not await self.initialize():
                     return False
 
-            # Test by subscribing to a stream
-            test_stream = 'btcusdt@trade'
-            try:
-                self.twm.start_kline_socket(
-                    symbol='BTCUSDT',
-                    callback=self._message_handler,
-                    interval='1m'
-                )
-                self.active_streams.add(test_stream)
-                logger.info("WebSocket connection test successful")
-                return True
-            except Exception as e:
-                logger.error(f"Failed to subscribe to test stream: {e}")
-                return False
+            if not self.is_connected():
+                logger.warning("WebSocket not connected, attempting reconnect...")
+                if not await self.initialize():
+                    return False
+
+            logger.info("WebSocket connection test successful")
+            return True
 
         except Exception as e:
             logger.error(f"WebSocket connection test failed: {e}")
@@ -95,7 +105,7 @@ class WebSocketHandler:
                     api_secret=self.api_secret,
                     testnet=self.testnet
                 )
-                self.twm.start()
+                self._ws_task = asyncio.create_task(self._start_websocket())
                 await asyncio.sleep(1)  # Give it time to establish connection
 
             self.connected = True
@@ -117,7 +127,6 @@ class WebSocketHandler:
                     except Exception as e:
                         logger.warning(f"Error unsubscribing from stream {stream}: {e}")
 
-                self.twm.stop()
                 self.connected = False
                 logger.info("WebSocket connection stopped")
                 self.active_streams.clear()
@@ -128,8 +137,16 @@ class WebSocketHandler:
         """Cleanup WebSocket resources"""
         try:
             self.keep_running = False
-            await self.stop()
+            if self._ws_task:
+                self._ws_task.cancel()
+                try:
+                    await self._ws_task
+                except asyncio.CancelledError:
+                    pass
+            if self.twm:
+                self.twm.stop()
             self.initialized = False
+            self.connected = False
             logger.info("WebSocket handler cleaned up successfully")
         except Exception as e:
             logger.error(f"Error during WebSocket cleanup: {e}")
@@ -199,10 +216,6 @@ class WebSocketHandler:
             self.connected = False
             return False
 
-    def is_connected(self) -> bool:
-        """Check if WebSocket is connected"""
-        return self.connected and hasattr(self, 'twm') and self.twm and self.twm.is_alive()
-
     async def reconnect(self) -> bool:
         """Attempt to reconnect the WebSocket"""
         if not self.keep_running:
@@ -259,6 +272,7 @@ class WebSocketHandler:
             return False
 
     def _handle_error(self, error_msg: Any):
+        """Handle WebSocket error messages"""
         try:
             if isinstance(error_msg, dict):
                 error_code = error_msg.get('code', 0)
@@ -271,13 +285,13 @@ class WebSocketHandler:
 
             if error_code in [1002, 1006, 1012]:  # Connection errors
                 logger.warning(f"Connection error {error_code}, attempting reconnect...")
-                asyncio.create_task(self.reconnect()) #Use asyncio.create_task for asynchronous reconnect
+                asyncio.create_task(self.reconnect())
             elif error_code == 451:  # Authentication error
                 logger.critical("Authentication failed. Please check API credentials.")
                 self.keep_running = False
-                asyncio.create_task(self.stop()) #Use asyncio.create_task for asynchronous stop
+                asyncio.create_task(self.stop())
             else:
                 logger.warning(f"Unhandled error code: {error_code}")
 
         except Exception as e:
-            logger.error(f"Error handling error: {str(e)}")
+            logger.error(f"Error handling error message: {str(e)}")
