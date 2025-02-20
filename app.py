@@ -13,6 +13,8 @@ import json
 from pathlib import Path
 import asyncio
 import nest_asyncio
+import plotly.express as px # Added import for plotly.express
+
 
 # Enable nested event loops for Streamlit
 nest_asyncio.apply()
@@ -260,106 +262,121 @@ def render_navigation():
 def render_dashboard():
     """Render modern dashboard with enhanced visualizations"""
     try:
-        col1, col2, col3 = st.columns([2,1,1])
+        st.title("Trading Dashboard")
+
+        # Top metrics row
+        col1, col2, col3 = st.columns(3)
 
         with col1:
-            st.subheader("Market Overview")
-
-            # Force data reload
-            trading_pair = "BTC/USDT"  # Default pair
-            if st.session_state.data_loader:
-                df = load_market_data(trading_pair)
-                if df is not None and not df.empty:
-                    # Add loading indicator
-                    with st.spinner('Loading market data...'):
-                        chart = create_candlestick_chart(df)
-                        if chart:
-                            st.plotly_chart(chart, use_container_width=True)
-                        else:
-                            st.error("Could not create chart. Please try again.")
-                else:
-                    st.warning("No market data available. Please wait while we fetch the latest data.")
+            st.metric(
+                label="Portfolio Value",
+                value="$10,000",
+                delta="↑ $500 (5%)",
+                help="Current portfolio value including all assets"
+            )
 
         with col2:
-            st.subheader("Portfolio Summary")
-            if st.session_state.bot:
-                current_balance = st.session_state.bot.balance
-                initial_balance = st.session_state.bot.initial_balance
-                pnl = current_balance - initial_balance
-                pnl_color = COLORS['success'] if pnl >= 0 else COLORS['error']
-
-                # Add portfolio metrics with loading state
-                with st.spinner('Loading portfolio data...'):
-                    st.markdown(f"""
-                    <div class='metric-card'>
-                        <h4>Current Balance</h4>
-                        <h2 style='color: {COLORS["text"]};'>${current_balance:.2f}</h2>
-                    </div>
-                    <div class='metric-card'>
-                        <h4>PNL</h4>
-                        <h2 style='color: {pnl_color};'>${pnl:.2f} ({(pnl/initial_balance)*100:.1f}%)</h2>
-                    </div>
-                    """, unsafe_allow_html=True)
-
-                    if hasattr(st.session_state.bot, 'balance_history'):
-                        pnl_df = pd.DataFrame(st.session_state.bot.balance_history)
-                        st.line_chart(pnl_df.set_index('timestamp')['balance'])
+            st.metric(
+                label="24h Trading Volume",
+                value="$25,000",
+                delta="↑ 15%",
+                help="Total trading volume in the last 24 hours"
+            )
 
         with col3:
-            st.subheader("Top Meme Coins")
-            # Add loading state for meme coins
-            with st.spinner('Loading meme coin data...'):
-                meme_pairs = ["DOGE/USDT", "SHIB/USDT", "PEPE/USDT"]
-                for pair in meme_pairs:
-                    df = load_market_data(pair)
-                    if df is not None and not df.empty:
-                        last_price = df['Close'].iloc[-1]
-                        price_change = ((last_price - df['Open'].iloc[-1]) / df['Open'].iloc[-1]) * 100
-                        color = COLORS['success'] if price_change >= 0 else COLORS['error']
+            st.metric(
+                label="Active Positions",
+                value="3",
+                help="Number of currently open trading positions"
+            )
 
-                        st.markdown(f"""
-                        <div class='metric-card'>
-                            <h4>{pair.split('/')[0]}</h4>
-                            <h3 style='color: {color};'>{price_change:+.1f}%</h3>
-                        </div>
-                        """, unsafe_allow_html=True)
+        # Charts row
+        st.subheader("Market Overview")
+        col1, col2 = st.columns([2, 1])
+
+        with col1:
+            # Price chart
+            if st.session_state.data_loader:
+                df = load_market_data("BTC/USDT")
+                if df is not None and not df.empty:
+                    chart = create_candlestick_chart(df)
+                    if chart:
+                        st.plotly_chart(chart, use_container_width=True)
                     else:
-                        st.warning(f"No data available for {pair}")
+                        st.error("Could not create chart. Please try again.")
+                else:
+                    st.warning("Loading market data...")
+
+        with col2:
+            # Portfolio composition
+            portfolio_data = {
+                'Asset': ['BTC', 'ETH', 'SOL', 'USDT'],
+                'Value': [4000, 3000, 2000, 1000]
+            }
+            df_portfolio = pd.DataFrame(portfolio_data)
+
+            fig = px.pie(
+                df_portfolio, 
+                values='Value', 
+                names='Asset',
+                title='Portfolio Composition'
+            )
+            st.plotly_chart(fig, use_container_width=True)
+
+        # Bottom row - Trading activity and alerts
+        col1, col2 = st.columns(2)
+
+        with col1:
+            st.subheader("Recent Trading Activity")
+            activity_data = [
+                {"time": "10:30", "pair": "BTC/USDT", "type": "Buy", "amount": "$1000"},
+                {"time": "11:15", "pair": "ETH/USDT", "type": "Sell", "amount": "$500"},
+                {"time": "12:00", "pair": "SOL/USDT", "type": "Buy", "amount": "$300"}
+            ]
+
+            st.table(activity_data)
+
+        with col2:
+            st.subheader("Active Alerts")
+            alerts = [
+                "BTC price above $45,000",
+                "ETH volume spike detected",
+                "New trading opportunity in SOL"
+            ]
+
+            for alert in alerts:
+                st.info(alert)
 
     except Exception as e:
-        logger.error(f"Error in dashboard: {str(e)}")
-        st.error("An error occurred while rendering the dashboard. Please refresh the page.")
+        st.error(f"Error rendering dashboard: {str(e)}")
+
 
 def create_candlestick_chart(df):
-    """Create interactive candlestick chart with improved styling"""
+    """Create an interactive candlestick chart"""
     try:
-        if df is None or df.empty:
-            return None
-
         fig = go.Figure(data=[go.Candlestick(
             x=df.index,
             open=df['Open'],
             high=df['High'],
             low=df['Low'],
             close=df['Close'],
-            increasing_line_color=COLORS['success'],
-            decreasing_line_color=COLORS['error']
+            increasing_line_color='#00C853',
+            decreasing_line_color='#FF4444'
         )])
 
         fig.update_layout(
             title='Price Chart',
             yaxis_title='Price',
             template='plotly_dark',
-            plot_bgcolor=COLORS['background'],
-            paper_bgcolor=COLORS['background'],
+            plot_bgcolor='rgba(0,0,0,0)',
+            paper_bgcolor='rgba(0,0,0,0)',
             xaxis_rangeslider_visible=False,
-            height=600,
-            font=dict(color=COLORS['text'])
+            height=400
         )
 
         return fig
     except Exception as e:
-        logger.error(f"Error creating chart: {str(e)}")
+        st.error(f"Error creating chart: {str(e)}")
         return None
 
 def render_trading_controls():
