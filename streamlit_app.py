@@ -74,7 +74,7 @@ def main():
         if st.button("🔐 Connect Wallet"):
             st.session_state.wallet_address = "Demo_Wallet"
             st.session_state.authenticated = True
-            st.experimental_rerun()
+            st.rerun()
     else:
         st.success("Connected to wallet: " + st.session_state.wallet_address)
         st.markdown("### Welcome to your trading dashboard")

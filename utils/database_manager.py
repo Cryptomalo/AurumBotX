@@ -72,60 +72,6 @@ class DatabaseManager:
             logger.error(f"Error parsing database URL: {str(e)}")
             raise ValueError(f"Invalid database URL format: {str(e)}")
 
-    async def save_trading_data(self, data: Union[Dict[str, Any], TradingData]) -> bool:
-        """Save trading data to database"""
-        try:
-            if not self.pool:
-                logger.error("Database connection not initialized")
-                return False
-
-            # Convert TradingData object to dictionary if necessary
-            if isinstance(data, TradingData):
-                data = data.to_dict()
-
-            async with self.pool.acquire() as conn:
-                # Create trading_data table if it doesn't exist
-                await conn.execute('''
-                    CREATE TABLE IF NOT EXISTS trading_data (
-                        id SERIAL PRIMARY KEY,
-                        symbol VARCHAR(20) NOT NULL,
-                        price DECIMAL NOT NULL,
-                        volume DECIMAL NOT NULL,
-                        timestamp TIMESTAMP NOT NULL,
-                        side VARCHAR(10),
-                        strategy VARCHAR(50),
-                        profit_loss DECIMAL DEFAULT 0.0,
-                        trade_metadata JSONB,
-                        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-                    )
-                ''')
-
-                # Insert trading data
-                await conn.execute('''
-                    INSERT INTO trading_data (
-                        symbol, price, volume, timestamp, side, 
-                        strategy, profit_loss, trade_metadata, created_at
-                    )
-                    VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
-                ''', 
-                data.get('symbol', 'UNKNOWN'),
-                float(data.get('price', 0)),
-                float(data.get('volume', 0)),
-                datetime.fromtimestamp(float(data.get('timestamp', datetime.now().timestamp()))),
-                data.get('side'),
-                data.get('strategy'),
-                float(data.get('profit_loss', 0.0)),
-                json.dumps(data.get('trade_metadata', {})),
-                datetime.now()
-                )
-
-                logger.info(f"Successfully saved trading data for {data.get('symbol')}")
-                return True
-
-        except Exception as e:
-            logger.error(f"Error saving trading data: {str(e)}")
-            return False
-
     async def initialize(self) -> bool:
         """Initialize database connection asynchronously"""
         try:
@@ -167,6 +113,98 @@ class DatabaseManager:
         except Exception as e:
             logger.error(f"Database initialization error: {str(e)}")
             self.pool = None
+            return False
+
+    async def test_connection(self) -> bool:
+        """Test database connection"""
+        try:
+            if not self.pool:
+                if not await self.initialize():
+                    return False
+
+            async with self.pool.acquire() as conn:
+                # Test query
+                await conn.execute('SELECT 1')
+                logger.info("Database connection test successful")
+                return True
+
+        except Exception as e:
+            logger.error(f"Database connection test failed: {str(e)}")
+            return False
+
+    async def save_trading_data(self, data: Union[Dict[str, Any], TradingData]) -> bool:
+        """Save trading data to database"""
+        try:
+            if not self.pool:
+                logger.error("Database connection not initialized")
+                return False
+
+            # Convert TradingData object to dictionary if necessary
+            if isinstance(data, TradingData):
+                data = data.to_dict()
+
+            # Convert timestamp to datetime if it's a string or timestamp
+            try:
+                if isinstance(data.get('timestamp'), str):
+                    timestamp = datetime.fromisoformat(data['timestamp'].replace('Z', '+00:00'))
+                elif isinstance(data.get('timestamp'), (int, float)):
+                    timestamp = datetime.fromtimestamp(data['timestamp'])
+                else:
+                    timestamp = datetime.now()
+            except (ValueError, TypeError) as e:
+                logger.warning(f"Invalid timestamp format, using current time: {e}")
+                timestamp = datetime.now()
+
+            async with self.pool.acquire() as conn:
+                # Create trading_data table if it doesn't exist
+                await conn.execute('''
+                    CREATE TABLE IF NOT EXISTS trading_data (
+                        id SERIAL PRIMARY KEY,
+                        symbol VARCHAR(20) NOT NULL,
+                        price DECIMAL NOT NULL,
+                        volume DECIMAL NOT NULL,
+                        timestamp TIMESTAMP NOT NULL,
+                        side VARCHAR(10),
+                        strategy VARCHAR(50),
+                        profit_loss DECIMAL DEFAULT 0.0,
+                        trade_metadata JSONB,
+                        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                    )
+                ''')
+
+                # Safely convert numeric values
+                try:
+                    price = float(data.get('price', 0))
+                    volume = float(data.get('volume', 0))
+                    profit_loss = float(data.get('profit_loss', 0.0))
+                except (ValueError, TypeError) as e:
+                    logger.error(f"Invalid numeric data: {e}")
+                    return False
+
+                # Insert trading data with proper type handling
+                await conn.execute('''
+                    INSERT INTO trading_data (
+                        symbol, price, volume, timestamp, side, 
+                        strategy, profit_loss, trade_metadata, created_at
+                    )
+                    VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+                ''', 
+                data.get('symbol', 'UNKNOWN'),
+                price,
+                volume,
+                timestamp,
+                data.get('side'),
+                data.get('strategy'),
+                profit_loss,
+                json.dumps(data.get('trade_metadata', {})),
+                datetime.now()
+                )
+
+                logger.info(f"Successfully saved trading data for {data.get('symbol')}")
+                return True
+
+        except Exception as e:
+            logger.error(f"Error saving trading data: {str(e)}")
             return False
 
     async def cleanup(self):

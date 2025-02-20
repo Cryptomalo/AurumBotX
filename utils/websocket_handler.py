@@ -1,11 +1,15 @@
 import asyncio
 import logging
+import nest_asyncio
 from typing import Optional, Dict, Any, Callable
 from datetime import datetime, timedelta
 import random
 from binance.client import Client
 from binance.streams import ThreadedWebsocketManager
 from binance.exceptions import BinanceAPIException
+
+# Apply nest_asyncio to handle nested event loops
+nest_asyncio.apply()
 
 logger = logging.getLogger(__name__)
 
@@ -25,7 +29,7 @@ class WebSocketHandler:
         self.max_reconnect_attempts = 10
         self.initialized = False
         self.active_streams = set()
-        self._loop = None
+        self._loop = asyncio.new_event_loop()
         self._ws_task = None
 
     async def initialize(self) -> bool:
@@ -37,7 +41,8 @@ class WebSocketHandler:
             logger.info("Initializing WebSocket handler...")
             self.client = Client(self.api_key, self.api_secret, testnet=self.testnet)
 
-            # Initialize WebSocket manager without starting it immediately
+            # Initialize WebSocket manager with the new event loop
+            asyncio.set_event_loop(self._loop)
             self.twm = ThreadedWebsocketManager(
                 api_key=self.api_key,
                 api_secret=self.api_secret,
@@ -45,7 +50,7 @@ class WebSocketHandler:
             )
 
             # Start WebSocket manager in a separate task
-            self._ws_task = asyncio.create_task(self._start_websocket())
+            self._ws_task = self._loop.create_task(self._start_websocket())
             await asyncio.sleep(1)  # Give it time to establish connection
 
             self.initialized = True
@@ -105,7 +110,7 @@ class WebSocketHandler:
                     api_secret=self.api_secret,
                     testnet=self.testnet
                 )
-                self._ws_task = asyncio.create_task(self._start_websocket())
+                self._ws_task = self._loop.create_task(self._start_websocket())
                 await asyncio.sleep(1)  # Give it time to establish connection
 
             self.connected = True

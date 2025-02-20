@@ -59,10 +59,10 @@ def render_chat():
 
     # Input area
     col1, col2 = st.columns([4, 1])
-    
+
     with col1:
         message = st.text_input("", placeholder="Scrivi un messaggio...", key="chat_input")
-    
+
     with col2:
         if st.button("Invia", use_container_width=True):
             if message:
@@ -72,7 +72,7 @@ def render_chat():
                     "is_user": True,
                     "timestamp": datetime.now().strftime("%H:%M")
                 })
-                
+
                 # Simulate bot response
                 bot_response = "Grazie per il tuo messaggio! Questa è una risposta di esempio."
                 st.session_state.messages.append({
@@ -80,7 +80,7 @@ def render_chat():
                     "is_user": False,
                     "timestamp": datetime.now().strftime("%H:%M")
                 })
-                
+
                 # Clear input
                 st.session_state.chat_input = ""
                 st.rerun()
