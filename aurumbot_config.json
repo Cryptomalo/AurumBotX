@@ -1,0 +1,29 @@
+{
+  "protection_rules": {
+    "require_approval": true,
+    "protected_components": [
+      "trading_strategies",
+      "dashboard",
+      "wallet_management",
+      "ai_analysis",
+      "backup_system",
+      "database"
+    ],
+    "backup_required": true,
+    "test_required": true
+  },
+  "critical_files": [
+    "app.py",
+    "streamlit_bot.py",
+    "utils/auto_trader.py",
+    "utils/strategies/*",
+    "utils/ai_trading.py",
+    "utils/wallet_manager.py",
+    "utils/backup_manager.py"
+  ],
+  "version_control": {
+    "backup_frequency": "before_each_change",
+    "backup_retention": "7_days",
+    "changelog_required": true
+  }
+}

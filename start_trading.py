@@ -1,8 +1,8 @@
-
 import asyncio
 import logging
 import signal
 from datetime import datetime
+from aiohttp import web
 from utils.trading_bot import WebSocketHandler
 from utils.database_manager import DatabaseManager
 from utils.system_checkup import run_system_checkup
@@ -24,6 +24,7 @@ class TradingBot:
         self.handler = None
         self.db_manager = None
         self.should_run = True
+        self.start_time = datetime.now()
         signal.signal(signal.SIGINT, self._handle_shutdown)
         signal.signal(signal.SIGTERM, self._handle_shutdown)
 
@@ -39,7 +40,7 @@ class TradingBot:
             # Initialize database
             self.db_manager = DatabaseManager()
             await self.db_manager.initialize()
-            
+
             # Initialize WebSocket handler
             self.handler = WebSocketHandler()
             return True
@@ -59,6 +60,17 @@ class TradingBot:
             # Initialize components
             if not await self.initialize():
                 return
+
+            # Start monitoring server
+            app = web.Application()
+            app.router.add_get('/status', self.handle_status)
+            app.router.add_get('/health', self.handle_health)
+
+            runner = web.AppRunner(app)
+            await runner.setup()
+            site = web.TCPSite(runner, '0.0.0.0', 5001)
+            await site.start()
+            logger.info("Monitoring server started on port 5001")
 
             # Connect WebSocket
             if await self.handler.connect_websocket():
@@ -83,6 +95,24 @@ class TradingBot:
             logger.info("Trading bot shutdown completed")
         except Exception as e:
             logger.error(f"Error during cleanup: {str(e)}")
+
+    async def handle_status(self, request):
+        """Handle status endpoint request"""
+        status = {
+            'status': 'running' if self.should_run else 'stopped',
+            'uptime': str(datetime.now() - self.start_time),
+            'websocket_connected': self.handler.check_connection() if self.handler else False,
+            'database_connected': bool(self.db_manager),
+            'last_error': None,
+            'version': '1.0.0'
+        }
+        return web.json_response(status)
+
+    async def handle_health(self, request):
+        """Handle health check endpoint"""
+        if self.should_run and self.handler and self.handler.check_connection():
+            return web.Response(text="OK", status=200)
+        return web.Response(text="Service Unavailable", status=503)
 
 async def main():
     bot = TradingBot()

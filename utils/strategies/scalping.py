@@ -5,6 +5,7 @@ from utils.strategies.base_strategy import BaseStrategy
 import logging
 import asyncio
 from cachetools import TTLCache
+from datetime import datetime
 
 logger = logging.getLogger(__name__)
 
@@ -28,40 +29,44 @@ class ScalpingStrategy(BaseStrategy):
         self._indicator_cache = TTLCache(maxsize=100, ttl=60)  # 1 minute cache
         self._analysis_cache = TTLCache(maxsize=50, ttl=30)    # 30 seconds cache
 
-        self.logger = logger
-
     async def analyze_market(
-        self, 
-        market_data: pd.DataFrame, 
-        sentiment_data: Optional[Dict] = None
+        self,
+        market_data: Dict[str, Any],
+        sentiment_data: Optional[Dict[str, Any]] = None
     ) -> List[Dict[str, Any]]:
         """Analisi di mercato ultra-rapida con rilevamento anomalie e caching"""
         try:
-            if market_data is None or market_data.empty:
+            if not market_data:
+                logger.warning("Dati di mercato mancanti")
+                return []
+
+            # Convert market data to DataFrame if needed
+            if isinstance(market_data, dict):
+                df = pd.DataFrame([market_data])
+            elif isinstance(market_data, pd.DataFrame):
+                df = market_data
+            else:
+                logger.error("Formato dati di mercato non valido")
+                return []
+
+            if df.empty:
                 return []
 
             # Check cache first
-            cache_key = f"{market_data.index[-1]}"
+            cache_key = f"{df.index[-1]}"
             cached_analysis = self._analysis_cache.get(cache_key)
             if cached_analysis:
                 return cached_analysis
 
-            # Standardizzazione colonne con validazione
-            required_columns = ['Volume', 'Close', 'High', 'Low']
-            available_columns = {col.lower(): col for col in market_data.columns}
+            # Calculate technical indicators
+            indicators = await self._calculate_indicators(df)
+            if not indicators:
+                return []
 
-            volume = market_data[available_columns.get('volume', 'Volume')]
-            close = market_data[available_columns.get('close', 'Close')]
-            high = market_data[available_columns.get('high', 'High')]
-            low = market_data[available_columns.get('low', 'Low')]
-
-            # Batch calculation of technical indicators
-            indicators = await self._calculate_indicators(volume, close, high, low)
-
-            current_price = close.iloc[-1]
+            current_price = float(df['Close'].iloc[-1])
 
             analysis = [{
-                'volume_24h': volume.iloc[-1],
+                'volume_24h': float(df['Volume'].iloc[-1]),
                 'volume_ratio': indicators['volume_ratio'],
                 'volume_trend': indicators['volume_trend'],
                 'volume_anomaly': indicators['volume_anomaly'],
@@ -79,46 +84,48 @@ class ScalpingStrategy(BaseStrategy):
 
             # Cache the results
             self._analysis_cache[cache_key] = analysis
-
             return analysis
 
         except Exception as e:
-            self.logger.error(f"Market analysis error: {str(e)}")
+            logger.error(f"Market analysis error: {str(e)}")
             return []
 
-    async def _calculate_indicators(self, volume: pd.Series, close: pd.Series, 
-                                 high: pd.Series, low: pd.Series) -> Dict[str, float]:
+    async def _calculate_indicators(self, df: pd.DataFrame) -> Dict[str, float]:
         """Calcolo ottimizzato degli indicatori tecnici con caching"""
         try:
-            cache_key = f"{close.index[-1]}"
+            cache_key = f"{df.index[-1]}"
             cached_indicators = self._indicator_cache.get(cache_key)
             if cached_indicators:
                 return cached_indicators
 
-            # Parallel calculation of indicators
+            volume = df['Volume']
+            close = df['Close']
+            high = df['High']
+            low = df['Low']
+
+            # Calculate indicators
             volume_sma = volume.rolling(window=5).mean()
             volume_std = volume.rolling(window=5).std()
 
             indicators = {
-                'volume_ratio': volume.iloc[-1] / volume_sma.iloc[-1],
-                'volume_anomaly': (volume.iloc[-1] - volume_sma.iloc[-1]) / volume_std.iloc[-1],
-                'volume_trend': volume.pct_change(3).mean(),
-                'volatility': close.pct_change().rolling(window=5).std().iloc[-1] * np.sqrt(288),
-                'momentum': close.pct_change(periods=3).iloc[-1],
-                'price_trend': close.pct_change(3).ewm(span=3).mean().iloc[-1],
-                'recent_high': high.rolling(window=12).max().iloc[-1],
-                'recent_low': low.rolling(window=12).min().iloc[-1]
+                'volume_ratio': float(volume.iloc[-1] / volume_sma.iloc[-1]),
+                'volume_anomaly': float((volume.iloc[-1] - volume_sma.iloc[-1]) / volume_std.iloc[-1]),
+                'volume_trend': float(volume.pct_change(3).mean()),
+                'volatility': float(close.pct_change().rolling(window=5).std().iloc[-1] * np.sqrt(288)),
+                'momentum': float(close.pct_change(periods=3).iloc[-1]),
+                'price_trend': float(close.pct_change(3).ewm(span=3).mean().iloc[-1]),
+                'recent_high': float(high.rolling(window=12).max().iloc[-1]),
+                'recent_low': float(low.rolling(window=12).min().iloc[-1])
             }
 
             indicators['price_range'] = indicators['recent_high'] - indicators['recent_low']
 
             # Cache the results
             self._indicator_cache[cache_key] = indicators
-
             return indicators
 
         except Exception as e:
-            self.logger.error(f"Error calculating indicators: {str(e)}")
+            logger.error(f"Error calculating indicators: {str(e)}")
             return {}
 
     def generate_signals(self, analysis: Dict[str, Any]) -> Dict[str, Any]:
@@ -203,13 +210,13 @@ class ScalpingStrategy(BaseStrategy):
     async def validate_trade(self, signal: Dict[str, Any], portfolio: Dict[str, Any]) -> bool:
         """Validates a potential scalping trade with enhanced risk management"""
         try:
-            if signal['action'] == 'hold':
+            if signal.get('action') == 'hold':
                 return False
 
             # Input validation
             required_fields = ['action', 'confidence', 'target_price', 'stop_loss', 'size_factor']
             if not all(field in signal for field in required_fields):
-                self.logger.warning("Invalid signal format")
+                logger.warning("Invalid signal format")
                 return False
 
             # Portfolio validation
@@ -217,61 +224,70 @@ class ScalpingStrategy(BaseStrategy):
             min_trade_size = portfolio.get('min_trade_size', 50)
 
             if required_capital < min_trade_size:
-                self.logger.info(f"Insufficient capital for minimum trade size: {min_trade_size}")
+                logger.info(f"Insufficient capital for minimum trade size: {min_trade_size}")
                 return False
 
             # Risk management
             risk_per_trade = abs(signal['target_price'] - signal['stop_loss']) * required_capital
-            max_risk = portfolio.get('total_capital', 0) * self.risk_per_trade  # Use configured risk per trade
+            max_risk = portfolio.get('total_capital', 0) * self.risk_per_trade
 
             # Market condition validation
             current_spread = portfolio.get('current_spread', 0.001)
             min_profit_after_fees = self.profit_target * 2
 
             if risk_per_trade > max_risk:
-                self.logger.info(f"Trade risk {risk_per_trade} exceeds maximum allowed {max_risk}")
+                logger.info(f"Trade risk {risk_per_trade} exceeds maximum allowed {max_risk}")
                 return False
 
             if current_spread >= min_profit_after_fees:
-                self.logger.info(f"Spread {current_spread} too high compared to target profit {min_profit_after_fees}")
+                logger.info(f"Spread {current_spread} too high compared to target profit {min_profit_after_fees}")
                 return False
 
             return True
 
         except Exception as e:
-            self.logger.error(f"Trade validation error: {str(e)}")
+            logger.error(f"Trade validation error: {str(e)}")
             return False
 
-    async def execute_trade(self, signal: Dict[str, Any]) -> Dict[str, Any]:
-        """Executes a scalping trade with enhanced error handling"""
+    async def _calculate_position_size(self, price: float, confidence: float) -> float:
+        """Calculate position size based on price and confidence"""
         try:
-            if signal['action'] == 'hold':
-                return {'success': False, 'reason': 'No trade signal'}
+            base_size = self.risk_per_trade * price
+            confidence_factor = 0.5 + (confidence * 0.5)  # Scale between 50-100% based on confidence
+            adjusted_size = base_size * confidence_factor
 
-            # Validate input
-            if not all(k in signal for k in ['action', 'confidence', 'target_price', 'stop_loss']):
-                raise ValueError("Invalid signal format")
+            # Apply maximum position limit
+            return min(adjusted_size, self.max_position_size * price)
+
+        except Exception as e:
+            logger.error(f"Position size calculation error: {str(e)}")
+            return 0.0
+
+    async def execute_trade(self, signal: Dict[str, Any]) -> Dict[str, Any]:
+        """Execute a scalping trade with performance tracking"""
+        try:
+            if signal.get('action') == 'hold':
+                return {'success': False, 'reason': 'No trade signal'}
 
             execution = {
                 'success': True,
                 'action': signal['action'],
                 'price': signal.get('current_price', 0),
-                'timestamp': pd.Timestamp.now().isoformat(),
+                'timestamp': datetime.now().isoformat(),
                 'size_factor': signal.get('size_factor', 0.0),
                 'target_price': signal.get('target_price'),
                 'stop_loss': signal.get('stop_loss'),
                 'confidence': signal.get('confidence', 0.0)
             }
 
-            # Update metrics
-            self.update_performance(execution)
-
+            # Update performance metrics
+            await self.update_performance(execution)
             return execution
 
         except Exception as e:
-            self.logger.error(f"Trade execution error: {str(e)}")
+            logger.error(f"Trade execution error: {str(e)}")
             return {
                 'success': False,
                 'error': str(e),
-                'timestamp': pd.Timestamp.now().isoformat()
+                'timestamp': datetime.now().isoformat()
             }

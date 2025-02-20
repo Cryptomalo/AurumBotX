@@ -27,17 +27,23 @@ class SwingTradingStrategy(BaseStrategy):
 
     async def analyze_market(
         self, 
-        market_data: pd.DataFrame,
+        market_data: Dict[str, Any],
         sentiment_data: Optional[Dict[str, Any]] = None
     ) -> List[Dict[str, Any]]:
         """Analyze market for swing trading opportunities"""
         try:
-            if market_data is None or market_data.empty:
+            if not market_data:
+                logger.warning("No market data provided")
+                return []
+
+            # Convert market data to DataFrame if needed
+            df = market_data if isinstance(market_data, pd.DataFrame) else pd.DataFrame(market_data)
+
+            if df.empty:
+                logger.warning("Empty market data")
                 return []
 
             # Calculate technical indicators
-            df = market_data.copy()
-
             df['SMA_20'] = df['Close'].rolling(window=20).mean()
             df['SMA_50'] = df['Close'].rolling(window=50).mean()
 
@@ -107,8 +113,36 @@ class SwingTradingStrategy(BaseStrategy):
             logger.error(f"Error validating trade: {str(e)}")
             return False
 
+    async def execute_trade(self, signal: Dict[str, Any]) -> Dict[str, Any]:
+        """Execute trade based on signal"""
+        try:
+            if signal['action'] == 'hold':
+                return {'success': False, 'reason': 'No trade signal'}
+
+            # Execute trade logic here
+            execution = {
+                'success': True,
+                'action': signal['action'],
+                'price': signal.get('current_price', 0),
+                'timestamp': pd.Timestamp.now().isoformat(),
+                'size_factor': signal.get('size_factor', 0.0),
+                'target_price': signal.get('target_price'),
+                'stop_loss': signal.get('stop_loss'),
+                'confidence': signal.get('confidence', 0.0)
+            }
+
+            return execution
+
+        except Exception as e:
+            logger.error(f"Trade execution error: {str(e)}")
+            return {
+                'success': False, 
+                'error': str(e),
+                'timestamp': pd.Timestamp.now().isoformat()
+            }
+
     def _generate_signals(self, analysis: Dict[str, Any]) -> Dict[str, Any]:
-        """Generate trading signals (internal helper method)"""
+        """Generate trading signals"""
         signal = {
             'action': 'hold',
             'confidence': 0.0,
@@ -117,43 +151,69 @@ class SwingTradingStrategy(BaseStrategy):
             'size_factor': 0.0
         }
 
-        # Verify trend strength
-        if analysis['trend_strength'] < self.min_trend_strength:
+        try:
+            # Verify trend strength
+            if analysis['trend_strength'] < self.min_trend_strength:
+                return signal
+
+            # Calculate overall score
+            trend_score = min(1.0, analysis['trend_strength'])
+            sentiment_score = analysis['sentiment_score']
+            volume_score = min(1.0, analysis['volume_ratio'])
+
+            total_score = (
+                trend_score * 0.4 +
+                sentiment_score * 0.3 +
+                volume_score * 0.3
+            )
+
+            # Generate signal if score is sufficient
+            if total_score > 0.7:
+                current_price = analysis['current_price']
+
+                if analysis['trend_direction'] > 0 and sentiment_score > 0.6:
+                    signal.update({
+                        'action': 'buy',
+                        'confidence': total_score,
+                        'target_price': current_price * (1 + self.profit_target),
+                        'stop_loss': current_price * (1 - self.stop_loss),
+                        'size_factor': total_score
+                    })
+                elif analysis['trend_direction'] < 0 and sentiment_score < 0.4:
+                    signal.update({
+                        'action': 'sell',
+                        'confidence': total_score,
+                        'target_price': current_price * (1 - self.profit_target),
+                        'stop_loss': current_price * (1 + self.stop_loss),
+                        'size_factor': total_score
+                    })
+
             return signal
 
-        # Calculate overall score
-        trend_score = min(1.0, analysis['trend_strength'])
-        sentiment_score = analysis['sentiment_score']
-        volume_score = min(1.0, analysis['volume_ratio'])
+        except Exception as e:
+            logger.error(f"Error generating signals: {str(e)}")
+            return signal
 
-        total_score = (
-            trend_score * 0.4 +
-            sentiment_score * 0.3 +
-            volume_score * 0.3
-        )
+    async def _analyze_market_sentiment(self) -> float:
+        """Analyze market sentiment using OpenAI"""
+        try:
+            if not self.has_sentiment:
+                return 0.5
 
-        # Generate signal if score is sufficient
-        if total_score > 0.7:
-            current_price = analysis['current_price']
-
-            if analysis['trend_direction'] > 0 and sentiment_score > 0.6:
-                signal.update({
-                    'action': 'buy',
-                    'confidence': total_score,
-                    'target_price': current_price * (1 + self.profit_target),
-                    'stop_loss': current_price * (1 - self.stop_loss),
-                    'size_factor': total_score
-                })
-            elif analysis['trend_direction'] < 0 and sentiment_score < 0.4:
-                signal.update({
-                    'action': 'sell',
-                    'confidence': total_score,
-                    'target_price': current_price * (1 - self.profit_target),
-                    'stop_loss': current_price * (1 + self.stop_loss),
-                    'size_factor': total_score
-                })
-
-        return signal
+            response = await asyncio.to_thread(
+                self.client.chat.completions.create,
+                model="gpt-4",
+                messages=[{
+                    "role": "system",
+                    "content": "Analyze the current market sentiment for long-term crypto trading and provide a sentiment score between 0 and 1."
+                }],
+                response_format={"type": "json_object"}
+            )
+            result = response.choices[0].message.content
+            return float(result.get('sentiment_score', 0.5))
+        except Exception as e:
+            logger.error(f"Error in sentiment analysis: {str(e)}")
+            return 0.5
 
     async def _technical_sentiment(self, df: pd.DataFrame) -> float:
         """Calculate sentiment based on technical analysis when OpenAI is unavailable"""
@@ -186,52 +246,3 @@ class SwingTradingStrategy(BaseStrategy):
         except Exception as e:
             logger.error(f"Error in technical sentiment: {str(e)}")
             return 0.5
-
-    async def _analyze_market_sentiment(self) -> float:
-        """Analyze market sentiment using OpenAI"""
-        try:
-            if not self.has_sentiment:
-                return 0.5
-
-            response = await asyncio.to_thread(
-                self.client.chat.completions.create,
-                model="gpt-4o",
-                messages=[{
-                    "role": "system",
-                    "content": "Analyze the current market sentiment for long-term crypto trading and provide a sentiment score between 0 and 1."
-                }],
-                response_format={"type": "json_object"}
-            )
-            result = response.choices[0].message.content
-            return float(result.get('sentiment_score', 0.5))
-        except Exception as e:
-            logger.error(f"Error in sentiment analysis: {str(e)}")
-            return 0.5
-
-    async def execute_trade(self, signal: Dict[str, Any]) -> Dict[str, Any]:
-        """Execute trade based on signal"""
-        try:
-            if signal['action'] == 'hold':
-                return {'success': False, 'reason': 'No trade signal'}
-
-            # Simulate trade execution
-            execution = {
-                'success': True,
-                'action': signal['action'],
-                'price': signal.get('current_price', 0),
-                'timestamp': pd.Timestamp.now().isoformat(),
-                'size_factor': signal.get('size_factor', 0.0),
-                'target_price': signal.get('target_price'),
-                'stop_loss': signal.get('stop_loss'),
-                'confidence': signal.get('confidence', 0.0)
-            }
-
-            return execution
-
-        except Exception as e:
-            logger.error(f"Trade execution error: {str(e)}")
-            return {
-                'success': False, 
-                'error': str(e),
-                'timestamp': pd.Timestamp.now().isoformat()
-            }

@@ -23,13 +23,13 @@ class BaseStrategy(ABC):
     @abstractmethod
     async def analyze_market(
         self,
-        market_data: pd.DataFrame,
+        market_data: Dict[str, Any],
         sentiment_data: Optional[Dict[str, Any]] = None
     ) -> List[Dict[str, Any]]:
         """
         Analyze market and generate trading signals
         Args:
-            market_data: DataFrame with market data
+            market_data: Market data dictionary or DataFrame
             sentiment_data: Optional social media sentiment data
         Returns:
             List of trade signals with analysis results
@@ -63,7 +63,19 @@ class BaseStrategy(ABC):
         """
         pass
 
-    def update_performance(self, trade_result: Dict[str, Any]) -> None:
+    @abstractmethod
+    async def _calculate_position_size(self, price: float, confidence: float) -> float:
+        """
+        Calculate optimal position size for a trade
+        Args:
+            price: Current asset price
+            confidence: Trade confidence score
+        Returns:
+            float: Position size in base currency
+        """
+        pass
+
+    async def update_performance(self, trade_result: Dict[str, Any]) -> None:
         """Update strategy performance metrics"""
         try:
             self.performance_metrics['total_trades'] += 1
