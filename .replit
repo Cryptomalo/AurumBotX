@@ -16,7 +16,7 @@ author = 39294082
 
 [[workflows.workflow.tasks]]
 task = "shell.exec"
-args = "python test_system.py"
+args = "python -m unittest discover -s tests"
 
 [[workflows.workflow]]
 name = "Project"
@@ -97,6 +97,33 @@ task = "packager.installForAll"
 task = "shell.exec"
 args = "python3 utils/system_checkup.py"
 
+[[workflows.workflow]]
+name = "Test Mode"
+author = "agent"
+
+[workflows.workflow.metadata]
+agentRequireRestartOnSave = false
+
+[[workflows.workflow.tasks]]
+task = "packager.installForAll"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "python3 start_trading_test.py"
+waitForPort = 5002
+
+[[workflows.workflow]]
+name = "Avvia il Bot"
+author = "agent"
+
+[workflows.workflow.metadata]
+agentRequireRestartOnSave = false
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "python3 start_trading.py"
+waitForPort = 5001
+
 [[ports]]
 localPort = 3000
 externalPort = 4200
@@ -112,6 +139,10 @@ externalPort = 80
 [[ports]]
 localPort = 5001
 externalPort = 3000
+
+[[ports]]
+localPort = 5002
+externalPort = 3004
 
 [[ports]]
 localPort = 8000

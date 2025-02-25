@@ -5,26 +5,36 @@ from datetime import datetime
 import streamlit as st
 import pandas as pd
 import plotly.graph_objects as go
+
+# Verifica se il modulo streamlit_option_menu è installato
+try:
+    from streamlit_option_menu import option_menu
+except ImportError:
+    os.system('pip install streamlit-option-menu')
+    from streamlit_option_menu import option_menu
+
 from utils.auto_trader import AutoTrader
 from utils.data_loader import CryptoDataLoader
 from utils.backup_manager import BackupManager
-from streamlit_option_menu import option_menu
 import json
 from pathlib import Path
 import asyncio
 import nest_asyncio
 import plotly.express as px # Added import for plotly.express
 
-
 # Enable nested event loops for Streamlit
 nest_asyncio.apply()
+
+# Assicurati che il percorso del file di log esista
+log_dir = 'logs/system'
+os.makedirs(log_dir, exist_ok=True)
 
 # Configure logging
 logging.basicConfig(
     level=logging.INFO,
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
     handlers=[
-        logging.FileHandler('logs/system/app.log', mode='a'),
+        logging.FileHandler(os.path.join(log_dir, 'app.log'), mode='a'),
         logging.StreamHandler(sys.stdout)
     ]
 )
@@ -621,6 +631,34 @@ def render_profile():
         logger.error(f"Error in profile section: {str(e)}")
         st.error("An error occurred while rendering the profile section. Please try again.")
 
+def render_portfolio():
+    """Render portfolio analysis"""
+    try:
+        st.title("Portfolio Analysis")
+        st.subheader("Current Holdings")
+
+        # Example portfolio data
+        portfolio_data = {
+            'Asset': ['BTC', 'ETH', 'SOL', 'USDT'],
+            'Amount': [0.5, 2.0, 10.0, 1000.0],
+            'Value (USDT)': [25000, 6000, 2000, 1000]
+        }
+        df_portfolio = pd.DataFrame(portfolio_data)
+
+        st.table(df_portfolio)
+
+        # Portfolio value over time (example data)
+        st.subheader("Portfolio Value Over Time")
+        dates = pd.date_range(start="2023-01-01", periods=100)
+        values = pd.Series([10000 + i * 50 for i in range(100)], index=dates)
+
+        fig = px.line(values, title="Portfolio Value Over Time")
+        st.plotly_chart(fig, use_container_width=True)
+
+    except Exception as e:
+        logger.error(f"Error rendering portfolio: {str(e)}")
+        st.error("An error occurred while rendering the portfolio. Please try again.")
+
 async def initialize_data_loader():
     """Initialize data loader if not already initialized"""
     if not st.session_state.data_loader_initialized:
@@ -633,6 +671,38 @@ async def initialize_data_loader():
         except Exception as e:
             logger.error(f"Failed to initialize data loader: {str(e)}")
             st.error("Error initializing market data. Please refresh the page.")
+
+def render_analytics():
+    """Render advanced analytics section"""
+    try:
+        st.title("Advanced Analytics")
+        st.subheader("Market Sentiment Analysis")
+
+        # Example sentiment data
+        sentiment_data = {
+            'Time': pd.date_range(start="2023-01-01", periods=100),
+            'Sentiment': pd.Series([0.5 + 0.1 * i for i in range(100)])
+        }
+        df_sentiment = pd.DataFrame(sentiment_data)
+
+        fig = px.line(df_sentiment, x='Time', y='Sentiment', title="Market Sentiment Over Time")
+        st.plotly_chart(fig, use_container_width=True)
+
+        st.subheader("Correlation Matrix")
+        # Example correlation data
+        correlation_data = {
+            'BTC': [1, 0.8, 0.6],
+            'ETH': [0.8, 1, 0.7],
+            'SOL': [0.6, 0.7, 1]
+        }
+        df_correlation = pd.DataFrame(correlation_data, index=['BTC', 'ETH', 'SOL'])
+
+        fig = px.imshow(df_correlation, text_auto=True, title="Asset Correlation Matrix")
+        st.plotly_chart(fig, use_container_width=True)
+
+    except Exception as e:
+        logger.error(f"Error rendering analytics: {str(e)}")
+        st.error("An error occurred while rendering analytics. Please try again.")
 
 def main():
     """Main application entry point"""
@@ -669,11 +739,9 @@ def main():
         elif selected_tab == "Trading":
             render_trading_controls()
         elif selected_tab == "Portfolio":
-            st.title("Portfolio Analysis")
-            # Future: Add portfolio content
+            render_portfolio()  # Call the new function
         elif selected_tab == "Analytics":
-            st.title("Advanced Analytics")
-            # Future: Add analytics content
+            render_analytics()  # Call the new function
         elif selected_tab == "Profile":
             render_profile()
         elif selected_tab == "Settings":

@@ -1,3 +1,15 @@
+# AurumBotX
+
+## Avvio del Bot
+
+Per avviare il bot, esegui il seguente comando nel terminale:
+
+```sh
+sh start_bot.sh
+```
+
+Questo comando avvierà l'interfaccia Streamlit, il Trading Bot e il System Monitor.
+
 streamlit run app.py
    ```
 3. Naviga alla pagina "Telegram Scanner" nel menu

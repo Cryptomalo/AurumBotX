@@ -92,11 +92,151 @@ class DataValidator:
         return True
 
 class CryptoDataLoader:
+    def __init__(self, testnet=True):
+        self.testnet = testnet
+
+    async def initialize(self):
+        # Initialize data loader, e.g., connect to API
+        pass
+
+    async def get_historical_data(self, symbol, period):
+        # Simulate fetching historical data
+        dates = pd.date_range(start="2023-01-01", periods=100)
+        data = {
+            'Open': [100 + i for i in range(100)],
+            'High': [105 + i for i in range(100)],
+            'Low': [95 + i for i in range(100)],
+            'Close': [100 + i for i in range(100)]
+        }
+        df = pd.DataFrame(data, index=dates)
+        return df
+
     """Enhanced data loader with improved error handling and caching"""
 
     RETRY_ATTEMPTS = 3
     RETRY_DELAY = 1  # seconds
     BATCH_SIZE = 500  # optimized batch size for database operations
+
+    def __init__(self, testnet):
+        pass
+
+    async def initialize(self):
+        try:
+            # Setup exchange connection
+            if self.use_live_data:
+                try:
+                    self._setup_client()
+                except Exception as e:
+                    logger.error(f"Error setting up client: {e}")
+                    self.use_live_data = False
+
+            # Setup database connection
+            database_url = os.getenv('DATABASE_URL')
+            if not database_url:
+                logger.warning("DATABASE_URL not found, running without persistent storage")
+                return
+
+            # Convert URL to async format if needed
+            if not database_url.startswith('postgresql+asyncpg://'):
+                database_url = database_url.replace('postgresql://', 'postgresql+asyncpg://')
+
+            self.engine = create_async_engine(
+                database_url,
+                pool_pre_ping=True,
+                pool_size=5,
+                max_overflow=10,
+                echo=False
+            )
+
+            self.async_session = async_sessionmaker(
+                self.engine,
+                expire_on_commit=False,
+                class_=AsyncSession
+            )
+
+            logger.info("Database connection established successfully")
+
+        except Exception as e:
+            logger.error(f"Initialization error: {e}", exc_info=True)
+            raise
+
+    async def get_historical_data(self, symbol, period):
+        try:
+            symbol = symbol.upper()
+            if symbol not in self.supported_coins:
+                logger.warning(f"Unsupported symbol: {symbol}")
+                return None
+
+            # Cache key that includes date range
+            cache_key = f"{symbol}_{period}_{interval}"
+            if start_date:
+                cache_key += f"_from_{start_date}"
+            if end_date:
+                cache_key += f"_to_{end_date}"
+
+            # Try cache first
+            cached_data = self._get_from_cache(cache_key, interval)
+            if cached_data is not None and self.data_validator.validate_market_data(cached_data):
+                return cached_data
+
+            if self.use_live_data and self.client:
+                try:
+                    # Calculate start timestamp
+                    since = None
+                    if start_date:
+                        since = int(pd.Timestamp(start_date).timestamp() * 1000)
+                    elif period:
+                        period_delta = {
+                            '1d': timedelta(days=1),
+                            '7d': timedelta(days=7),
+                            '30d': timedelta(days=30)
+                        }.get(period)
+                        if period_delta:
+                            since = int((datetime.now() - period_delta).timestamp() * 1000)
+
+                    # Retrieve data with retry
+                    klines = await self.retry_handler.execute(
+                        self.client.get_klines,
+                        symbol=symbol,
+                        interval=interval,
+                        limit=1000,
+                        startTime=since
+                    )
+
+                    if not klines:
+                        logger.warning(f"No data received for {symbol}")
+                        return self._get_mock_data(symbol, period, interval)
+
+                    # Process and validate data
+                    df = self._process_klines_data(klines)
+                    if not self.data_validator.validate_market_data(df):
+                        raise ValueError("Data validation failed")
+
+                    # Filter by end date if specified
+                    if end_date:
+                        end_timestamp = pd.Timestamp(end_date)
+                        df = df[df.index <= end_timestamp]
+
+                    # Add technical indicators
+                    df = self._add_technical_indicators(df)
+
+                    # Save to cache
+                    self._add_to_cache(cache_key, df)
+
+                    # Asynchronous database save without waiting
+                    asyncio.create_task(self._save_to_database(symbol, df))
+
+                    return df
+
+                except Exception as e:
+                    logger.error(f"Error fetching live data for {symbol}: {str(e)}")
+                    return self._get_mock_data(symbol, period, interval)
+
+            return self._get_mock_data(symbol, period, interval)
+
+        except Exception as e:
+            logger.error(f"Error in get_historical_data for {symbol}: {str(e)}")
+            return None
 
     def __init__(self, use_live_data: bool = True, testnet: bool = True):
         self.use_live_data = use_live_data
