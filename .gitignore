@@ -1,0 +1,61 @@
+# Database files
+*.db
+*.sqlite
+*.sqlite3
+
+# Log files
+*.log
+logs/
+monitoring/
+reports/
+
+# Python cache
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+*.so
+
+# Environment
+.env
+.venv
+env/
+venv/
+
+# Backup directories
+backups/
+local_storage/
+validation_results/
+simulation_results/
+configs/
+stabilization_results/
+
+# Temporary files
+nohup.out
+*.tmp
+*.temp
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Trading data
+aggressive_trading.db
+ultra_aggressive_trading.db
+test_trading_*.db
+bootstrap_trading.db
+real_data_trading.db
+ai_optimization.db
+enhanced_trading_v2.db
+
+# HTML generated files
+aurumbotx_dashboard_24_7.html
+dashboard_config.json
+external_access_config.json

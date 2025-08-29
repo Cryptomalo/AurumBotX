@@ -364,27 +364,3 @@ class SentimentAnalyzer:
 
 
 
-
-    def get_fallback_sentiment(self, symbol: str) -> float:
-        """Fallback sentiment basato su price action"""
-        try:
-            # Sentiment neutro come fallback
-            return 0.0
-        except Exception:
-            return 0.0
-    
-    def get_combined_sentiment(self, symbol: str) -> float:
-        """Sentiment combinato con fallback"""
-        try:
-            # Prova sentiment reale
-            if self.reddit:
-                reddit_sentiment = self.get_reddit_sentiment(symbol)
-                if reddit_sentiment is not None:
-                    return reddit_sentiment
-            
-            # Fallback
-            return self.get_fallback_sentiment(symbol)
-            
-        except Exception as e:
-            self.logger.warning(f"Sentiment analysis fallback: {e}")
-            return 0.0

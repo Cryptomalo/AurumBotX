@@ -1,81 +1,56 @@
-from sqlalchemy import Column, Integer, Float, String, DateTime, ForeignKey, Boolean, JSON
+"""
+Database models for AurumBotX trading platform
+"""
+
+from sqlalchemy import Column, Integer, String, Float, DateTime, Boolean, Text, JSON
 from sqlalchemy.ext.declarative import declarative_base
-from sqlalchemy.orm import sessionmaker, scoped_session
 from datetime import datetime
-import os
-from typing import Optional, Dict, Any
 
 Base = declarative_base()
 
 class TradingData(Base):
+    """Model for storing trading data and signals"""
     __tablename__ = 'trading_data'
-
-    id = Column(Integer, primary_key=True)
-    timestamp = Column(DateTime, default=datetime.utcnow)
-    symbol = Column(String)
-    price = Column(Float)
+    
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    timestamp = Column(DateTime, default=datetime.utcnow, nullable=False)
+    symbol = Column(String(20), nullable=False)
+    price = Column(Float, nullable=False)
     volume = Column(Float)
-    side = Column(String)  # buy/sell
-    strategy = Column(String)
-    profit_loss = Column(Float, default=0.0)
-    trade_metadata = Column(JSON)
+    signal = Column(String(10))  # BUY, SELL, HOLD
+    confidence = Column(Float)
+    strategy = Column(String(50))
+    metadata_json = Column(JSON)
     created_at = Column(DateTime, default=datetime.utcnow)
 
-    def __repr__(self):
-        return f"<TradingData(symbol='{self.symbol}', price={self.price}, volume={self.volume}, side='{self.side}', strategy='{self.strategy}', profit_loss={self.profit_loss})>"
-
-    def to_dict(self) -> Dict[str, Any]:
-        """Convert model instance to dictionary."""
-        return {
-            'id': self.id,
-            'symbol': self.symbol,
-            'price': self.price,
-            'volume': self.volume,
-            'timestamp': self.timestamp.isoformat() if self.timestamp else None,
-            'side': self.side,
-            'strategy': self.strategy,
-            'profit_loss': self.profit_loss,
-            'trade_metadata': self.trade_metadata,
-            'created_at': self.created_at.isoformat() if self.created_at else None
-        }
-
-    @property
-    def as_dict(self) -> Dict[str, Any]:
-        """Alias for to_dict() for backward compatibility."""
-        return self.to_dict()
-
-class TradingStrategy(Base):
-    __tablename__ = 'trading_strategies'
-
-    id = Column(Integer, primary_key=True)
-    name = Column(String)
-    description = Column(String)
-    parameters = Column(JSON)
-    is_active = Column(Boolean, default=True)
+class TradeExecution(Base):
+    """Model for storing executed trades"""
+    __tablename__ = 'trade_executions'
+    
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    timestamp = Column(DateTime, default=datetime.utcnow, nullable=False)
+    symbol = Column(String(20), nullable=False)
+    side = Column(String(10), nullable=False)  # BUY, SELL
+    quantity = Column(Float, nullable=False)
+    price = Column(Float, nullable=False)
+    order_id = Column(String(100))
+    status = Column(String(20))  # FILLED, PARTIAL, CANCELLED
+    strategy = Column(String(50))
+    profit_loss = Column(Float)
     created_at = Column(DateTime, default=datetime.utcnow)
-    updated_at = Column(DateTime, onupdate=datetime.utcnow)
 
-def get_database_session() -> scoped_session:
-    """Create database session with connection pooling and proper error handling"""
-    from sqlalchemy import create_engine
+class MarketData(Base):
+    """Model for storing market data"""
+    __tablename__ = 'market_data'
+    
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    timestamp = Column(DateTime, nullable=False)
+    symbol = Column(String(20), nullable=False)
+    open_price = Column(Float, nullable=False)
+    high_price = Column(Float, nullable=False)
+    low_price = Column(Float, nullable=False)
+    close_price = Column(Float, nullable=False)
+    volume = Column(Float, nullable=False)
+    interval = Column(String(10), nullable=False)  # 1m, 5m, 1h, etc.
+    created_at = Column(DateTime, default=datetime.utcnow)
 
-    db_url = os.getenv('DATABASE_URL')
-    if not db_url:
-        raise ValueError("DATABASE_URL environment variable not set")
-
-    # Remove SSL parameter if present
-    if 'sslmode=' in db_url:
-        db_url = db_url.split('?')[0]
-
-    engine = create_engine(
-        db_url,
-        pool_size=5,
-        max_overflow=10,
-        pool_timeout=30,
-        pool_pre_ping=True,
-        pool_recycle=3600
-    )
-
-    Base.metadata.create_all(engine)
-    session_factory = sessionmaker(bind=engine)
-    return scoped_session(session_factory)

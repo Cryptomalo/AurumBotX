@@ -92,166 +92,26 @@ class DataValidator:
         return True
 
 class CryptoDataLoader:
-    def __init__(self, testnet=True):
-        self.testnet = testnet
-
-    async def initialize(self):
-        # Initialize data loader, e.g., connect to API
-        pass
-
-    async def get_historical_data(self, symbol, period):
-        # Simulate fetching historical data
-        dates = pd.date_range(start="2023-01-01", periods=100)
-        data = {
-            'Open': [100 + i for i in range(100)],
-            'High': [105 + i for i in range(100)],
-            'Low': [95 + i for i in range(100)],
-            'Close': [100 + i for i in range(100)]
-        }
-        df = pd.DataFrame(data, index=dates)
-        return df
-
     """Enhanced data loader with improved error handling and caching"""
 
     RETRY_ATTEMPTS = 3
     RETRY_DELAY = 1  # seconds
     BATCH_SIZE = 500  # optimized batch size for database operations
 
-    def __init__(self, testnet):
-        pass
-
-    async def initialize(self):
-        try:
-            # Setup exchange connection
-            if self.use_live_data:
-                try:
-                    self._setup_client()
-                except Exception as e:
-                    logger.error(f"Error setting up client: {e}")
-                    self.use_live_data = False
-
-            # Setup database connection
-            database_url = os.getenv('DATABASE_URL')
-            if not database_url:
-                logger.warning("DATABASE_URL not found, running without persistent storage")
-                return
-
-            # Convert URL to async format if needed
-            if not database_url.startswith('postgresql+asyncpg://'):
-                database_url = database_url.replace('postgresql://', 'postgresql+asyncpg://')
-
-            self.engine = create_async_engine(
-                database_url,
-                pool_pre_ping=True,
-                pool_size=5,
-                max_overflow=10,
-                echo=False
-            )
-
-            self.async_session = async_sessionmaker(
-                self.engine,
-                expire_on_commit=False,
-                class_=AsyncSession
-            )
-
-            logger.info("Database connection established successfully")
-
-        except Exception as e:
-            logger.error(f"Initialization error: {e}", exc_info=True)
-            raise
-
-    async def get_historical_data(self, symbol, period):
-        try:
-            symbol = symbol.upper()
-            if symbol not in self.supported_coins:
-                logger.warning(f"Unsupported symbol: {symbol}")
-                return None
-
-            # Cache key that includes date range
-            cache_key = f"{symbol}_{period}_{interval}"
-            if start_date:
-                cache_key += f"_from_{start_date}"
-            if end_date:
-                cache_key += f"_to_{end_date}"
-
-            # Try cache first
-            cached_data = self._get_from_cache(cache_key, interval)
-            if cached_data is not None and self.data_validator.validate_market_data(cached_data):
-                return cached_data
-
-            if self.use_live_data and self.client:
-                try:
-                    # Calculate start timestamp
-                    since = None
-                    if start_date:
-                        since = int(pd.Timestamp(start_date).timestamp() * 1000)
-                    elif period:
-                        period_delta = {
-                            '1d': timedelta(days=1),
-                            '7d': timedelta(days=7),
-                            '30d': timedelta(days=30)
-                        }.get(period)
-                        if period_delta:
-                            since = int((datetime.now() - period_delta).timestamp() * 1000)
-
-                    # Retrieve data with retry
-                    klines = await self.retry_handler.execute(
-                        self.client.get_klines,
-                        symbol=symbol,
-                        interval=interval,
-                        limit=1000,
-                        startTime=since
-                    )
-
-                    if not klines:
-                        logger.warning(f"No data received for {symbol}")
-                        return self._get_mock_data(symbol, period, interval)
-
-                    # Process and validate data
-                    df = self._process_klines_data(klines)
-                    if not self.data_validator.validate_market_data(df):
-                        raise ValueError("Data validation failed")
-
-                    # Filter by end date if specified
-                    if end_date:
-                        end_timestamp = pd.Timestamp(end_date)
-                        df = df[df.index <= end_timestamp]
-
-                    # Add technical indicators
-                    df = self._add_technical_indicators(df)
-
-                    # Save to cache
-                    self._add_to_cache(cache_key, df)
-
-                    # Asynchronous database save without waiting
-                    asyncio.create_task(self._save_to_database(symbol, df))
-
-                    return df
-
-                except Exception as e:
-                    logger.error(f"Error fetching live data for {symbol}: {str(e)}")
-                    return self._get_mock_data(symbol, period, interval)
-
-            return self._get_mock_data(symbol, period, interval)
-
-        except Exception as e:
-            logger.error(f"Error in get_historical_data for {symbol}: {str(e)}")
-            return None
-
     def __init__(self, use_live_data: bool = True, testnet: bool = True):
         self.use_live_data = use_live_data
         self.testnet = testnet
         self.retry_handler = RetryHandler()
         self.data_validator = DataValidator()
-        self.client = None
+        self.client = self._setup_binance_client()
         self._cache = {}
         self._cache_duration = {
-            '1m': 60,
-            '5m': 300,
-            '15m': 900,
-            '1h': 3600,
-            '4h': 14400,
-            '1d': 86400
+            '1M': 60,
+            '5M': 300,
+            '15M': 900,
+            '1H': 3600,
+            '4H': 14400,
+            '1D': 86400
         }
         self.engine = None
         self.async_session = None
@@ -268,6 +128,51 @@ class CryptoDataLoader:
             'MATICUSDT': 'Polygon',
             'AVAXUSDT': 'Avalanche'
         }
+        # Initialize database connection here
+        database_url = os.getenv('DATABASE_URL')
+        if database_url:
+            if not database_url.startswith('postgresql+asyncpg://'):
+                database_url = database_url.replace('postgresql://', 'postgresql+asyncpg://')
+            self.engine = create_async_engine(
+                database_url,
+                pool_pre_ping=True,
+                pool_size=5,
+                max_overflow=10,
+                echo=False
+            )
+            self.async_session = async_sessionmaker(
+                self.engine,
+                expire_on_commit=False,
+                class_=AsyncSession
+            )
+            logger.info("Database connection established successfully during DataLoader init")
+        else:
+            logger.warning("DATABASE_URL not found, CryptoDataLoader running without persistent storage")
+    
+    def _setup_binance_client(self):
+        """Setup client Binance con API keys"""
+        try:
+            # Carica API keys dalle variabili ambiente
+            api_key = os.environ.get('BINANCE_API_KEY')
+            secret_key = os.environ.get('BINANCE_SECRET_KEY')
+            
+            if api_key and secret_key:
+                # Crea client Binance
+                client = Client(
+                    api_key=api_key,
+                    api_secret=secret_key,
+                    testnet=self.testnet
+                )
+                
+                logger.info(f"✅ Client Binance inizializzato (testnet={self.testnet})")
+                return client
+            else:
+                logger.warning("❌ API Keys non trovate - client non inizializzato")
+                return None
+                
+        except Exception as e:
+            logger.error(f"❌ Errore setup client Binance: {e}")
+            return None
 
     async def initialize(self):
         """Initialize database connection and Binance client asynchronously"""
@@ -280,32 +185,6 @@ class CryptoDataLoader:
                     logger.error(f"Error setting up client: {e}")
                     self.use_live_data = False
 
-            # Setup database connection
-            database_url = os.getenv('DATABASE_URL')
-            if not database_url:
-                logger.warning("DATABASE_URL not found, running without persistent storage")
-                return
-
-            # Convert URL to async format if needed
-            if not database_url.startswith('postgresql+asyncpg://'):
-                database_url = database_url.replace('postgresql://', 'postgresql+asyncpg://')
-
-            self.engine = create_async_engine(
-                database_url,
-                pool_pre_ping=True,
-                pool_size=5,
-                max_overflow=10,
-                echo=False
-            )
-
-            self.async_session = async_sessionmaker(
-                self.engine,
-                expire_on_commit=False,
-                class_=AsyncSession
-            )
-
-            logger.info("Database connection established successfully")
-
         except Exception as e:
             logger.error(f"Initialization error: {e}", exc_info=True)
             raise
@@ -313,8 +192,9 @@ class CryptoDataLoader:
     def _setup_client(self):
         """Setup Binance client with enhanced error handling"""
         try:
-            api_key = os.environ.get('BINANCE_API_KEY_TESTNET' if self.testnet else 'BINANCE_API_KEY')
-            api_secret = os.environ.get('BINANCE_API_SECRET_TESTNET' if self.testnet else 'BINANCE_API_SECRET')
+            # Per testnet, usa le stesse variabili d'ambiente ma con endpoint testnet
+            api_key = os.getenv('BINANCE_API_KEY')
+            api_secret = os.getenv('BINANCE_SECRET_KEY')
 
             if not api_key or not api_secret:
                 logger.warning("API credentials not found. Mock data will be used instead.")
@@ -324,8 +204,7 @@ class CryptoDataLoader:
             self.client = Client(
                 api_key,
                 api_secret,
-                testnet=self.testnet,
-                tld='us' if not self.testnet else None
+                testnet=self.testnet
             )
 
             # Test connection
@@ -347,13 +226,17 @@ class CryptoDataLoader:
     async def get_historical_data(
         self,
         symbol: str,
-        period: str = '1d',
-        interval: str = '1m',
+        period: str = '1D',
+        interval: str = '1M',
         start_date: Optional[str] = None,
         end_date: Optional[str] = None
     ) -> Optional[pd.DataFrame]:
         """Get historical data with improved error handling and validation"""
         try:
+            # Inizializza il client se non è ancora stato fatto
+            if self.use_live_data and self.client is None:
+                await self.initialize()
+            
             symbol = symbol.upper()
             if symbol not in self.supported_coins:
                 logger.warning(f"Unsupported symbol: {symbol}")
@@ -379,7 +262,7 @@ class CryptoDataLoader:
                         since = int(pd.Timestamp(start_date).timestamp() * 1000)
                     elif period:
                         period_delta = {
-                            '1d': timedelta(days=1),
+                            '1D': timedelta(days=1),
                             '7d': timedelta(days=7),
                             '30d': timedelta(days=30)
                         }.get(period)
@@ -447,431 +330,207 @@ class CryptoDataLoader:
                 'close': 'Close',
                 'volume': 'Volume'
             }
+            for col_name, new_name in numeric_columns.items():
+                df[new_name] = pd.to_numeric(df[col_name])
 
-            for old_name, new_name in numeric_columns.items():
-                df[new_name] = pd.to_numeric(df[old_name], errors='coerce')
-
-            # Drop original columns and unused ones
-            columns_to_drop = [
-                'open', 'high', 'low', 'close', 'volume',
-                'close_time', 'quote_volume', 'trades',
-                'taker_base', 'taker_quote', 'ignore'
-            ]
-            df = df.drop(columns=columns_to_drop)
-
-            # Convert timestamp and set index
+            # Set timestamp as index
             df['timestamp'] = pd.to_datetime(df['timestamp'], unit='ms')
             df.set_index('timestamp', inplace=True)
-            df.sort_index(inplace=True)
 
-            # Clean up NaN values
-            df = df.ffill().bfill()
-
-            return df
+            return df[list(numeric_columns.values())]
 
         except Exception as e:
-            logger.error(f"Error processing klines data: {str(e)}", exc_info=True)
-            raise DataLoadError(f"Failed to process klines data: {str(e)}")
-
-    async def _save_to_database(self, symbol: str, df: pd.DataFrame) -> None:
-        """Save market data to database with optimized batch processing"""
-        if not self.engine or not self.async_session:
-            logger.warning("Database engine not available")
-            return
-
-        try:
-            async with self.async_session() as session:
-                # Process in optimized batches
-                for i in range(0, len(df), self.BATCH_SIZE):
-                    batch_df = df.iloc[i:i + self.BATCH_SIZE]
-
-                    values = [
-                        {
-                            'symbol': symbol,
-                            'timestamp': row.name,
-                            'open': float(row['Open']),
-                            'high': float(row['High']),
-                            'low': float(row['Low']),
-                            'close': float(row['Close']),
-                            'volume': float(row['Volume'])
-                        }
-                        for _, row in batch_df.iterrows()
-                        if not any(pd.isna([
-                            row['Open'], row['High'],
-                            row['Low'], row['Close'],
-                            row['Volume']
-                        ]))
-                    ]
-
-                    if values:
-                        await session.execute(
-                            text("""
-                            INSERT INTO market_data 
-                            (symbol, timestamp, open, high, low, close, volume)
-                            VALUES 
-                            (:symbol, :timestamp, :open, :high, :low, :close, :volume)
-                            ON CONFLICT (symbol, timestamp) 
-                            DO UPDATE SET
-                                open = EXCLUDED.open,
-                                high = EXCLUDED.high,
-                                low = EXCLUDED.low,
-                                close = EXCLUDED.close,
-                                volume = EXCLUDED.volume
-                            """),
-                            values
-                        )
-
-                await session.commit()
-                logger.info(f"Successfully saved {len(df)} rows for {symbol}")
-
-        except Exception as e:
-            error_msg = f"Database error for {symbol}: {str(e)}"
-            logger.error(error_msg, exc_info=True)
-            raise DatabaseError(error_msg)
+            logger.error(f"Error processing klines data: {e}")
+            return pd.DataFrame()
 
     def _get_mock_data(self, symbol: str, period: str, interval: str) -> pd.DataFrame:
-        """Generate realistic mock data for testing"""
-        periods = {'1d': 1440, '7d': 10080, '30d': 43200}
-        n_periods = periods.get(period, 1440)
-
-        np.random.seed(42)  # For reproducible mock data
-        timestamps = pd.date_range(
-            end=datetime.now(),
-            periods=n_periods,
-            freq='1min'
-        )
-
-        # Generate more realistic price movements
-        price_changes = np.random.normal(0, 0.0002, n_periods)
-        price_changes[0] = 0
-        cum_returns = np.exp(np.cumsum(price_changes))
-        base_price = 100 if 'BTC' not in symbol else 30000
-
-        close_price = base_price * cum_returns
-        volatility = np.abs(np.random.normal(0, 0.001, n_periods))
-
-        df = pd.DataFrame({
-            'Open': close_price * (1 - volatility),
-            'High': close_price * (1 + volatility),
-            'Low': close_price * (1 - volatility),
-            'Close': close_price,
-            'Volume': np.random.lognormal(10, 1, n_periods)
-        }, index=timestamps)
-
-        return self._add_technical_indicators(df)
-
-    def _add_technical_indicators(self, df: pd.DataFrame) -> pd.DataFrame:
-        """Add technical indicators with optimized calculations"""
-        try:
-            df = df.copy()
-
-            # Basic metrics with vectorized operations
-            df['Returns'] = df['Close'].pct_change()
-            df['Volatility'] = df['Returns'].rolling(window=20).std()
-            df['Volume_MA'] = df['Volume'].rolling(window=20).mean()
-            df['Volume_Ratio'] = df['Volume'] / df['Volume_MA']
-
-            # Moving averages using vectorized operations
-            for period in [20, 50, 200]:
-                df[f'SMA_{period}'] = df['Close'].rolling(window=period).mean()
-                df[f'EMA_{period}'] = df['Close'].ewm(span=period, adjust=False).mean()
-
-            # MACD with vectorized calculations
-            df['MACD'] = df['Close'].ewm(span=12, adjust=False).mean() - \
-                        df['Close'].ewm(span=26, adjust=False).mean()
-            df['MACD_Signal'] = df['MACD'].ewm(span=9, adjust=False).mean()
-            df['MACD_Hist'] = df['MACD'] - df['MACD_Signal']
-
-            # ATR using vectorized operations
-            high_low = df['High'] - df['Low']
-            high_close = np.abs(df['High'] - df['Close'].shift())
-            low_close = np.abs(df['Low'] - df['Close'].shift())
-            ranges = pd.concat([high_low, high_close, low_close], axis=1)
-            true_range = ranges.max(axis=1)
-            df['ATR'] = true_range.rolling(window=14).mean()
-
-            # Bollinger Bands
-            bb_period = 20
-            df['BB_Middle'] = df['Close'].rolling(window=bb_period).mean()
-            bb_std = df['Close'].rolling(window=bb_period).std()
-            df['BB_Upper'] = df['BB_Middle'] + (2 * bb_std)
-            df['BB_Lower'] = df['BB_Middle'] - (2 * bb_std)
-            df['BB_Width'] = (df['BB_Upper'] - df['BB_Lower']) / df['BB_Middle']
-
-            # RSI with vectorized calculations
-            delta = df['Close'].diff()
-            gain = (delta.clip(lower=0)).rolling(window=14).mean()
-            loss = (-delta.clip(upper=0)).rolling(window=14).mean()
-            rs = gain / loss
-            df['RSI'] = 100 - (100 / (1 + rs))
-
-            # Clean up NaN values using forward fill then backward fill
-            df = df.ffill().bfill()
-
-            return df
-
-        except Exception as e:
-            logger.error(f"Error calculating indicators: {e}", exc_info=True)
-            return df
-
-    def _get_from_cache(self, key: str, interval: str = '1m') -> Optional[pd.DataFrame]:
-        """Get data from cache if valid"""
-        try:
-            if key in self._cache:
-                data, timestamp = self._cache[key]
-                cache_duration = self._cache_duration.get(interval, 300)
-                if time.time() - timestamp < cache_duration:
-                    logger.debug(f"Cache hit for {key}")
-                    return data.copy()
-                logger.debug(f"Cache expired for {key}")
-                del self._cache[key]
-            return None
-        except Exception as e:
-            logger.error(f"Cache error for {key}: {e}", exc_info=True)
-            return None
-
-    def _add_to_cache(self, key: str, data: pd.DataFrame):
-        """Add data to cache with memory management"""
-        try:
-            if len(self._cache) > 100:  # Maximum cache items
-                oldest_key = min(self._cache.items(), key=lambda x: x[1][1])[0]
-                del self._cache[oldest_key]
-            self._cache[key] = (data.copy(), time.time())
-        except Exception as e:
-            logger.error(f"Cache error for {key}: {e}", exc_info=True)
-
-    def load_market_data(self, symbol: str, period: str = '1d') -> Optional[pd.DataFrame]:
-        """Load market data safely with improved error handling"""
-        try:
-            if not self.engine or not self.async_session:
-                logger.warning("Data loader not fully initialized.  Call initialize() first.")
-                return None
-
-            # Use existing event loop if available
-            try:
-                loop = asyncio.get_event_loop()
-            except RuntimeError:
-                loop = asyncio.new_event_loop()
-                asyncio.set_event_loop(loop)
-
-            # Add loading message
-            logger.info(f"Loading market data for {symbol}...")
-
-            df = loop.run_until_complete(self.get_historical_data(symbol, period))
-
-            if df is not None and len(df) > 0:
-                logger.info(f"Successfully loaded {len(df)} rows of market data for {symbol}")
-                return df
-
-            logger.warning(f"No data available for {symbol}")
-            return None
-        except Exception as e:
-            logger.error(f"Error loading market data for {symbol}: {str(e)}")
-            return None
-
-    async def get_market_summary(self, symbol: str) -> Dict[str, Union[float, str]]:
-        """Get comprehensive market summary with standardized column names"""
-        try:
-            symbol = self._normalize_symbol(symbol)
-            df = await self.get_historical_data_async(symbol, period='1d')
-            if df is None or df.empty:
-                return {
-                    'current_price': 0.0,
-                    'price_change_24h': 0.0,
-                    'volume_24h': 0.0,
-                    'high_24h': 0.0,
-                    'low_24h': 0.0,
-                    'volatility': 0.0,
-                    'rsi': 0.0,
-                    'trend': 'Unknown'
-                }
-
-            current_price = float(df['Close'].iloc[-1])
-            previous_close = float(df['Close'].iloc[-2])
-            price_change = ((current_price - previous_close) / previous_close) * 100
-
-            return {
-                'current_price': current_price,
-                'price_change_24h': float(price_change),
-                'volume_24h': float(df['Volume'].sum()),
-                'high_24h': float(df['High'].max()),
-                'low_24h': float(df['Low'].min()),
-                'volatility': float(df['Returns'].std() * 100) if 'Returns' in df.columns else 0.0,
-                'rsi': float(df['RSI'].iloc[-1]) if 'RSI' in df.columns else 0.0,
-                'trend': 'Bullish' if current_price > df['SMA_20'].iloc[-1] else 'Bearish'
-            }
-
-        except Exception as e:
-            logger.error(f"Error getting market summary for {symbol}: {e}", exc_info=True)
-            return {
-                'current_price': 0.0,
-                'price_change_24h': 0.0,
-                'volume_24h': 0.0,
-                'high_24h': 0.0,
-                'low_24h': 0.0,
-                'volatility': 0.0,
-                'rsi': 0.0,
-                'trend': 'Error'
-            }
-
-    def get_available_coins(self) -> Dict[str, str]:
-        """Return dictionary of supported cryptocurrencies"""
-        # Convert USDT pairs to USD format for display
-        display_coins = {}
-        for symbol, name in self.supported_coins.items():
-            display_symbol = symbol.replace('USDT', '/USD')
-            display_coins[display_symbol] = name
-        return display_coins
-
-    def _validate_and_fix_data(self, df: pd.DataFrame) -> pd.DataFrame:
-        """Validate and fix DataFrame to ensure all required columns are present"""
-        if df is None or df.empty:
-            raise ValueError("Invalid DataFrame: None or empty")
-
-        required_columns = [
-            'Open', 'High', 'Low', 'Close', 'Volume',
-            'Returns', 'Volatility', 'Volume_MA', 'Volume_Ratio',
-            'SMA_20', 'SMA_50', 'SMA_200', 'EMA_20', 'EMA_50', 'EMA_200',
-            'MACD', 'MACD_Signal', 'MACD_Hist', 'RSI', 'ATR',
-            'BB_Middle', 'BB_Upper', 'BB_Lower', 'BB_Width'
-        ]
-
-        df = df.copy()
-
-        # Ensure basic price columns exist
-        for col in ['Open', 'High', 'Low', 'Close', 'Volume']:
-            if col not in df.columns:
-                raise ValueError(f"Missing critical column: {col}")
-
-        # Add missing technical indicators
-        if 'Returns' not in df.columns:
-            df['Returns'] = df['Close'].pct_change()
-
-        if 'Volatility' not in df.columns:
-            df['Volatility'] = df['Returns'].rolling(window=20).std()
-
-        # Add or recalculate other technical indicators
-        df = self._add_technical_indicators(df)
-
-        # Verify all required columns are present
-        missing_columns = [col for col in required_columns if col not in df.columns]
-        if missing_columns:
-            logger.warning(f"Adding missing columns with default values: {missing_columns}")
-            for col in missing_columns:
-                df[col] = 0.0
-
-        # Clean up NaN values using the recommended approach instead of the deprecated method
-        df = df.ffill().bfill().fillna(0)
-
+        """Generate mock data for testing"""
+        logger.info(f"Generating mock data for {symbol}")
+        dates = pd.date_range(start="2023-01-01", periods=100)
+        data = {
+            'Open': [100 + i for i in range(100)],
+            'High': [105 + i for i in range(100)],
+            'Low': [95 + i for i in range(100)],
+            'Close': [100 + i for i in range(100)],
+            'Volume': [1000 + i * 10 for i in range(100)]
+        }
+        df = pd.DataFrame(data, index=dates)
         return df
 
-    def _get_start_time(self, period: str) -> Optional[int]:
-        """Calculate start time based on period"""
-        period_map = {
-            '1d': timedelta(days=1),
-            '7d': timedelta(days=7),
-            '30d': timedelta(days=30)
+    def _add_to_cache(self, key: str, data: pd.DataFrame):
+        """Add data to cache with timestamp"""
+        self._cache[key] = {
+            'data': data,
+            'timestamp': time.time()
         }
-        delta = period_map.get(period)
-        if delta:
-            return int((datetime.now() - delta).timestamp() * 1000)
+
+    def _get_from_cache(self, key: str, interval: str) -> Optional[pd.DataFrame]:
+        """Get data from cache if not expired"""
+        if key in self._cache:
+            cache_entry = self._cache[key]
+            if time.time() - cache_entry['timestamp'] < self._cache_duration.get(interval, 60):
+                return cache_entry['data']
         return None
 
-    async def get_historical_data_async(
-        self,
-        symbol: str,
-        period: str = '1d',
-        interval: str = '1m',
-        start_date: Optional[str] = None,
-        end_date: Optional[str] = None
-    ) -> Optional[pd.DataFrame]:
-        """Async wrapper for get_historical_data with error handling"""
-        try:
-            return await self.get_historical_data(
-                symbol,
-                period,
-                interval,
-                start_date,
-                end_date
-            )
-        except Exception as e:
-            error_msg = f"Error in async historical data fetch: {str(e)}"
-            logger.error(error_msg, exc_info=True)
-            raise DataLoadError(error_msg)
+    async def _save_to_database(self, symbol: str, df: pd.DataFrame):
+        """Save data to database asynchronously"""
+        if not self.async_session:
+            return
 
-    async def preload_data(self, period: str = '30d') -> bool:
+        async with self.async_session() as session:
+            try:
+                for _, row in df.iterrows():
+                    stmt = text("""
+                        INSERT INTO historical_data (symbol, timestamp, open, high, low, close, volume)
+                        VALUES (:symbol, :timestamp, :open, :high, :low, :close, :volume)
+                        ON CONFLICT (symbol, timestamp) DO NOTHING;
+                    """)
+                    await session.execute(stmt, {
+                        'symbol': symbol,
+                        'timestamp': row.name,
+                        'open': row['Open'],
+                        'high': row['High'],
+                        'low': row['Low'],
+                        'close': row['Close'],
+                        'volume': row['Volume']
+                    })
+                await session.commit()
+            except SQLAlchemyError as e:
+                logger.error(f"Database save error: {e}")
+                await session.rollback()
+
+    def _add_technical_indicators(self, df: pd.DataFrame) -> pd.DataFrame:
+        """Add technical indicators to the DataFrame"""
+        df['SMA_20'] = df['Close'].rolling(window=20).mean()
+        df['SMA_50'] = df['Close'].rolling(window=50).mean()
+        
+        # Calculate RSI
+        delta = df['Close'].diff()
+        gain = (delta.where(delta > 0, 0)).rolling(window=14).mean()
+        loss = (-delta.where(delta < 0, 0)).rolling(window=14).mean()
+        rs = gain / loss
+        df['RSI'] = 100 - (100 / (1 + rs))
+
+        # Add more indicators as needed
+        return df
+
+
+
+
+
+
+
+
+
+
+
+    async def get_latest_price(self, symbol: str) -> Optional[float]:
         """
-        Preload historical data for all supported coins
+        Ottiene il prezzo più recente per un simbolo con retry automatico
+        
         Args:
-            period: Time period to load (default: 30 days)
+            symbol: Simbolo della coppia (es. 'BTCUSDT')
+            
         Returns:
-            bool: True if successful, False otherwise
+            Prezzo corrente o None se errore
+        """
+        max_retries = 3
+        retry_delay = 1.0
+        
+        for attempt in range(max_retries):
+            try:
+                if True:  # Force real data
+                    self._setup_client()
+                
+                # Usa ticker price per ottenere prezzo corrente
+                ticker = self.client.get_symbol_ticker(symbol=symbol)
+                price = float(ticker['price'])
+                
+                if price > 0:  # Validazione prezzo
+                    return price
+                else:
+                    logger.warning(f"Prezzo invalido ricevuto per {symbol}: {price}")
+                    
+            except Exception as e:
+                logger.warning(f"Tentativo {attempt + 1}/{max_retries} fallito per {symbol}: {str(e)}")
+                
+                if attempt < max_retries - 1:
+                    await asyncio.sleep(retry_delay * (attempt + 1))
+                else:
+                    logger.error(f"Errore ottenimento prezzo {symbol} dopo {max_retries} tentativi: {str(e)}")
+        
+        return None
+    
+    async def get_current_price(self, symbol: str) -> Optional[float]:
+        """Alias per get_latest_price"""
+        return await self.get_latest_price(symbol)
+    def aggregate_3m_to_6m(self, df_3m: pd.DataFrame) -> pd.DataFrame:
+        """
+        Aggrega dati 3m in 6m
+        
+        Args:
+            df_3m: DataFrame con dati 3 minuti
+            
+        Returns:
+            DataFrame con dati 6 minuti
         """
         try:
-            symbols = list(self.supported_coins.keys())
-            logger.info(f"Preloading data for {len(symbols)} symbols")
-
-            success_count = 0
-            for symbol in symbols:
-                try:
-                    data = await self.get_historical_data_async(
-                        symbol=symbol,
-                        period=period,
-                        interval='1m'
-                    )
-
-                    if data is not None:
-                        success_count += 1
-                        logger.info(f"Successfully preloaded data for {symbol}")
-                    else:
-                        logger.warning(f"Failed to preload data for {symbol}")
-
-                except Exception as e:
-                    logger.error(f"Error preloading data for {symbol}: {str(e)}")
-                    continue
-
-            success_rate = success_count / len(symbols) if symbols else 0
-            logger.info(f"Preload completed. Success rate: {success_rate:.2%}")
-            return success_rate > 0.5  # Consider successful if more than 50% loaded
-
+            if df_3m.empty:
+                return df_3m
+            
+            # Raggruppa ogni 2 candele 3m per fare 6m
+            df_6m = df_3m.groupby(df_3m.index // 2).agg({
+                'Open': 'first',
+                'High': 'max', 
+                'Low': 'min',
+                'Close': 'last',
+                'Volume': 'sum'
+            })
+            
+            # Ricostruisci index temporale
+            df_6m.index = df_3m.index[::2]  # Ogni 2 candele
+            
+            return df_6m
+            
         except Exception as e:
-            logger.error(f"Error in preload_data: {str(e)}", exc_info=True)
-            return False
+            logger.error(f"Errore aggregazione 3m->6m: {e}")
+            return pd.DataFrame()
 
-    def get_current_price(self, symbol: str) -> Optional[float]:
-        """Get current price using ccxt"""
+    async def get_6m_data(self, symbol: str, period: str) -> Optional[pd.DataFrame]:
+        """
+        Ottiene dati 6 minuti tramite aggregazione da 3m
+        
+        Args:
+            symbol: Simbolo trading (es. 'BTCUSDT')
+            period: Periodo (es. '1D', '7d')
+            
+        Returns:
+            DataFrame con dati 6 minuti
+        """
         try:
-            if not self.use_live_data:
-                # Return mock price for testing
-                return 41000.0
-
-            if not self.client:
-                self._setup_client()
-                if not self.client:
-                    raise ValueError("Client not initialized")
-
-            symbol = self._normalize_symbol(symbol)
-            if symbol not in self.supported_coins:
-                logger.warning(f"Unsupported symbol: {symbol}")
+            # Ottieni dati 3m (doppia quantità per aggregazione)
+            period_multiplier = {'1D': '2d', '7d': '14d', '30d': '60d'}
+            extended_period = period_multiplier.get(period, period)
+            
+            df_3m = await self.get_historical_data(symbol, extended_period, '3m')
+            
+            if df_3m is None or df_3m.empty:
                 return None
-
-            # Get latest klines data
-            klines = self.client.get_klines(
-                symbol=symbol,
-                interval='1m',
-                limit=1
-            )
-
-            if not klines:
-                return None
-
-            # Return the closing price from the latest kline
-            return float(klines[0][4])  # Close price is at index 4
-
+                
+            # Aggrega a 6m
+            df_6m = self.aggregate_3m_to_6m(df_3m)
+            
+            # Taglia al periodo richiesto
+            if period == '1D':
+                df_6m = df_6m.tail(240)  # 24h * 10 candele/h = 240
+            elif period == '7d':
+                df_6m = df_6m.tail(1680)  # 7 * 240 = 1680
+            elif period == '30d':
+                df_6m = df_6m.tail(7200)  # 30 * 240 = 7200
+                
+            return df_6m
+            
         except Exception as e:
-            logger.error(f"Error getting price for {symbol}: {e}", exc_info=True)
+            logger.error(f"Errore get_6m_data: {e}")
             return None
 
-    def _normalize_symbol(self, symbol: str) -> str:
-        """Normalize symbol format for exchange"""
-        return symbol.upper().replace('-', '').replace('/', '')
