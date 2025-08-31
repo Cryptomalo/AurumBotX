@@ -1,0 +1,56 @@
+{
+  "timestamp": "2025-08-15T07:08:08.431656",
+  "final_score": 83.33333333333334,
+  "final_status": "BUONO \u2705",
+  "validation_results": {
+    "core_components": {
+      "data_loader": {
+        "status": "FAIL",
+        "price": null
+      },
+      "prediction_model": {
+        "status": "ERROR",
+        "error": "'TechnicalIndicators' object has no attribute 'calculate_all_indicators'"
+      },
+      "ai_trading": {
+        "status": "OK",
+        "analysis": true
+      }
+    },
+    "integration": {
+      "cycle_time": 4.107461,
+      "market_analysis": true,
+      "signals_generated": 0,
+      "status": "OK"
+    },
+    "strategies": {
+      "scalping_6m_conservative": {
+        "valid_params": true,
+        "risk_reward": 1.5,
+        "timeframe": "6m",
+        "status": "OK"
+      },
+      "scalping_6m_moderate": {
+        "valid_params": true,
+        "risk_reward": 1.6666666666666667,
+        "timeframe": "6m",
+        "status": "OK"
+      },
+      "swing_6m_short": {
+        "valid_params": true,
+        "risk_reward": 1.4285714285714286,
+        "timeframe": "6m",
+        "status": "OK"
+      }
+    },
+    "performance": {
+      "avg_time": 0.9019449999999999,
+      "max_time": 1.002156,
+      "min_time": 0.001671,
+      "std_time": 0.30009146232440537,
+      "errors": 0,
+      "success_rate": 1.0,
+      "status": "OK"
+    }
+  }
+}

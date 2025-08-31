@@ -1,0 +1,182 @@
+{
+  "timestamp": "2025-08-26T01:27:00.318839",
+  "execution_time": 39.949692,
+  "results": {
+    "dataframe_fix": {
+      "component": "dataframe_fix",
+      "status": "completed",
+      "files_fixed": 2,
+      "results": {
+        "utils/strategies/scalping.py": {
+          "status": "fixed",
+          "fixes_applied": [
+            "nan_checks"
+          ],
+          "backup_created": "utils/strategies/scalping.py.backup_20250826_012620"
+        },
+        "utils/strategies/swing_trading.py": {
+          "status": "fixed",
+          "fixes_applied": [
+            "nan_checks"
+          ],
+          "backup_created": "utils/strategies/swing_trading.py.backup_20250826_012620"
+        },
+        "utils/strategies/base_strategy.py": {
+          "status": "no_fixes_needed"
+        },
+        "utils/strategies/strategy_manager.py": {
+          "status": "not_found"
+        },
+        "strategy_test": {
+          "import_tests": {
+            "ScalpingStrategy": {
+              "status": "error",
+              "error": "ScalpingStrategy.__init__() missing 1 required positional argument: 'config'"
+            },
+            "SwingTradingStrategy": {
+              "status": "error",
+              "error": "SwingTradingStrategy.__init__() missing 1 required positional argument: 'config'"
+            },
+            "BaseStrategy": {
+              "status": "success",
+              "import": true,
+              "init": "skipped"
+            }
+          },
+          "mock_data_test": {},
+          "overall_status": "partial"
+        }
+      }
+    },
+    "sentiment_fix": {
+      "component": "sentiment_analyzer",
+      "status": "completed",
+      "fixes_applied": [
+        "fallback_methods"
+      ],
+      "backup_created": "utils/sentiment_analyzer.py.backup_20250826_012622",
+      "test_result": {
+        "status": "success",
+        "import": true,
+        "initialization": true,
+        "sentiment_test": 0.0,
+        "methods_working": true
+      }
+    },
+    "dependencies": {
+      "component": "dependencies",
+      "status": "completed",
+      "installed": [
+        "twilio",
+        "tweepy",
+        "yfinance",
+        "ta",
+        "python-telegram-bot"
+      ],
+      "total_attempted": 8,
+      "results": {
+        "twilio": {
+          "status": "success",
+          "package": "twilio"
+        },
+        "streamlit": {
+          "status": "already_installed",
+          "package": "streamlit"
+        },
+        "plotly": {
+          "status": "already_installed",
+          "package": "plotly"
+        },
+        "praw": {
+          "status": "already_installed",
+          "package": "praw"
+        },
+        "tweepy": {
+          "status": "success",
+          "package": "tweepy"
+        },
+        "yfinance": {
+          "status": "success",
+          "package": "yfinance"
+        },
+        "ta": {
+          "status": "success",
+          "package": "ta"
+        },
+        "python-telegram-bot": {
+          "status": "success",
+          "package": "python-telegram-bot"
+        }
+      }
+    },
+    "performance": {
+      "component": "performance",
+      "status": "completed",
+      "optimizations": {
+        "cache_optimization": {
+          "status": "success",
+          "cache_system": "created"
+        },
+        "database_optimization": {
+          "status": "success",
+          "databases_optimized": [
+            "aggressive_trading.db",
+            "real_data_trading.db",
+            "ai_optimization.db"
+          ]
+        },
+        "memory_optimization": {
+          "status": "success",
+          "memory_optimizer": "created"
+        },
+        "network_optimization": {
+          "status": "success",
+          "network_manager": "created"
+        }
+      }
+    },
+    "final_test": {
+      "imports": {
+        "utils.strategies.scalping": {
+          "status": "success"
+        },
+        "utils.strategies.swing_trading": {
+          "status": "success"
+        },
+        "utils.sentiment_analyzer": {
+          "status": "success"
+        },
+        "utils.advanced_cache": {
+          "status": "success"
+        },
+        "utils.memory_optimizer": {
+          "status": "success"
+        },
+        "utils.network_optimizer": {
+          "status": "success"
+        }
+      },
+      "dependencies": {
+        "twilio": {
+          "status": "available"
+        },
+        "streamlit": {
+          "status": "available"
+        },
+        "plotly": {
+          "status": "available"
+        }
+      },
+      "memory": {
+        "status": "success",
+        "usage_mb": 191.37890625
+      }
+    }
+  },
+  "summary": {
+    "dataframe_fixes": 2,
+    "sentiment_fixed": true,
+    "dependencies_installed": 5,
+    "performance_optimized": true
+  }
+}

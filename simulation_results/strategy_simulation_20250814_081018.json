@@ -1,0 +1,2759 @@
+{
+  "swing_trading_conservative": {
+    "config": {
+      "type": "swing",
+      "profit_target": 0.03,
+      "stop_loss": 0.02,
+      "trend_period": 20,
+      "min_trend_strength": 0.4,
+      "description": "Swing Trading Conservativo"
+    },
+    "timeframe_results": {
+      "1h": {
+        "timeframe": "1h",
+        "total_trades": 0,
+        "winning_trades": 0,
+        "losing_trades": 0,
+        "win_rate": 0,
+        "total_pnl": 0.0,
+        "avg_win": 0,
+        "avg_loss": 0,
+        "final_balance": 10000,
+        "trades": []
+      },
+      "4h": {
+        "timeframe": "4h",
+        "total_trades": 0,
+        "winning_trades": 0,
+        "losing_trades": 0,
+        "win_rate": 0,
+        "total_pnl": 0.0,
+        "avg_win": 0,
+        "avg_loss": 0,
+        "final_balance": 10000,
+        "trades": []
+      },
+      "1d": {
+        "timeframe": "1d",
+        "total_trades": 0,
+        "winning_trades": 0,
+        "losing_trades": 0,
+        "win_rate": 0,
+        "total_pnl": 0.0,
+        "avg_win": 0,
+        "avg_loss": 0,
+        "final_balance": 10000,
+        "trades": []
+      }
+    },
+    "aggregate": {
+      "total_trades": 0,
+      "win_rate": 0,
+      "avg_pnl": 0,
+      "sharpe_ratio": 0,
+      "max_drawdown": 0,
+      "profit_factor": 0
+    }
+  },
+  "swing_trading_moderate": {
+    "config": {
+      "type": "swing",
+      "profit_target": 0.05,
+      "stop_loss": 0.03,
+      "trend_period": 20,
+      "min_trend_strength": 0.6,
+      "description": "Swing Trading Moderato (Attuale)"
+    },
+    "timeframe_results": {
+      "1h": {
+        "timeframe": "1h",
+        "total_trades": 0,
+        "winning_trades": 0,
+        "losing_trades": 0,
+        "win_rate": 0,
+        "total_pnl": 0.0,
+        "avg_win": 0,
+        "avg_loss": 0,
+        "final_balance": 10000,
+        "trades": []
+      },
+      "4h": {
+        "timeframe": "4h",
+        "total_trades": 0,
+        "winning_trades": 0,
+        "losing_trades": 0,
+        "win_rate": 0,
+        "total_pnl": 0.0,
+        "avg_win": 0,
+        "avg_loss": 0,
+        "final_balance": 10000,
+        "trades": []
+      },
+      "1d": {
+        "timeframe": "1d",
+        "total_trades": 0,
+        "winning_trades": 0,
+        "losing_trades": 0,
+        "win_rate": 0,
+        "total_pnl": 0.0,
+        "avg_win": 0,
+        "avg_loss": 0,
+        "final_balance": 10000,
+        "trades": []
+      }
+    },
+    "aggregate": {
+      "total_trades": 0,
+      "win_rate": 0,
+      "avg_pnl": 0,
+      "sharpe_ratio": 0,
+      "max_drawdown": 0,
+      "profit_factor": 0
+    }
+  },
+  "swing_trading_aggressive": {
+    "config": {
+      "type": "swing",
+      "profit_target": 0.08,
+      "stop_loss": 0.05,
+      "trend_period": 14,
+      "min_trend_strength": 0.7,
+      "description": "Swing Trading Aggressivo"
+    },
+    "timeframe_results": {
+      "1h": {
+        "timeframe": "1h",
+        "total_trades": 0,
+        "winning_trades": 0,
+        "losing_trades": 0,
+        "win_rate": 0,
+        "total_pnl": 0.0,
+        "avg_win": 0,
+        "avg_loss": 0,
+        "final_balance": 10000,
+        "trades": []
+      },
+      "4h": {
+        "timeframe": "4h",
+        "total_trades": 0,
+        "winning_trades": 0,
+        "losing_trades": 0,
+        "win_rate": 0,
+        "total_pnl": 0.0,
+        "avg_win": 0,
+        "avg_loss": 0,
+        "final_balance": 10000,
+        "trades": []
+      },
+      "1d": {
+        "timeframe": "1d",
+        "total_trades": 0,
+        "winning_trades": 0,
+        "losing_trades": 0,
+        "win_rate": 0,
+        "total_pnl": 0.0,
+        "avg_win": 0,
+        "avg_loss": 0,
+        "final_balance": 10000,
+        "trades": []
+      }
+    },
+    "aggregate": {
+      "total_trades": 0,
+      "win_rate": 0,
+      "avg_pnl": 0,
+      "sharpe_ratio": 0,
+      "max_drawdown": 0,
+      "profit_factor": 0
+    }
+  },
+  "scalping_conservative": {
+    "config": {
+      "type": "scalping",
+      "profit_target": 0.005,
+      "stop_loss": 0.003,
+      "trend_period": 5,
+      "min_trend_strength": 0.3,
+      "description": "Scalping Conservativo"
+    },
+    "timeframe_results": {
+      "1h": {
+        "timeframe": "1h",
+        "total_trades": 49,
+        "winning_trades": 0,
+        "losing_trades": 49,
+        "win_rate": 0.0,
+        "total_pnl": -0.24747474747474715,
+        "avg_win": 0,
+        "avg_loss": -0.005785548990124318,
+        "final_balance": 7525.252525252528,
+        "trades": [
+          {
+            "entry_time": "2023-02-20 00:00:00",
+            "exit_time": "2023-02-21 00:00:00",
+            "entry_price": 150,
+            "exit_price": 151,
+            "type": "short",
+            "pnl": -0.006666666666666667,
+            "exit_reason": "stop_loss"
+          },
+          {
+            "entry_time": "2023-02-21 00:00:00",
+            "exit_time": "2023-02-22 00:00:00",
+            "entry_price": 151,
+            "exit_price": 152,
+            "type": "short",
+            "pnl": -0.006622516556291391,
+            "exit_reason": "stop_loss"
+          },
+          {
+            "entry_time": "2023-02-22 00:00:00",
+            "exit_time": "2023-02-23 00:00:00",
+            "entry_price": 152,
+            "exit_price": 153,
+            "type": "short",
+            "pnl": -0.006578947368421052,
+            "exit_reason": "stop_loss"
+          },
+          {
+            "entry_time": "2023-02-23 00:00:00",
+            "exit_time": "2023-02-24 00:00:00",
+            "entry_price": 153,
+            "exit_price": 154,
+            "type": "short",
+            "pnl": -0.006535947712418301,
+            "exit_reason": "stop_loss"
+          },
+          {
+            "entry_time": "2023-02-24 00:00:00",
+            "exit_time": "2023-02-25 00:00:00",
+            "entry_price": 154,
+            "exit_price": 155,
+            "type": "short",
+            "pnl": -0.006493506493506494,
+            "exit_reason": "stop_loss"
+          },
+          {
+            "entry_time": "2023-02-25 00:00:00",
+            "exit_time": "2023-02-26 00:00:00",
+            "entry_price": 155,
+            "exit_price": 156,
+            "type": "short",
+            "pnl": -0.0064516129032258064,
+            "exit_reason": "stop_loss"
+          },
+          {
+            "entry_time": "2023-02-26 00:00:00",
+            "exit_time": "2023-02-27 00:00:00",
+            "entry_price": 156,
+            "exit_price": 157,
+            "type": "short",
+            "pnl": -0.00641025641025641,
+            "exit_reason": "stop_loss"
+          },
+          {
+            "entry_time": "2023-02-27 00:00:00",
+            "exit_time": "2023-02-28 00:00:00",
+            "entry_price": 157,
+            "exit_price": 158,
+            "type": "short",
+            "pnl": -0.006369426751592357,
+            "exit_reason": "stop_loss"
+          },
+          {
+            "entry_time": "2023-02-28 00:00:00",
+            "exit_time": "2023-03-01 00:00:00",
+            "entry_price": 158,
+            "exit_price": 159,
+            "type": "short",
+            "pnl": -0.006329113924050633,
+            "exit_reason": "stop_loss"
+          },
+          {
+            "entry_time": "2023-03-01 00:00:00",
+            "exit_time": "2023-03-02 00:00:00",
+            "entry_price": 159,
+            "exit_price": 160,
+            "type": "short",
+            "pnl": -0.006289308176100629,
+            "exit_reason": "stop_loss"
+          },
+          {
+            "entry_time": "2023-03-02 00:00:00",
+            "exit_time": "2023-03-03 00:00:00",
+            "entry_price": 160,
+            "exit_price": 161,
+            "type": "short",
+            "pnl": -0.00625,
+            "exit_reason": "stop_loss"
+          },
+          {
+            "entry_time": "2023-03-03 00:00:00",
+            "exit_time": "2023-03-04 00:00:00",
+            "entry_price": 161,
+            "exit_price": 162,
+            "type": "short",
+            "pnl": -0.006211180124223602,
+            "exit_reason": "stop_loss"
+          },
+          {
+            "entry_time": "2023-03-04 00:00:00",
+            "exit_time": "2023-03-05 00:00:00",
+            "entry_price": 162,
+            "exit_price": 163,
+            "type": "short",
+            "pnl": -0.006172839506172839,
+            "exit_reason": "stop_loss"
+          },
+          {
+            "entry_time": "2023-03-05 00:00:00",
+            "exit_time": "2023-03-06 00:00:00",
+            "entry_price": 163,
+            "exit_price": 164,
+            "type": "short",
+            "pnl": -0.006134969325153374,
+            "exit_reason": "stop_loss"
+          },
+          {
+            "entry_time": "2023-03-06 00:00:00",
+            "exit_time": "2023-03-07 00:00:00",
+            "entry_price": 164,
+            "exit_price": 165,
+            "type": "short",
+            "pnl": -0.006097560975609756,
+            "exit_reason": "stop_loss"
+          },
+          {
+            "entry_time": "2023-03-07 00:00:00",
+            "exit_time": "2023-03-08 00:00:00",
+            "entry_price": 165,
+            "exit_price": 166,
+            "type": "short",
+            "pnl": -0.006060606060606061,
+            "exit_reason": "stop_loss"
+          },
+          {
+            "entry_time": "2023-03-08 00:00:00",
+            "exit_time": "2023-03-09 00:00:00",
+            "entry_price": 166,
+            "exit_price": 167,
+            "type": "short",
+            "pnl": -0.006024096385542169,
+            "exit_reason": "stop_loss"
+          },
+          {
+            "entry_time": "2023-03-09 00:00:00",
+            "exit_time": "2023-03-10 00:00:00",
+            "entry_price": 167,
+            "exit_price": 168,
+            "type": "short",
+            "pnl": -0.005988023952095809,
+            "exit_reason": "stop_loss"
+          },
+          {
+            "entry_time": "2023-03-10 00:00:00",
+            "exit_time": "2023-03-11 00:00:00",
+            "entry_price": 168,
+            "exit_price": 169,
+            "type": "short",
+            "pnl": -0.005952380952380952,
+            "exit_reason": "stop_loss"
+          },
+          {
+            "entry_time": "2023-03-11 00:00:00",
+            "exit_time": "2023-03-12 00:00:00",
+            "entry_price": 169,
+            "exit_price": 170,
+            "type": "short",
+            "pnl": -0.005917159763313609,
+            "exit_reason": "stop_loss"
+          },
+          {
+            "entry_time": "2023-03-12 00:00:00",
+            "exit_time": "2023-03-13 00:00:00",
+            "entry_price": 170,
+            "exit_price": 171,
+            "type": "short",
+            "pnl": -0.0058823529411764705,
+            "exit_reason": "stop_loss"
+          },
+          {
+            "entry_time": "2023-03-13 00:00:00",
+            "exit_time": "2023-03-14 00:00:00",
+            "entry_price": 171,
+            "exit_price": 172,
+            "type": "short",
+            "pnl": -0.005847953216374269,
+            "exit_reason": "stop_loss"
+          },
+          {
+            "entry_time": "2023-03-14 00:00:00",
+            "exit_time": "2023-03-15 00:00:00",
+            "entry_price": 172,
+            "exit_price": 173,
+            "type": "short",
+            "pnl": -0.005813953488372093,
+            "exit_reason": "stop_loss"
+          },
+          {
+            "entry_time": "2023-03-15 00:00:00",
+            "exit_time": "2023-03-16 00:00:00",
+            "entry_price": 173,
+            "exit_price": 174,
+            "type": "short",
+            "pnl": -0.005780346820809248,
+            "exit_reason": "stop_loss"
+          },
+          {
+            "entry_time": "2023-03-16 00:00:00",
+            "exit_time": "2023-03-17 00:00:00",
+            "entry_price": 174,
+            "exit_price": 175,
+            "type": "short",
+            "pnl": -0.005747126436781609,
+            "exit_reason": "stop_loss"
+          },
+          {
+            "entry_time": "2023-03-17 00:00:00",
+            "exit_time": "2023-03-18 00:00:00",
+            "entry_price": 175,
+            "exit_price": 176,
+            "type": "short",
+            "pnl": -0.005714285714285714,
+            "exit_reason": "stop_loss"
+          },
+          {
+            "entry_time": "2023-03-18 00:00:00",
+            "exit_time": "2023-03-19 00:00:00",
+            "entry_price": 176,
+            "exit_price": 177,
+            "type": "short",
+            "pnl": -0.005681818181818182,
+            "exit_reason": "stop_loss"
+          },
+          {
+            "entry_time": "2023-03-19 00:00:00",
+            "exit_time": "2023-03-20 00:00:00",
+            "entry_price": 177,
+            "exit_price": 178,
+            "type": "short",
+            "pnl": -0.005649717514124294,
+            "exit_reason": "stop_loss"
+          },
+          {
+            "entry_time": "2023-03-20 00:00:00",
+            "exit_time": "2023-03-21 00:00:00",
+            "entry_price": 178,
+            "exit_price": 179,
+            "type": "short",
+            "pnl": -0.0056179775280898875,
+            "exit_reason": "stop_loss"
+          },
+          {
+            "entry_time": "2023-03-21 00:00:00",
+            "exit_time": "2023-03-22 00:00:00",
+            "entry_price": 179,
+            "exit_price": 180,
+            "type": "short",
+            "pnl": -0.00558659217877095,
+            "exit_reason": "stop_loss"
+          },
+          {
+            "entry_time": "2023-03-22 00:00:00",
+            "exit_time": "2023-03-23 00:00:00",
+            "entry_price": 180,
+            "exit_price": 181,
+            "type": "short",
+            "pnl": -0.005555555555555556,
+            "exit_reason": "stop_loss"
+          },
+          {
+            "entry_time": "2023-03-23 00:00:00",
+            "exit_time": "2023-03-24 00:00:00",
+            "entry_price": 181,
+            "exit_price": 182,
+            "type": "short",
+            "pnl": -0.0055248618784530384,
+            "exit_reason": "stop_loss"
+          },
+          {
+            "entry_time": "2023-03-24 00:00:00",
+            "exit_time": "2023-03-25 00:00:00",
+            "entry_price": 182,
+            "exit_price": 183,
+            "type": "short",
+            "pnl": -0.005494505494505495,
+            "exit_reason": "stop_loss"
+          },
+          {
+            "entry_time": "2023-03-25 00:00:00",
+            "exit_time": "2023-03-26 00:00:00",
+            "entry_price": 183,
+            "exit_price": 184,
+            "type": "short",
+            "pnl": -0.00546448087431694,
+            "exit_reason": "stop_loss"
+          },
+          {
+            "entry_time": "2023-03-26 00:00:00",
+            "exit_time": "2023-03-27 00:00:00",
+            "entry_price": 184,
+            "exit_price": 185,
+            "type": "short",
+            "pnl": -0.005434782608695652,
+            "exit_reason": "stop_loss"
+          },
+          {
+            "entry_time": "2023-03-27 00:00:00",
+            "exit_time": "2023-03-28 00:00:00",
+            "entry_price": 185,
+            "exit_price": 186,
+            "type": "short",
+            "pnl": -0.005405405405405406,
+            "exit_reason": "stop_loss"
+          },
+          {
+            "entry_time": "2023-03-28 00:00:00",
+            "exit_time": "2023-03-29 00:00:00",
+            "entry_price": 186,
+            "exit_price": 187,
+            "type": "short",
+            "pnl": -0.005376344086021506,
+            "exit_reason": "stop_loss"
+          },
+          {
+            "entry_time": "2023-03-29 00:00:00",
+            "exit_time": "2023-03-30 00:00:00",
+            "entry_price": 187,
+            "exit_price": 188,
+            "type": "short",
+            "pnl": -0.0053475935828877,
+            "exit_reason": "stop_loss"
+          },
+          {
+            "entry_time": "2023-03-30 00:00:00",
+            "exit_time": "2023-03-31 00:00:00",
+            "entry_price": 188,
+            "exit_price": 189,
+            "type": "short",
+            "pnl": -0.005319148936170213,
+            "exit_reason": "stop_loss"
+          },
+          {
+            "entry_time": "2023-03-31 00:00:00",
+            "exit_time": "2023-04-01 00:00:00",
+            "entry_price": 189,
+            "exit_price": 190,
+            "type": "short",
+            "pnl": -0.005291005291005291,
+            "exit_reason": "stop_loss"
+          },
+          {
+            "entry_time": "2023-04-01 00:00:00",
+            "exit_time": "2023-04-02 00:00:00",
+            "entry_price": 190,
+            "exit_price": 191,
+            "type": "short",
+            "pnl": -0.005263157894736842,
+            "exit_reason": "stop_loss"
+          },
+          {
+            "entry_time": "2023-04-02 00:00:00",
+            "exit_time": "2023-04-03 00:00:00",
+            "entry_price": 191,
+            "exit_price": 192,
+            "type": "short",
+            "pnl": -0.005235602094240838,
+            "exit_reason": "stop_loss"
+          },
+          {
+            "entry_time": "2023-04-03 00:00:00",
+            "exit_time": "2023-04-04 00:00:00",
+            "entry_price": 192,
+            "exit_price": 193,
+            "type": "short",
+            "pnl": -0.005208333333333333,
+            "exit_reason": "stop_loss"
+          },
+          {
+            "entry_time": "2023-04-04 00:00:00",
+            "exit_time": "2023-04-05 00:00:00",
+            "entry_price": 193,
+            "exit_price": 194,
+            "type": "short",
+            "pnl": -0.0051813471502590676,
+            "exit_reason": "stop_loss"
+          },
+          {
+            "entry_time": "2023-04-05 00:00:00",
+            "exit_time": "2023-04-06 00:00:00",
+            "entry_price": 194,
+            "exit_price": 195,
+            "type": "short",
+            "pnl": -0.005154639175257732,
+            "exit_reason": "stop_loss"
+          },
+          {
+            "entry_time": "2023-04-06 00:00:00",
+            "exit_time": "2023-04-07 00:00:00",
+            "entry_price": 195,
+            "exit_price": 196,
+            "type": "short",
+            "pnl": -0.005128205128205128,
+            "exit_reason": "stop_loss"
+          },
+          {
+            "entry_time": "2023-04-07 00:00:00",
+            "exit_time": "2023-04-08 00:00:00",
+            "entry_price": 196,
+            "exit_price": 197,
+            "type": "short",
+            "pnl": -0.00510204081632653,
+            "exit_reason": "stop_loss"
+          },
+          {
+            "entry_time": "2023-04-08 00:00:00",
+            "exit_time": "2023-04-09 00:00:00",
+            "entry_price": 197,
+            "exit_price": 198,
+            "type": "short",
+            "pnl": -0.005076142131979695,
+            "exit_reason": "stop_loss"
+          },
+          {
+            "entry_time": "2023-04-09 00:00:00",
+            "exit_time": "2023-04-10 00:00:00",
+            "entry_price": 198,
+            "exit_price": 199,
+            "type": "short",
+            "pnl": -0.005050505050505051,
+            "exit_reason": "stop_loss"
+          }
+        ]
+      },
+      "4h": {
+        "timeframe": "4h",
+        "total_trades": 49,
+        "winning_trades": 0,
+        "losing_trades": 49,
+        "win_rate": 0.0,
+        "total_pnl": -0.24747474747474715,
+        "avg_win": 0,
+        "avg_loss": -0.005785548990124318,
+        "final_balance": 7525.252525252528,
+        "trades": [
+          {
+            "entry_time": "2023-02-20 00:00:00",
+            "exit_time": "2023-02-21 00:00:00",
+            "entry_price": 150,
+            "exit_price": 151,
+            "type": "short",
+            "pnl": -0.006666666666666667,
+            "exit_reason": "stop_loss"
+          },
+          {
+            "entry_time": "2023-02-21 00:00:00",
+            "exit_time": "2023-02-22 00:00:00",
+            "entry_price": 151,
+            "exit_price": 152,
+            "type": "short",
+            "pnl": -0.006622516556291391,
+            "exit_reason": "stop_loss"
+          },
+          {
+            "entry_time": "2023-02-22 00:00:00",
+            "exit_time": "2023-02-23 00:00:00",
+            "entry_price": 152,
+            "exit_price": 153,
+            "type": "short",
+            "pnl": -0.006578947368421052,
+            "exit_reason": "stop_loss"
+          },
+          {
+            "entry_time": "2023-02-23 00:00:00",
+            "exit_time": "2023-02-24 00:00:00",
+            "entry_price": 153,
+            "exit_price": 154,
+            "type": "short",
+            "pnl": -0.006535947712418301,
+            "exit_reason": "stop_loss"
+          },
+          {
+            "entry_time": "2023-02-24 00:00:00",
+            "exit_time": "2023-02-25 00:00:00",
+            "entry_price": 154,
+            "exit_price": 155,
+            "type": "short",
+            "pnl": -0.006493506493506494,
+            "exit_reason": "stop_loss"
+          },
+          {
+            "entry_time": "2023-02-25 00:00:00",
+            "exit_time": "2023-02-26 00:00:00",
+            "entry_price": 155,
+            "exit_price": 156,
+            "type": "short",
+            "pnl": -0.0064516129032258064,
+            "exit_reason": "stop_loss"
+          },
+          {
+            "entry_time": "2023-02-26 00:00:00",
+            "exit_time": "2023-02-27 00:00:00",
+            "entry_price": 156,
+            "exit_price": 157,
+            "type": "short",
+            "pnl": -0.00641025641025641,
+            "exit_reason": "stop_loss"
+          },
+          {
+            "entry_time": "2023-02-27 00:00:00",
+            "exit_time": "2023-02-28 00:00:00",
+            "entry_price": 157,
+            "exit_price": 158,
+            "type": "short",
+            "pnl": -0.006369426751592357,
+            "exit_reason": "stop_loss"
+          },
+          {
+            "entry_time": "2023-02-28 00:00:00",
+            "exit_time": "2023-03-01 00:00:00",
+            "entry_price": 158,
+            "exit_price": 159,
+            "type": "short",
+            "pnl": -0.006329113924050633,
+            "exit_reason": "stop_loss"
+          },
+          {
+            "entry_time": "2023-03-01 00:00:00",
+            "exit_time": "2023-03-02 00:00:00",
+            "entry_price": 159,
+            "exit_price": 160,
+            "type": "short",
+            "pnl": -0.006289308176100629,
+            "exit_reason": "stop_loss"
+          },
+          {
+            "entry_time": "2023-03-02 00:00:00",
+            "exit_time": "2023-03-03 00:00:00",
+            "entry_price": 160,
+            "exit_price": 161,
+            "type": "short",
+            "pnl": -0.00625,
+            "exit_reason": "stop_loss"
+          },
+          {
+            "entry_time": "2023-03-03 00:00:00",
+            "exit_time": "2023-03-04 00:00:00",
+            "entry_price": 161,
+            "exit_price": 162,
+            "type": "short",
+            "pnl": -0.006211180124223602,
+            "exit_reason": "stop_loss"
+          },
+          {
+            "entry_time": "2023-03-04 00:00:00",
+            "exit_time": "2023-03-05 00:00:00",
+            "entry_price": 162,
+            "exit_price": 163,
+            "type": "short",
+            "pnl": -0.006172839506172839,
+            "exit_reason": "stop_loss"
+          },
+          {
+            "entry_time": "2023-03-05 00:00:00",
+            "exit_time": "2023-03-06 00:00:00",
+            "entry_price": 163,
+            "exit_price": 164,
+            "type": "short",
+            "pnl": -0.006134969325153374,
+            "exit_reason": "stop_loss"
+          },
+          {
+            "entry_time": "2023-03-06 00:00:00",
+            "exit_time": "2023-03-07 00:00:00",
+            "entry_price": 164,
+            "exit_price": 165,
+            "type": "short",
+            "pnl": -0.006097560975609756,
+            "exit_reason": "stop_loss"
+          },
+          {
+            "entry_time": "2023-03-07 00:00:00",
+            "exit_time": "2023-03-08 00:00:00",
+            "entry_price": 165,
+            "exit_price": 166,
+            "type": "short",
+            "pnl": -0.006060606060606061,
+            "exit_reason": "stop_loss"
+          },
+          {
+            "entry_time": "2023-03-08 00:00:00",
+            "exit_time": "2023-03-09 00:00:00",
+            "entry_price": 166,
+            "exit_price": 167,
+            "type": "short",
+            "pnl": -0.006024096385542169,
+            "exit_reason": "stop_loss"
+          },
+          {
+            "entry_time": "2023-03-09 00:00:00",
+            "exit_time": "2023-03-10 00:00:00",
+            "entry_price": 167,
+            "exit_price": 168,
+            "type": "short",
+            "pnl": -0.005988023952095809,
+            "exit_reason": "stop_loss"
+          },
+          {
+            "entry_time": "2023-03-10 00:00:00",
+            "exit_time": "2023-03-11 00:00:00",
+            "entry_price": 168,
+            "exit_price": 169,
+            "type": "short",
+            "pnl": -0.005952380952380952,
+            "exit_reason": "stop_loss"
+          },
+          {
+            "entry_time": "2023-03-11 00:00:00",
+            "exit_time": "2023-03-12 00:00:00",
+            "entry_price": 169,
+            "exit_price": 170,
+            "type": "short",
+            "pnl": -0.005917159763313609,
+            "exit_reason": "stop_loss"
+          },
+          {
+            "entry_time": "2023-03-12 00:00:00",
+            "exit_time": "2023-03-13 00:00:00",
+            "entry_price": 170,
+            "exit_price": 171,
+            "type": "short",
+            "pnl": -0.0058823529411764705,
+            "exit_reason": "stop_loss"
+          },
+          {
+            "entry_time": "2023-03-13 00:00:00",
+            "exit_time": "2023-03-14 00:00:00",
+            "entry_price": 171,
+            "exit_price": 172,
+            "type": "short",
+            "pnl": -0.005847953216374269,
+            "exit_reason": "stop_loss"
+          },
+          {
+            "entry_time": "2023-03-14 00:00:00",
+            "exit_time": "2023-03-15 00:00:00",
+            "entry_price": 172,
+            "exit_price": 173,
+            "type": "short",
+            "pnl": -0.005813953488372093,
+            "exit_reason": "stop_loss"
+          },
+          {
+            "entry_time": "2023-03-15 00:00:00",
+            "exit_time": "2023-03-16 00:00:00",
+            "entry_price": 173,
+            "exit_price": 174,
+            "type": "short",
+            "pnl": -0.005780346820809248,
+            "exit_reason": "stop_loss"
+          },
+          {
+            "entry_time": "2023-03-16 00:00:00",
+            "exit_time": "2023-03-17 00:00:00",
+            "entry_price": 174,
+            "exit_price": 175,
+            "type": "short",
+            "pnl": -0.005747126436781609,
+            "exit_reason": "stop_loss"
+          },
+          {
+            "entry_time": "2023-03-17 00:00:00",
+            "exit_time": "2023-03-18 00:00:00",
+            "entry_price": 175,
+            "exit_price": 176,
+            "type": "short",
+            "pnl": -0.005714285714285714,
+            "exit_reason": "stop_loss"
+          },
+          {
+            "entry_time": "2023-03-18 00:00:00",
+            "exit_time": "2023-03-19 00:00:00",
+            "entry_price": 176,
+            "exit_price": 177,
+            "type": "short",
+            "pnl": -0.005681818181818182,
+            "exit_reason": "stop_loss"
+          },
+          {
+            "entry_time": "2023-03-19 00:00:00",
+            "exit_time": "2023-03-20 00:00:00",
+            "entry_price": 177,
+            "exit_price": 178,
+            "type": "short",
+            "pnl": -0.005649717514124294,
+            "exit_reason": "stop_loss"
+          },
+          {
+            "entry_time": "2023-03-20 00:00:00",
+            "exit_time": "2023-03-21 00:00:00",
+            "entry_price": 178,
+            "exit_price": 179,
+            "type": "short",
+            "pnl": -0.0056179775280898875,
+            "exit_reason": "stop_loss"
+          },
+          {
+            "entry_time": "2023-03-21 00:00:00",
+            "exit_time": "2023-03-22 00:00:00",
+            "entry_price": 179,
+            "exit_price": 180,
+            "type": "short",
+            "pnl": -0.00558659217877095,
+            "exit_reason": "stop_loss"
+          },
+          {
+            "entry_time": "2023-03-22 00:00:00",
+            "exit_time": "2023-03-23 00:00:00",
+            "entry_price": 180,
+            "exit_price": 181,
+            "type": "short",
+            "pnl": -0.005555555555555556,
+            "exit_reason": "stop_loss"
+          },
+          {
+            "entry_time": "2023-03-23 00:00:00",
+            "exit_time": "2023-03-24 00:00:00",
+            "entry_price": 181,
+            "exit_price": 182,
+            "type": "short",
+            "pnl": -0.0055248618784530384,
+            "exit_reason": "stop_loss"
+          },
+          {
+            "entry_time": "2023-03-24 00:00:00",
+            "exit_time": "2023-03-25 00:00:00",
+            "entry_price": 182,
+            "exit_price": 183,
+            "type": "short",
+            "pnl": -0.005494505494505495,
+            "exit_reason": "stop_loss"
+          },
+          {
+            "entry_time": "2023-03-25 00:00:00",
+            "exit_time": "2023-03-26 00:00:00",
+            "entry_price": 183,
+            "exit_price": 184,
+            "type": "short",
+            "pnl": -0.00546448087431694,
+            "exit_reason": "stop_loss"
+          },
+          {
+            "entry_time": "2023-03-26 00:00:00",
+            "exit_time": "2023-03-27 00:00:00",
+            "entry_price": 184,
+            "exit_price": 185,
+            "type": "short",
+            "pnl": -0.005434782608695652,
+            "exit_reason": "stop_loss"
+          },
+          {
+            "entry_time": "2023-03-27 00:00:00",
+            "exit_time": "2023-03-28 00:00:00",
+            "entry_price": 185,
+            "exit_price": 186,
+            "type": "short",
+            "pnl": -0.005405405405405406,
+            "exit_reason": "stop_loss"
+          },
+          {
+            "entry_time": "2023-03-28 00:00:00",
+            "exit_time": "2023-03-29 00:00:00",
+            "entry_price": 186,
+            "exit_price": 187,
+            "type": "short",
+            "pnl": -0.005376344086021506,
+            "exit_reason": "stop_loss"
+          },
+          {
+            "entry_time": "2023-03-29 00:00:00",
+            "exit_time": "2023-03-30 00:00:00",
+            "entry_price": 187,
+            "exit_price": 188,
+            "type": "short",
+            "pnl": -0.0053475935828877,
+            "exit_reason": "stop_loss"
+          },
+          {
+            "entry_time": "2023-03-30 00:00:00",
+            "exit_time": "2023-03-31 00:00:00",
+            "entry_price": 188,
+            "exit_price": 189,
+            "type": "short",
+            "pnl": -0.005319148936170213,
+            "exit_reason": "stop_loss"
+          },
+          {
+            "entry_time": "2023-03-31 00:00:00",
+            "exit_time": "2023-04-01 00:00:00",
+            "entry_price": 189,
+            "exit_price": 190,
+            "type": "short",
+            "pnl": -0.005291005291005291,
+            "exit_reason": "stop_loss"
+          },
+          {
+            "entry_time": "2023-04-01 00:00:00",
+            "exit_time": "2023-04-02 00:00:00",
+            "entry_price": 190,
+            "exit_price": 191,
+            "type": "short",
+            "pnl": -0.005263157894736842,
+            "exit_reason": "stop_loss"
+          },
+          {
+            "entry_time": "2023-04-02 00:00:00",
+            "exit_time": "2023-04-03 00:00:00",
+            "entry_price": 191,
+            "exit_price": 192,
+            "type": "short",
+            "pnl": -0.005235602094240838,
+            "exit_reason": "stop_loss"
+          },
+          {
+            "entry_time": "2023-04-03 00:00:00",
+            "exit_time": "2023-04-04 00:00:00",
+            "entry_price": 192,
+            "exit_price": 193,
+            "type": "short",
+            "pnl": -0.005208333333333333,
+            "exit_reason": "stop_loss"
+          },
+          {
+            "entry_time": "2023-04-04 00:00:00",
+            "exit_time": "2023-04-05 00:00:00",
+            "entry_price": 193,
+            "exit_price": 194,
+            "type": "short",
+            "pnl": -0.0051813471502590676,
+            "exit_reason": "stop_loss"
+          },
+          {
+            "entry_time": "2023-04-05 00:00:00",
+            "exit_time": "2023-04-06 00:00:00",
+            "entry_price": 194,
+            "exit_price": 195,
+            "type": "short",
+            "pnl": -0.005154639175257732,
+            "exit_reason": "stop_loss"
+          },
+          {
+            "entry_time": "2023-04-06 00:00:00",
+            "exit_time": "2023-04-07 00:00:00",
+            "entry_price": 195,
+            "exit_price": 196,
+            "type": "short",
+            "pnl": -0.005128205128205128,
+            "exit_reason": "stop_loss"
+          },
+          {
+            "entry_time": "2023-04-07 00:00:00",
+            "exit_time": "2023-04-08 00:00:00",
+            "entry_price": 196,
+            "exit_price": 197,
+            "type": "short",
+            "pnl": -0.00510204081632653,
+            "exit_reason": "stop_loss"
+          },
+          {
+            "entry_time": "2023-04-08 00:00:00",
+            "exit_time": "2023-04-09 00:00:00",
+            "entry_price": 197,
+            "exit_price": 198,
+            "type": "short",
+            "pnl": -0.005076142131979695,
+            "exit_reason": "stop_loss"
+          },
+          {
+            "entry_time": "2023-04-09 00:00:00",
+            "exit_time": "2023-04-10 00:00:00",
+            "entry_price": 198,
+            "exit_price": 199,
+            "type": "short",
+            "pnl": -0.005050505050505051,
+            "exit_reason": "stop_loss"
+          }
+        ]
+      },
+      "1d": {
+        "timeframe": "1d",
+        "total_trades": 49,
+        "winning_trades": 0,
+        "losing_trades": 49,
+        "win_rate": 0.0,
+        "total_pnl": -0.24747474747474715,
+        "avg_win": 0,
+        "avg_loss": -0.005785548990124318,
+        "final_balance": 7525.252525252528,
+        "trades": [
+          {
+            "entry_time": "2023-02-20 00:00:00",
+            "exit_time": "2023-02-21 00:00:00",
+            "entry_price": 150,
+            "exit_price": 151,
+            "type": "short",
+            "pnl": -0.006666666666666667,
+            "exit_reason": "stop_loss"
+          },
+          {
+            "entry_time": "2023-02-21 00:00:00",
+            "exit_time": "2023-02-22 00:00:00",
+            "entry_price": 151,
+            "exit_price": 152,
+            "type": "short",
+            "pnl": -0.006622516556291391,
+            "exit_reason": "stop_loss"
+          },
+          {
+            "entry_time": "2023-02-22 00:00:00",
+            "exit_time": "2023-02-23 00:00:00",
+            "entry_price": 152,
+            "exit_price": 153,
+            "type": "short",
+            "pnl": -0.006578947368421052,
+            "exit_reason": "stop_loss"
+          },
+          {
+            "entry_time": "2023-02-23 00:00:00",
+            "exit_time": "2023-02-24 00:00:00",
+            "entry_price": 153,
+            "exit_price": 154,
+            "type": "short",
+            "pnl": -0.006535947712418301,
+            "exit_reason": "stop_loss"
+          },
+          {
+            "entry_time": "2023-02-24 00:00:00",
+            "exit_time": "2023-02-25 00:00:00",
+            "entry_price": 154,
+            "exit_price": 155,
+            "type": "short",
+            "pnl": -0.006493506493506494,
+            "exit_reason": "stop_loss"
+          },
+          {
+            "entry_time": "2023-02-25 00:00:00",
+            "exit_time": "2023-02-26 00:00:00",
+            "entry_price": 155,
+            "exit_price": 156,
+            "type": "short",
+            "pnl": -0.0064516129032258064,
+            "exit_reason": "stop_loss"
+          },
+          {
+            "entry_time": "2023-02-26 00:00:00",
+            "exit_time": "2023-02-27 00:00:00",
+            "entry_price": 156,
+            "exit_price": 157,
+            "type": "short",
+            "pnl": -0.00641025641025641,
+            "exit_reason": "stop_loss"
+          },
+          {
+            "entry_time": "2023-02-27 00:00:00",
+            "exit_time": "2023-02-28 00:00:00",
+            "entry_price": 157,
+            "exit_price": 158,
+            "type": "short",
+            "pnl": -0.006369426751592357,
+            "exit_reason": "stop_loss"
+          },
+          {
+            "entry_time": "2023-02-28 00:00:00",
+            "exit_time": "2023-03-01 00:00:00",
+            "entry_price": 158,
+            "exit_price": 159,
+            "type": "short",
+            "pnl": -0.006329113924050633,
+            "exit_reason": "stop_loss"
+          },
+          {
+            "entry_time": "2023-03-01 00:00:00",
+            "exit_time": "2023-03-02 00:00:00",
+            "entry_price": 159,
+            "exit_price": 160,
+            "type": "short",
+            "pnl": -0.006289308176100629,
+            "exit_reason": "stop_loss"
+          },
+          {
+            "entry_time": "2023-03-02 00:00:00",
+            "exit_time": "2023-03-03 00:00:00",
+            "entry_price": 160,
+            "exit_price": 161,
+            "type": "short",
+            "pnl": -0.00625,
+            "exit_reason": "stop_loss"
+          },
+          {
+            "entry_time": "2023-03-03 00:00:00",
+            "exit_time": "2023-03-04 00:00:00",
+            "entry_price": 161,
+            "exit_price": 162,
+            "type": "short",
+            "pnl": -0.006211180124223602,
+            "exit_reason": "stop_loss"
+          },
+          {
+            "entry_time": "2023-03-04 00:00:00",
+            "exit_time": "2023-03-05 00:00:00",
+            "entry_price": 162,
+            "exit_price": 163,
+            "type": "short",
+            "pnl": -0.006172839506172839,
+            "exit_reason": "stop_loss"
+          },
+          {
+            "entry_time": "2023-03-05 00:00:00",
+            "exit_time": "2023-03-06 00:00:00",
+            "entry_price": 163,
+            "exit_price": 164,
+            "type": "short",
+            "pnl": -0.006134969325153374,
+            "exit_reason": "stop_loss"
+          },
+          {
+            "entry_time": "2023-03-06 00:00:00",
+            "exit_time": "2023-03-07 00:00:00",
+            "entry_price": 164,
+            "exit_price": 165,
+            "type": "short",
+            "pnl": -0.006097560975609756,
+            "exit_reason": "stop_loss"
+          },
+          {
+            "entry_time": "2023-03-07 00:00:00",
+            "exit_time": "2023-03-08 00:00:00",
+            "entry_price": 165,
+            "exit_price": 166,
+            "type": "short",
+            "pnl": -0.006060606060606061,
+            "exit_reason": "stop_loss"
+          },
+          {
+            "entry_time": "2023-03-08 00:00:00",
+            "exit_time": "2023-03-09 00:00:00",
+            "entry_price": 166,
+            "exit_price": 167,
+            "type": "short",
+            "pnl": -0.006024096385542169,
+            "exit_reason": "stop_loss"
+          },
+          {
+            "entry_time": "2023-03-09 00:00:00",
+            "exit_time": "2023-03-10 00:00:00",
+            "entry_price": 167,
+            "exit_price": 168,
+            "type": "short",
+            "pnl": -0.005988023952095809,
+            "exit_reason": "stop_loss"
+          },
+          {
+            "entry_time": "2023-03-10 00:00:00",
+            "exit_time": "2023-03-11 00:00:00",
+            "entry_price": 168,
+            "exit_price": 169,
+            "type": "short",
+            "pnl": -0.005952380952380952,
+            "exit_reason": "stop_loss"
+          },
+          {
+            "entry_time": "2023-03-11 00:00:00",
+            "exit_time": "2023-03-12 00:00:00",
+            "entry_price": 169,
+            "exit_price": 170,
+            "type": "short",
+            "pnl": -0.005917159763313609,
+            "exit_reason": "stop_loss"
+          },
+          {
+            "entry_time": "2023-03-12 00:00:00",
+            "exit_time": "2023-03-13 00:00:00",
+            "entry_price": 170,
+            "exit_price": 171,
+            "type": "short",
+            "pnl": -0.0058823529411764705,
+            "exit_reason": "stop_loss"
+          },
+          {
+            "entry_time": "2023-03-13 00:00:00",
+            "exit_time": "2023-03-14 00:00:00",
+            "entry_price": 171,
+            "exit_price": 172,
+            "type": "short",
+            "pnl": -0.005847953216374269,
+            "exit_reason": "stop_loss"
+          },
+          {
+            "entry_time": "2023-03-14 00:00:00",
+            "exit_time": "2023-03-15 00:00:00",
+            "entry_price": 172,
+            "exit_price": 173,
+            "type": "short",
+            "pnl": -0.005813953488372093,
+            "exit_reason": "stop_loss"
+          },
+          {
+            "entry_time": "2023-03-15 00:00:00",
+            "exit_time": "2023-03-16 00:00:00",
+            "entry_price": 173,
+            "exit_price": 174,
+            "type": "short",
+            "pnl": -0.005780346820809248,
+            "exit_reason": "stop_loss"
+          },
+          {
+            "entry_time": "2023-03-16 00:00:00",
+            "exit_time": "2023-03-17 00:00:00",
+            "entry_price": 174,
+            "exit_price": 175,
+            "type": "short",
+            "pnl": -0.005747126436781609,
+            "exit_reason": "stop_loss"
+          },
+          {
+            "entry_time": "2023-03-17 00:00:00",
+            "exit_time": "2023-03-18 00:00:00",
+            "entry_price": 175,
+            "exit_price": 176,
+            "type": "short",
+            "pnl": -0.005714285714285714,
+            "exit_reason": "stop_loss"
+          },
+          {
+            "entry_time": "2023-03-18 00:00:00",
+            "exit_time": "2023-03-19 00:00:00",
+            "entry_price": 176,
+            "exit_price": 177,
+            "type": "short",
+            "pnl": -0.005681818181818182,
+            "exit_reason": "stop_loss"
+          },
+          {
+            "entry_time": "2023-03-19 00:00:00",
+            "exit_time": "2023-03-20 00:00:00",
+            "entry_price": 177,
+            "exit_price": 178,
+            "type": "short",
+            "pnl": -0.005649717514124294,
+            "exit_reason": "stop_loss"
+          },
+          {
+            "entry_time": "2023-03-20 00:00:00",
+            "exit_time": "2023-03-21 00:00:00",
+            "entry_price": 178,
+            "exit_price": 179,
+            "type": "short",
+            "pnl": -0.0056179775280898875,
+            "exit_reason": "stop_loss"
+          },
+          {
+            "entry_time": "2023-03-21 00:00:00",
+            "exit_time": "2023-03-22 00:00:00",
+            "entry_price": 179,
+            "exit_price": 180,
+            "type": "short",
+            "pnl": -0.00558659217877095,
+            "exit_reason": "stop_loss"
+          },
+          {
+            "entry_time": "2023-03-22 00:00:00",
+            "exit_time": "2023-03-23 00:00:00",
+            "entry_price": 180,
+            "exit_price": 181,
+            "type": "short",
+            "pnl": -0.005555555555555556,
+            "exit_reason": "stop_loss"
+          },
+          {
+            "entry_time": "2023-03-23 00:00:00",
+            "exit_time": "2023-03-24 00:00:00",
+            "entry_price": 181,
+            "exit_price": 182,
+            "type": "short",
+            "pnl": -0.0055248618784530384,
+            "exit_reason": "stop_loss"
+          },
+          {
+            "entry_time": "2023-03-24 00:00:00",
+            "exit_time": "2023-03-25 00:00:00",
+            "entry_price": 182,
+            "exit_price": 183,
+            "type": "short",
+            "pnl": -0.005494505494505495,
+            "exit_reason": "stop_loss"
+          },
+          {
+            "entry_time": "2023-03-25 00:00:00",
+            "exit_time": "2023-03-26 00:00:00",
+            "entry_price": 183,
+            "exit_price": 184,
+            "type": "short",
+            "pnl": -0.00546448087431694,
+            "exit_reason": "stop_loss"
+          },
+          {
+            "entry_time": "2023-03-26 00:00:00",
+            "exit_time": "2023-03-27 00:00:00",
+            "entry_price": 184,
+            "exit_price": 185,
+            "type": "short",
+            "pnl": -0.005434782608695652,
+            "exit_reason": "stop_loss"
+          },
+          {
+            "entry_time": "2023-03-27 00:00:00",
+            "exit_time": "2023-03-28 00:00:00",
+            "entry_price": 185,
+            "exit_price": 186,
+            "type": "short",
+            "pnl": -0.005405405405405406,
+            "exit_reason": "stop_loss"
+          },
+          {
+            "entry_time": "2023-03-28 00:00:00",
+            "exit_time": "2023-03-29 00:00:00",
+            "entry_price": 186,
+            "exit_price": 187,
+            "type": "short",
+            "pnl": -0.005376344086021506,
+            "exit_reason": "stop_loss"
+          },
+          {
+            "entry_time": "2023-03-29 00:00:00",
+            "exit_time": "2023-03-30 00:00:00",
+            "entry_price": 187,
+            "exit_price": 188,
+            "type": "short",
+            "pnl": -0.0053475935828877,
+            "exit_reason": "stop_loss"
+          },
+          {
+            "entry_time": "2023-03-30 00:00:00",
+            "exit_time": "2023-03-31 00:00:00",
+            "entry_price": 188,
+            "exit_price": 189,
+            "type": "short",
+            "pnl": -0.005319148936170213,
+            "exit_reason": "stop_loss"
+          },
+          {
+            "entry_time": "2023-03-31 00:00:00",
+            "exit_time": "2023-04-01 00:00:00",
+            "entry_price": 189,
+            "exit_price": 190,
+            "type": "short",
+            "pnl": -0.005291005291005291,
+            "exit_reason": "stop_loss"
+          },
+          {
+            "entry_time": "2023-04-01 00:00:00",
+            "exit_time": "2023-04-02 00:00:00",
+            "entry_price": 190,
+            "exit_price": 191,
+            "type": "short",
+            "pnl": -0.005263157894736842,
+            "exit_reason": "stop_loss"
+          },
+          {
+            "entry_time": "2023-04-02 00:00:00",
+            "exit_time": "2023-04-03 00:00:00",
+            "entry_price": 191,
+            "exit_price": 192,
+            "type": "short",
+            "pnl": -0.005235602094240838,
+            "exit_reason": "stop_loss"
+          },
+          {
+            "entry_time": "2023-04-03 00:00:00",
+            "exit_time": "2023-04-04 00:00:00",
+            "entry_price": 192,
+            "exit_price": 193,
+            "type": "short",
+            "pnl": -0.005208333333333333,
+            "exit_reason": "stop_loss"
+          },
+          {
+            "entry_time": "2023-04-04 00:00:00",
+            "exit_time": "2023-04-05 00:00:00",
+            "entry_price": 193,
+            "exit_price": 194,
+            "type": "short",
+            "pnl": -0.0051813471502590676,
+            "exit_reason": "stop_loss"
+          },
+          {
+            "entry_time": "2023-04-05 00:00:00",
+            "exit_time": "2023-04-06 00:00:00",
+            "entry_price": 194,
+            "exit_price": 195,
+            "type": "short",
+            "pnl": -0.005154639175257732,
+            "exit_reason": "stop_loss"
+          },
+          {
+            "entry_time": "2023-04-06 00:00:00",
+            "exit_time": "2023-04-07 00:00:00",
+            "entry_price": 195,
+            "exit_price": 196,
+            "type": "short",
+            "pnl": -0.005128205128205128,
+            "exit_reason": "stop_loss"
+          },
+          {
+            "entry_time": "2023-04-07 00:00:00",
+            "exit_time": "2023-04-08 00:00:00",
+            "entry_price": 196,
+            "exit_price": 197,
+            "type": "short",
+            "pnl": -0.00510204081632653,
+            "exit_reason": "stop_loss"
+          },
+          {
+            "entry_time": "2023-04-08 00:00:00",
+            "exit_time": "2023-04-09 00:00:00",
+            "entry_price": 197,
+            "exit_price": 198,
+            "type": "short",
+            "pnl": -0.005076142131979695,
+            "exit_reason": "stop_loss"
+          },
+          {
+            "entry_time": "2023-04-09 00:00:00",
+            "exit_time": "2023-04-10 00:00:00",
+            "entry_price": 198,
+            "exit_price": 199,
+            "type": "short",
+            "pnl": -0.005050505050505051,
+            "exit_reason": "stop_loss"
+          }
+        ]
+      }
+    },
+    "aggregate": {
+      "total_trades": 147,
+      "win_rate": 0.0,
+      "avg_win": 0,
+      "avg_loss": -0.005785548990124319,
+      "avg_pnl": -0.005785548990124319,
+      "sharpe_ratio": -12.205717725601195,
+      "max_drawdown": -0.8438090348816083,
+      "profit_factor": 0.0,
+      "total_pnl": -0.24747474747474715
+    }
+  },
+  "scalping_moderate": {
+    "config": {
+      "type": "scalping",
+      "profit_target": 0.01,
+      "stop_loss": 0.007,
+      "trend_period": 10,
+      "min_trend_strength": 0.5,
+      "description": "Scalping Moderato"
+    },
+    "timeframe_results": {
+      "1h": {
+        "timeframe": "1h",
+        "total_trades": 24,
+        "winning_trades": 0,
+        "losing_trades": 24,
+        "win_rate": 0.0,
+        "total_pnl": -0.24489795918367335,
+        "avg_win": 0,
+        "avg_loss": -0.011635592096620672,
+        "final_balance": 7551.020408163266,
+        "trades": [
+          {
+            "entry_time": "2023-02-20 00:00:00",
+            "exit_time": "2023-02-22 00:00:00",
+            "entry_price": 150,
+            "exit_price": 152,
+            "type": "short",
+            "pnl": -0.013333333333333334,
+            "exit_reason": "stop_loss"
+          },
+          {
+            "entry_time": "2023-02-22 00:00:00",
+            "exit_time": "2023-02-24 00:00:00",
+            "entry_price": 152,
+            "exit_price": 154,
+            "type": "short",
+            "pnl": -0.013157894736842105,
+            "exit_reason": "stop_loss"
+          },
+          {
+            "entry_time": "2023-02-24 00:00:00",
+            "exit_time": "2023-02-26 00:00:00",
+            "entry_price": 154,
+            "exit_price": 156,
+            "type": "short",
+            "pnl": -0.012987012987012988,
+            "exit_reason": "stop_loss"
+          },
+          {
+            "entry_time": "2023-02-26 00:00:00",
+            "exit_time": "2023-02-28 00:00:00",
+            "entry_price": 156,
+            "exit_price": 158,
+            "type": "short",
+            "pnl": -0.01282051282051282,
+            "exit_reason": "stop_loss"
+          },
+          {
+            "entry_time": "2023-02-28 00:00:00",
+            "exit_time": "2023-03-02 00:00:00",
+            "entry_price": 158,
+            "exit_price": 160,
+            "type": "short",
+            "pnl": -0.012658227848101266,
+            "exit_reason": "stop_loss"
+          },
+          {
+            "entry_time": "2023-03-02 00:00:00",
+            "exit_time": "2023-03-04 00:00:00",
+            "entry_price": 160,
+            "exit_price": 162,
+            "type": "short",
+            "pnl": -0.0125,
+            "exit_reason": "stop_loss"
+          },
+          {
+            "entry_time": "2023-03-04 00:00:00",
+            "exit_time": "2023-03-06 00:00:00",
+            "entry_price": 162,
+            "exit_price": 164,
+            "type": "short",
+            "pnl": -0.012345679012345678,
+            "exit_reason": "stop_loss"
+          },
+          {
+            "entry_time": "2023-03-06 00:00:00",
+            "exit_time": "2023-03-08 00:00:00",
+            "entry_price": 164,
+            "exit_price": 166,
+            "type": "short",
+            "pnl": -0.012195121951219513,
+            "exit_reason": "stop_loss"
+          },
+          {
+            "entry_time": "2023-03-08 00:00:00",
+            "exit_time": "2023-03-10 00:00:00",
+            "entry_price": 166,
+            "exit_price": 168,
+            "type": "short",
+            "pnl": -0.012048192771084338,
+            "exit_reason": "stop_loss"
+          },
+          {
+            "entry_time": "2023-03-10 00:00:00",
+            "exit_time": "2023-03-12 00:00:00",
+            "entry_price": 168,
+            "exit_price": 170,
+            "type": "short",
+            "pnl": -0.011904761904761904,
+            "exit_reason": "stop_loss"
+          },
+          {
+            "entry_time": "2023-03-12 00:00:00",
+            "exit_time": "2023-03-14 00:00:00",
+            "entry_price": 170,
+            "exit_price": 172,
+            "type": "short",
+            "pnl": -0.011764705882352941,
+            "exit_reason": "stop_loss"
+          },
+          {
+            "entry_time": "2023-03-14 00:00:00",
+            "exit_time": "2023-03-16 00:00:00",
+            "entry_price": 172,
+            "exit_price": 174,
+            "type": "short",
+            "pnl": -0.011627906976744186,
+            "exit_reason": "stop_loss"
+          },
+          {
+            "entry_time": "2023-03-16 00:00:00",
+            "exit_time": "2023-03-18 00:00:00",
+            "entry_price": 174,
+            "exit_price": 176,
+            "type": "short",
+            "pnl": -0.011494252873563218,
+            "exit_reason": "stop_loss"
+          },
+          {
+            "entry_time": "2023-03-18 00:00:00",
+            "exit_time": "2023-03-20 00:00:00",
+            "entry_price": 176,
+            "exit_price": 178,
+            "type": "short",
+            "pnl": -0.011363636363636364,
+            "exit_reason": "stop_loss"
+          },
+          {
+            "entry_time": "2023-03-20 00:00:00",
+            "exit_time": "2023-03-22 00:00:00",
+            "entry_price": 178,
+            "exit_price": 180,
+            "type": "short",
+            "pnl": -0.011235955056179775,
+            "exit_reason": "stop_loss"
+          },
+          {
+            "entry_time": "2023-03-22 00:00:00",
+            "exit_time": "2023-03-24 00:00:00",
+            "entry_price": 180,
+            "exit_price": 182,
+            "type": "short",
+            "pnl": -0.011111111111111112,
+            "exit_reason": "stop_loss"
+          },
+          {
+            "entry_time": "2023-03-24 00:00:00",
+            "exit_time": "2023-03-26 00:00:00",
+            "entry_price": 182,
+            "exit_price": 184,
+            "type": "short",
+            "pnl": -0.01098901098901099,
+            "exit_reason": "stop_loss"
+          },
+          {
+            "entry_time": "2023-03-26 00:00:00",
+            "exit_time": "2023-03-28 00:00:00",
+            "entry_price": 184,
+            "exit_price": 186,
+            "type": "short",
+            "pnl": -0.010869565217391304,
+            "exit_reason": "stop_loss"
+          },
+          {
+            "entry_time": "2023-03-28 00:00:00",
+            "exit_time": "2023-03-30 00:00:00",
+            "entry_price": 186,
+            "exit_price": 188,
+            "type": "short",
+            "pnl": -0.010752688172043012,
+            "exit_reason": "stop_loss"
+          },
+          {
+            "entry_time": "2023-03-30 00:00:00",
+            "exit_time": "2023-04-01 00:00:00",
+            "entry_price": 188,
+            "exit_price": 190,
+            "type": "short",
+            "pnl": -0.010638297872340425,
+            "exit_reason": "stop_loss"
+          },
+          {
+            "entry_time": "2023-04-01 00:00:00",
+            "exit_time": "2023-04-03 00:00:00",
+            "entry_price": 190,
+            "exit_price": 192,
+            "type": "short",
+            "pnl": -0.010526315789473684,
+            "exit_reason": "stop_loss"
+          },
+          {
+            "entry_time": "2023-04-03 00:00:00",
+            "exit_time": "2023-04-05 00:00:00",
+            "entry_price": 192,
+            "exit_price": 194,
+            "type": "short",
+            "pnl": -0.010416666666666666,
+            "exit_reason": "stop_loss"
+          },
+          {
+            "entry_time": "2023-04-05 00:00:00",
+            "exit_time": "2023-04-07 00:00:00",
+            "entry_price": 194,
+            "exit_price": 196,
+            "type": "short",
+            "pnl": -0.010309278350515464,
+            "exit_reason": "stop_loss"
+          },
+          {
+            "entry_time": "2023-04-07 00:00:00",
+            "exit_time": "2023-04-09 00:00:00",
+            "entry_price": 196,
+            "exit_price": 198,
+            "type": "short",
+            "pnl": -0.01020408163265306,
+            "exit_reason": "stop_loss"
+          }
+        ]
+      },
+      "4h": {
+        "timeframe": "4h",
+        "total_trades": 24,
+        "winning_trades": 0,
+        "losing_trades": 24,
+        "win_rate": 0.0,
+        "total_pnl": -0.24489795918367335,
+        "avg_win": 0,
+        "avg_loss": -0.011635592096620672,
+        "final_balance": 7551.020408163266,
+        "trades": [
+          {
+            "entry_time": "2023-02-20 00:00:00",
+            "exit_time": "2023-02-22 00:00:00",
+            "entry_price": 150,
+            "exit_price": 152,
+            "type": "short",
+            "pnl": -0.013333333333333334,
+            "exit_reason": "stop_loss"
+          },
+          {
+            "entry_time": "2023-02-22 00:00:00",
+            "exit_time": "2023-02-24 00:00:00",
+            "entry_price": 152,
+            "exit_price": 154,
+            "type": "short",
+            "pnl": -0.013157894736842105,
+            "exit_reason": "stop_loss"
+          },
+          {
+            "entry_time": "2023-02-24 00:00:00",
+            "exit_time": "2023-02-26 00:00:00",
+            "entry_price": 154,
+            "exit_price": 156,
+            "type": "short",
+            "pnl": -0.012987012987012988,
+            "exit_reason": "stop_loss"
+          },
+          {
+            "entry_time": "2023-02-26 00:00:00",
+            "exit_time": "2023-02-28 00:00:00",
+            "entry_price": 156,
+            "exit_price": 158,
+            "type": "short",
+            "pnl": -0.01282051282051282,
+            "exit_reason": "stop_loss"
+          },
+          {
+            "entry_time": "2023-02-28 00:00:00",
+            "exit_time": "2023-03-02 00:00:00",
+            "entry_price": 158,
+            "exit_price": 160,
+            "type": "short",
+            "pnl": -0.012658227848101266,
+            "exit_reason": "stop_loss"
+          },
+          {
+            "entry_time": "2023-03-02 00:00:00",
+            "exit_time": "2023-03-04 00:00:00",
+            "entry_price": 160,
+            "exit_price": 162,
+            "type": "short",
+            "pnl": -0.0125,
+            "exit_reason": "stop_loss"
+          },
+          {
+            "entry_time": "2023-03-04 00:00:00",
+            "exit_time": "2023-03-06 00:00:00",
+            "entry_price": 162,
+            "exit_price": 164,
+            "type": "short",
+            "pnl": -0.012345679012345678,
+            "exit_reason": "stop_loss"
+          },
+          {
+            "entry_time": "2023-03-06 00:00:00",
+            "exit_time": "2023-03-08 00:00:00",
+            "entry_price": 164,
+            "exit_price": 166,
+            "type": "short",
+            "pnl": -0.012195121951219513,
+            "exit_reason": "stop_loss"
+          },
+          {
+            "entry_time": "2023-03-08 00:00:00",
+            "exit_time": "2023-03-10 00:00:00",
+            "entry_price": 166,
+            "exit_price": 168,
+            "type": "short",
+            "pnl": -0.012048192771084338,
+            "exit_reason": "stop_loss"
+          },
+          {
+            "entry_time": "2023-03-10 00:00:00",
+            "exit_time": "2023-03-12 00:00:00",
+            "entry_price": 168,
+            "exit_price": 170,
+            "type": "short",
+            "pnl": -0.011904761904761904,
+            "exit_reason": "stop_loss"
+          },
+          {
+            "entry_time": "2023-03-12 00:00:00",
+            "exit_time": "2023-03-14 00:00:00",
+            "entry_price": 170,
+            "exit_price": 172,
+            "type": "short",
+            "pnl": -0.011764705882352941,
+            "exit_reason": "stop_loss"
+          },
+          {
+            "entry_time": "2023-03-14 00:00:00",
+            "exit_time": "2023-03-16 00:00:00",
+            "entry_price": 172,
+            "exit_price": 174,
+            "type": "short",
+            "pnl": -0.011627906976744186,
+            "exit_reason": "stop_loss"
+          },
+          {
+            "entry_time": "2023-03-16 00:00:00",
+            "exit_time": "2023-03-18 00:00:00",
+            "entry_price": 174,
+            "exit_price": 176,
+            "type": "short",
+            "pnl": -0.011494252873563218,
+            "exit_reason": "stop_loss"
+          },
+          {
+            "entry_time": "2023-03-18 00:00:00",
+            "exit_time": "2023-03-20 00:00:00",
+            "entry_price": 176,
+            "exit_price": 178,
+            "type": "short",
+            "pnl": -0.011363636363636364,
+            "exit_reason": "stop_loss"
+          },
+          {
+            "entry_time": "2023-03-20 00:00:00",
+            "exit_time": "2023-03-22 00:00:00",
+            "entry_price": 178,
+            "exit_price": 180,
+            "type": "short",
+            "pnl": -0.011235955056179775,
+            "exit_reason": "stop_loss"
+          },
+          {
+            "entry_time": "2023-03-22 00:00:00",
+            "exit_time": "2023-03-24 00:00:00",
+            "entry_price": 180,
+            "exit_price": 182,
+            "type": "short",
+            "pnl": -0.011111111111111112,
+            "exit_reason": "stop_loss"
+          },
+          {
+            "entry_time": "2023-03-24 00:00:00",
+            "exit_time": "2023-03-26 00:00:00",
+            "entry_price": 182,
+            "exit_price": 184,
+            "type": "short",
+            "pnl": -0.01098901098901099,
+            "exit_reason": "stop_loss"
+          },
+          {
+            "entry_time": "2023-03-26 00:00:00",
+            "exit_time": "2023-03-28 00:00:00",
+            "entry_price": 184,
+            "exit_price": 186,
+            "type": "short",
+            "pnl": -0.010869565217391304,
+            "exit_reason": "stop_loss"
+          },
+          {
+            "entry_time": "2023-03-28 00:00:00",
+            "exit_time": "2023-03-30 00:00:00",
+            "entry_price": 186,
+            "exit_price": 188,
+            "type": "short",
+            "pnl": -0.010752688172043012,
+            "exit_reason": "stop_loss"
+          },
+          {
+            "entry_time": "2023-03-30 00:00:00",
+            "exit_time": "2023-04-01 00:00:00",
+            "entry_price": 188,
+            "exit_price": 190,
+            "type": "short",
+            "pnl": -0.010638297872340425,
+            "exit_reason": "stop_loss"
+          },
+          {
+            "entry_time": "2023-04-01 00:00:00",
+            "exit_time": "2023-04-03 00:00:00",
+            "entry_price": 190,
+            "exit_price": 192,
+            "type": "short",
+            "pnl": -0.010526315789473684,
+            "exit_reason": "stop_loss"
+          },
+          {
+            "entry_time": "2023-04-03 00:00:00",
+            "exit_time": "2023-04-05 00:00:00",
+            "entry_price": 192,
+            "exit_price": 194,
+            "type": "short",
+            "pnl": -0.010416666666666666,
+            "exit_reason": "stop_loss"
+          },
+          {
+            "entry_time": "2023-04-05 00:00:00",
+            "exit_time": "2023-04-07 00:00:00",
+            "entry_price": 194,
+            "exit_price": 196,
+            "type": "short",
+            "pnl": -0.010309278350515464,
+            "exit_reason": "stop_loss"
+          },
+          {
+            "entry_time": "2023-04-07 00:00:00",
+            "exit_time": "2023-04-09 00:00:00",
+            "entry_price": 196,
+            "exit_price": 198,
+            "type": "short",
+            "pnl": -0.01020408163265306,
+            "exit_reason": "stop_loss"
+          }
+        ]
+      },
+      "1d": {
+        "timeframe": "1d",
+        "total_trades": 24,
+        "winning_trades": 0,
+        "losing_trades": 24,
+        "win_rate": 0.0,
+        "total_pnl": -0.24489795918367335,
+        "avg_win": 0,
+        "avg_loss": -0.011635592096620672,
+        "final_balance": 7551.020408163266,
+        "trades": [
+          {
+            "entry_time": "2023-02-20 00:00:00",
+            "exit_time": "2023-02-22 00:00:00",
+            "entry_price": 150,
+            "exit_price": 152,
+            "type": "short",
+            "pnl": -0.013333333333333334,
+            "exit_reason": "stop_loss"
+          },
+          {
+            "entry_time": "2023-02-22 00:00:00",
+            "exit_time": "2023-02-24 00:00:00",
+            "entry_price": 152,
+            "exit_price": 154,
+            "type": "short",
+            "pnl": -0.013157894736842105,
+            "exit_reason": "stop_loss"
+          },
+          {
+            "entry_time": "2023-02-24 00:00:00",
+            "exit_time": "2023-02-26 00:00:00",
+            "entry_price": 154,
+            "exit_price": 156,
+            "type": "short",
+            "pnl": -0.012987012987012988,
+            "exit_reason": "stop_loss"
+          },
+          {
+            "entry_time": "2023-02-26 00:00:00",
+            "exit_time": "2023-02-28 00:00:00",
+            "entry_price": 156,
+            "exit_price": 158,
+            "type": "short",
+            "pnl": -0.01282051282051282,
+            "exit_reason": "stop_loss"
+          },
+          {
+            "entry_time": "2023-02-28 00:00:00",
+            "exit_time": "2023-03-02 00:00:00",
+            "entry_price": 158,
+            "exit_price": 160,
+            "type": "short",
+            "pnl": -0.012658227848101266,
+            "exit_reason": "stop_loss"
+          },
+          {
+            "entry_time": "2023-03-02 00:00:00",
+            "exit_time": "2023-03-04 00:00:00",
+            "entry_price": 160,
+            "exit_price": 162,
+            "type": "short",
+            "pnl": -0.0125,
+            "exit_reason": "stop_loss"
+          },
+          {
+            "entry_time": "2023-03-04 00:00:00",
+            "exit_time": "2023-03-06 00:00:00",
+            "entry_price": 162,
+            "exit_price": 164,
+            "type": "short",
+            "pnl": -0.012345679012345678,
+            "exit_reason": "stop_loss"
+          },
+          {
+            "entry_time": "2023-03-06 00:00:00",
+            "exit_time": "2023-03-08 00:00:00",
+            "entry_price": 164,
+            "exit_price": 166,
+            "type": "short",
+            "pnl": -0.012195121951219513,
+            "exit_reason": "stop_loss"
+          },
+          {
+            "entry_time": "2023-03-08 00:00:00",
+            "exit_time": "2023-03-10 00:00:00",
+            "entry_price": 166,
+            "exit_price": 168,
+            "type": "short",
+            "pnl": -0.012048192771084338,
+            "exit_reason": "stop_loss"
+          },
+          {
+            "entry_time": "2023-03-10 00:00:00",
+            "exit_time": "2023-03-12 00:00:00",
+            "entry_price": 168,
+            "exit_price": 170,
+            "type": "short",
+            "pnl": -0.011904761904761904,
+            "exit_reason": "stop_loss"
+          },
+          {
+            "entry_time": "2023-03-12 00:00:00",
+            "exit_time": "2023-03-14 00:00:00",
+            "entry_price": 170,
+            "exit_price": 172,
+            "type": "short",
+            "pnl": -0.011764705882352941,
+            "exit_reason": "stop_loss"
+          },
+          {
+            "entry_time": "2023-03-14 00:00:00",
+            "exit_time": "2023-03-16 00:00:00",
+            "entry_price": 172,
+            "exit_price": 174,
+            "type": "short",
+            "pnl": -0.011627906976744186,
+            "exit_reason": "stop_loss"
+          },
+          {
+            "entry_time": "2023-03-16 00:00:00",
+            "exit_time": "2023-03-18 00:00:00",
+            "entry_price": 174,
+            "exit_price": 176,
+            "type": "short",
+            "pnl": -0.011494252873563218,
+            "exit_reason": "stop_loss"
+          },
+          {
+            "entry_time": "2023-03-18 00:00:00",
+            "exit_time": "2023-03-20 00:00:00",
+            "entry_price": 176,
+            "exit_price": 178,
+            "type": "short",
+            "pnl": -0.011363636363636364,
+            "exit_reason": "stop_loss"
+          },
+          {
+            "entry_time": "2023-03-20 00:00:00",
+            "exit_time": "2023-03-22 00:00:00",
+            "entry_price": 178,
+            "exit_price": 180,
+            "type": "short",
+            "pnl": -0.011235955056179775,
+            "exit_reason": "stop_loss"
+          },
+          {
+            "entry_time": "2023-03-22 00:00:00",
+            "exit_time": "2023-03-24 00:00:00",
+            "entry_price": 180,
+            "exit_price": 182,
+            "type": "short",
+            "pnl": -0.011111111111111112,
+            "exit_reason": "stop_loss"
+          },
+          {
+            "entry_time": "2023-03-24 00:00:00",
+            "exit_time": "2023-03-26 00:00:00",
+            "entry_price": 182,
+            "exit_price": 184,
+            "type": "short",
+            "pnl": -0.01098901098901099,
+            "exit_reason": "stop_loss"
+          },
+          {
+            "entry_time": "2023-03-26 00:00:00",
+            "exit_time": "2023-03-28 00:00:00",
+            "entry_price": 184,
+            "exit_price": 186,
+            "type": "short",
+            "pnl": -0.010869565217391304,
+            "exit_reason": "stop_loss"
+          },
+          {
+            "entry_time": "2023-03-28 00:00:00",
+            "exit_time": "2023-03-30 00:00:00",
+            "entry_price": 186,
+            "exit_price": 188,
+            "type": "short",
+            "pnl": -0.010752688172043012,
+            "exit_reason": "stop_loss"
+          },
+          {
+            "entry_time": "2023-03-30 00:00:00",
+            "exit_time": "2023-04-01 00:00:00",
+            "entry_price": 188,
+            "exit_price": 190,
+            "type": "short",
+            "pnl": -0.010638297872340425,
+            "exit_reason": "stop_loss"
+          },
+          {
+            "entry_time": "2023-04-01 00:00:00",
+            "exit_time": "2023-04-03 00:00:00",
+            "entry_price": 190,
+            "exit_price": 192,
+            "type": "short",
+            "pnl": -0.010526315789473684,
+            "exit_reason": "stop_loss"
+          },
+          {
+            "entry_time": "2023-04-03 00:00:00",
+            "exit_time": "2023-04-05 00:00:00",
+            "entry_price": 192,
+            "exit_price": 194,
+            "type": "short",
+            "pnl": -0.010416666666666666,
+            "exit_reason": "stop_loss"
+          },
+          {
+            "entry_time": "2023-04-05 00:00:00",
+            "exit_time": "2023-04-07 00:00:00",
+            "entry_price": 194,
+            "exit_price": 196,
+            "type": "short",
+            "pnl": -0.010309278350515464,
+            "exit_reason": "stop_loss"
+          },
+          {
+            "entry_time": "2023-04-07 00:00:00",
+            "exit_time": "2023-04-09 00:00:00",
+            "entry_price": 196,
+            "exit_price": 198,
+            "type": "short",
+            "pnl": -0.01020408163265306,
+            "exit_reason": "stop_loss"
+          }
+        ]
+      }
+    },
+    "aggregate": {
+      "total_trades": 72,
+      "win_rate": 0.0,
+      "avg_win": 0,
+      "avg_loss": -0.011635592096620672,
+      "avg_pnl": -0.011635592096620672,
+      "sharpe_ratio": -12.400025699746577,
+      "max_drawdown": -0.8244292976233548,
+      "profit_factor": 0.0,
+      "total_pnl": -0.24489795918367338
+    }
+  },
+  "scalping_aggressive": {
+    "config": {
+      "type": "scalping",
+      "profit_target": 0.02,
+      "stop_loss": 0.015,
+      "trend_period": 15,
+      "min_trend_strength": 0.6,
+      "description": "Scalping Aggressivo"
+    },
+    "timeframe_results": {
+      "1h": {
+        "timeframe": "1h",
+        "total_trades": 16,
+        "winning_trades": 0,
+        "losing_trades": 16,
+        "win_rate": 0.0,
+        "total_pnl": -0.24615384615384628,
+        "avg_win": 0,
+        "avg_loss": -0.01750438629755996,
+        "final_balance": 7538.461538461537,
+        "trades": [
+          {
+            "entry_time": "2023-02-20 00:00:00",
+            "exit_time": "2023-02-23 00:00:00",
+            "entry_price": 150,
+            "exit_price": 153,
+            "type": "short",
+            "pnl": -0.02,
+            "exit_reason": "stop_loss"
+          },
+          {
+            "entry_time": "2023-02-23 00:00:00",
+            "exit_time": "2023-02-26 00:00:00",
+            "entry_price": 153,
+            "exit_price": 156,
+            "type": "short",
+            "pnl": -0.0196078431372549,
+            "exit_reason": "stop_loss"
+          },
+          {
+            "entry_time": "2023-02-26 00:00:00",
+            "exit_time": "2023-03-01 00:00:00",
+            "entry_price": 156,
+            "exit_price": 159,
+            "type": "short",
+            "pnl": -0.019230769230769232,
+            "exit_reason": "stop_loss"
+          },
+          {
+            "entry_time": "2023-03-01 00:00:00",
+            "exit_time": "2023-03-04 00:00:00",
+            "entry_price": 159,
+            "exit_price": 162,
+            "type": "short",
+            "pnl": -0.018867924528301886,
+            "exit_reason": "stop_loss"
+          },
+          {
+            "entry_time": "2023-03-04 00:00:00",
+            "exit_time": "2023-03-07 00:00:00",
+            "entry_price": 162,
+            "exit_price": 165,
+            "type": "short",
+            "pnl": -0.018518518518518517,
+            "exit_reason": "stop_loss"
+          },
+          {
+            "entry_time": "2023-03-07 00:00:00",
+            "exit_time": "2023-03-10 00:00:00",
+            "entry_price": 165,
+            "exit_price": 168,
+            "type": "short",
+            "pnl": -0.01818181818181818,
+            "exit_reason": "stop_loss"
+          },
+          {
+            "entry_time": "2023-03-10 00:00:00",
+            "exit_time": "2023-03-13 00:00:00",
+            "entry_price": 168,
+            "exit_price": 171,
+            "type": "short",
+            "pnl": -0.017857142857142856,
+            "exit_reason": "stop_loss"
+          },
+          {
+            "entry_time": "2023-03-13 00:00:00",
+            "exit_time": "2023-03-16 00:00:00",
+            "entry_price": 171,
+            "exit_price": 174,
+            "type": "short",
+            "pnl": -0.017543859649122806,
+            "exit_reason": "stop_loss"
+          },
+          {
+            "entry_time": "2023-03-16 00:00:00",
+            "exit_time": "2023-03-19 00:00:00",
+            "entry_price": 174,
+            "exit_price": 177,
+            "type": "short",
+            "pnl": -0.017241379310344827,
+            "exit_reason": "stop_loss"
+          },
+          {
+            "entry_time": "2023-03-19 00:00:00",
+            "exit_time": "2023-03-22 00:00:00",
+            "entry_price": 177,
+            "exit_price": 180,
+            "type": "short",
+            "pnl": -0.01694915254237288,
+            "exit_reason": "stop_loss"
+          },
+          {
+            "entry_time": "2023-03-22 00:00:00",
+            "exit_time": "2023-03-25 00:00:00",
+            "entry_price": 180,
+            "exit_price": 183,
+            "type": "short",
+            "pnl": -0.016666666666666666,
+            "exit_reason": "stop_loss"
+          },
+          {
+            "entry_time": "2023-03-25 00:00:00",
+            "exit_time": "2023-03-28 00:00:00",
+            "entry_price": 183,
+            "exit_price": 186,
+            "type": "short",
+            "pnl": -0.01639344262295082,
+            "exit_reason": "stop_loss"
+          },
+          {
+            "entry_time": "2023-03-28 00:00:00",
+            "exit_time": "2023-03-31 00:00:00",
+            "entry_price": 186,
+            "exit_price": 189,
+            "type": "short",
+            "pnl": -0.016129032258064516,
+            "exit_reason": "stop_loss"
+          },
+          {
+            "entry_time": "2023-03-31 00:00:00",
+            "exit_time": "2023-04-03 00:00:00",
+            "entry_price": 189,
+            "exit_price": 192,
+            "type": "short",
+            "pnl": -0.015873015873015872,
+            "exit_reason": "stop_loss"
+          },
+          {
+            "entry_time": "2023-04-03 00:00:00",
+            "exit_time": "2023-04-06 00:00:00",
+            "entry_price": 192,
+            "exit_price": 195,
+            "type": "short",
+            "pnl": -0.015625,
+            "exit_reason": "stop_loss"
+          },
+          {
+            "entry_time": "2023-04-06 00:00:00",
+            "exit_time": "2023-04-09 00:00:00",
+            "entry_price": 195,
+            "exit_price": 198,
+            "type": "short",
+            "pnl": -0.015384615384615385,
+            "exit_reason": "stop_loss"
+          }
+        ]
+      },
+      "4h": {
+        "timeframe": "4h",
+        "total_trades": 16,
+        "winning_trades": 0,
+        "losing_trades": 16,
+        "win_rate": 0.0,
+        "total_pnl": -0.24615384615384628,
+        "avg_win": 0,
+        "avg_loss": -0.01750438629755996,
+        "final_balance": 7538.461538461537,
+        "trades": [
+          {
+            "entry_time": "2023-02-20 00:00:00",
+            "exit_time": "2023-02-23 00:00:00",
+            "entry_price": 150,
+            "exit_price": 153,
+            "type": "short",
+            "pnl": -0.02,
+            "exit_reason": "stop_loss"
+          },
+          {
+            "entry_time": "2023-02-23 00:00:00",
+            "exit_time": "2023-02-26 00:00:00",
+            "entry_price": 153,
+            "exit_price": 156,
+            "type": "short",
+            "pnl": -0.0196078431372549,
+            "exit_reason": "stop_loss"
+          },
+          {
+            "entry_time": "2023-02-26 00:00:00",
+            "exit_time": "2023-03-01 00:00:00",
+            "entry_price": 156,
+            "exit_price": 159,
+            "type": "short",
+            "pnl": -0.019230769230769232,
+            "exit_reason": "stop_loss"
+          },
+          {
+            "entry_time": "2023-03-01 00:00:00",
+            "exit_time": "2023-03-04 00:00:00",
+            "entry_price": 159,
+            "exit_price": 162,
+            "type": "short",
+            "pnl": -0.018867924528301886,
+            "exit_reason": "stop_loss"
+          },
+          {
+            "entry_time": "2023-03-04 00:00:00",
+            "exit_time": "2023-03-07 00:00:00",
+            "entry_price": 162,
+            "exit_price": 165,
+            "type": "short",
+            "pnl": -0.018518518518518517,
+            "exit_reason": "stop_loss"
+          },
+          {
+            "entry_time": "2023-03-07 00:00:00",
+            "exit_time": "2023-03-10 00:00:00",
+            "entry_price": 165,
+            "exit_price": 168,
+            "type": "short",
+            "pnl": -0.01818181818181818,
+            "exit_reason": "stop_loss"
+          },
+          {
+            "entry_time": "2023-03-10 00:00:00",
+            "exit_time": "2023-03-13 00:00:00",
+            "entry_price": 168,
+            "exit_price": 171,
+            "type": "short",
+            "pnl": -0.017857142857142856,
+            "exit_reason": "stop_loss"
+          },
+          {
+            "entry_time": "2023-03-13 00:00:00",
+            "exit_time": "2023-03-16 00:00:00",
+            "entry_price": 171,
+            "exit_price": 174,
+            "type": "short",
+            "pnl": -0.017543859649122806,
+            "exit_reason": "stop_loss"
+          },
+          {
+            "entry_time": "2023-03-16 00:00:00",
+            "exit_time": "2023-03-19 00:00:00",
+            "entry_price": 174,
+            "exit_price": 177,
+            "type": "short",
+            "pnl": -0.017241379310344827,
+            "exit_reason": "stop_loss"
+          },
+          {
+            "entry_time": "2023-03-19 00:00:00",
+            "exit_time": "2023-03-22 00:00:00",
+            "entry_price": 177,
+            "exit_price": 180,
+            "type": "short",
+            "pnl": -0.01694915254237288,
+            "exit_reason": "stop_loss"
+          },
+          {
+            "entry_time": "2023-03-22 00:00:00",
+            "exit_time": "2023-03-25 00:00:00",
+            "entry_price": 180,
+            "exit_price": 183,
+            "type": "short",
+            "pnl": -0.016666666666666666,
+            "exit_reason": "stop_loss"
+          },
+          {
+            "entry_time": "2023-03-25 00:00:00",
+            "exit_time": "2023-03-28 00:00:00",
+            "entry_price": 183,
+            "exit_price": 186,
+            "type": "short",
+            "pnl": -0.01639344262295082,
+            "exit_reason": "stop_loss"
+          },
+          {
+            "entry_time": "2023-03-28 00:00:00",
+            "exit_time": "2023-03-31 00:00:00",
+            "entry_price": 186,
+            "exit_price": 189,
+            "type": "short",
+            "pnl": -0.016129032258064516,
+            "exit_reason": "stop_loss"
+          },
+          {
+            "entry_time": "2023-03-31 00:00:00",
+            "exit_time": "2023-04-03 00:00:00",
+            "entry_price": 189,
+            "exit_price": 192,
+            "type": "short",
+            "pnl": -0.015873015873015872,
+            "exit_reason": "stop_loss"
+          },
+          {
+            "entry_time": "2023-04-03 00:00:00",
+            "exit_time": "2023-04-06 00:00:00",
+            "entry_price": 192,
+            "exit_price": 195,
+            "type": "short",
+            "pnl": -0.015625,
+            "exit_reason": "stop_loss"
+          },
+          {
+            "entry_time": "2023-04-06 00:00:00",
+            "exit_time": "2023-04-09 00:00:00",
+            "entry_price": 195,
+            "exit_price": 198,
+            "type": "short",
+            "pnl": -0.015384615384615385,
+            "exit_reason": "stop_loss"
+          }
+        ]
+      },
+      "1d": {
+        "timeframe": "1d",
+        "total_trades": 16,
+        "winning_trades": 0,
+        "losing_trades": 16,
+        "win_rate": 0.0,
+        "total_pnl": -0.24615384615384628,
+        "avg_win": 0,
+        "avg_loss": -0.01750438629755996,
+        "final_balance": 7538.461538461537,
+        "trades": [
+          {
+            "entry_time": "2023-02-20 00:00:00",
+            "exit_time": "2023-02-23 00:00:00",
+            "entry_price": 150,
+            "exit_price": 153,
+            "type": "short",
+            "pnl": -0.02,
+            "exit_reason": "stop_loss"
+          },
+          {
+            "entry_time": "2023-02-23 00:00:00",
+            "exit_time": "2023-02-26 00:00:00",
+            "entry_price": 153,
+            "exit_price": 156,
+            "type": "short",
+            "pnl": -0.0196078431372549,
+            "exit_reason": "stop_loss"
+          },
+          {
+            "entry_time": "2023-02-26 00:00:00",
+            "exit_time": "2023-03-01 00:00:00",
+            "entry_price": 156,
+            "exit_price": 159,
+            "type": "short",
+            "pnl": -0.019230769230769232,
+            "exit_reason": "stop_loss"
+          },
+          {
+            "entry_time": "2023-03-01 00:00:00",
+            "exit_time": "2023-03-04 00:00:00",
+            "entry_price": 159,
+            "exit_price": 162,
+            "type": "short",
+            "pnl": -0.018867924528301886,
+            "exit_reason": "stop_loss"
+          },
+          {
+            "entry_time": "2023-03-04 00:00:00",
+            "exit_time": "2023-03-07 00:00:00",
+            "entry_price": 162,
+            "exit_price": 165,
+            "type": "short",
+            "pnl": -0.018518518518518517,
+            "exit_reason": "stop_loss"
+          },
+          {
+            "entry_time": "2023-03-07 00:00:00",
+            "exit_time": "2023-03-10 00:00:00",
+            "entry_price": 165,
+            "exit_price": 168,
+            "type": "short",
+            "pnl": -0.01818181818181818,
+            "exit_reason": "stop_loss"
+          },
+          {
+            "entry_time": "2023-03-10 00:00:00",
+            "exit_time": "2023-03-13 00:00:00",
+            "entry_price": 168,
+            "exit_price": 171,
+            "type": "short",
+            "pnl": -0.017857142857142856,
+            "exit_reason": "stop_loss"
+          },
+          {
+            "entry_time": "2023-03-13 00:00:00",
+            "exit_time": "2023-03-16 00:00:00",
+            "entry_price": 171,
+            "exit_price": 174,
+            "type": "short",
+            "pnl": -0.017543859649122806,
+            "exit_reason": "stop_loss"
+          },
+          {
+            "entry_time": "2023-03-16 00:00:00",
+            "exit_time": "2023-03-19 00:00:00",
+            "entry_price": 174,
+            "exit_price": 177,
+            "type": "short",
+            "pnl": -0.017241379310344827,
+            "exit_reason": "stop_loss"
+          },
+          {
+            "entry_time": "2023-03-19 00:00:00",
+            "exit_time": "2023-03-22 00:00:00",
+            "entry_price": 177,
+            "exit_price": 180,
+            "type": "short",
+            "pnl": -0.01694915254237288,
+            "exit_reason": "stop_loss"
+          },
+          {
+            "entry_time": "2023-03-22 00:00:00",
+            "exit_time": "2023-03-25 00:00:00",
+            "entry_price": 180,
+            "exit_price": 183,
+            "type": "short",
+            "pnl": -0.016666666666666666,
+            "exit_reason": "stop_loss"
+          },
+          {
+            "entry_time": "2023-03-25 00:00:00",
+            "exit_time": "2023-03-28 00:00:00",
+            "entry_price": 183,
+            "exit_price": 186,
+            "type": "short",
+            "pnl": -0.01639344262295082,
+            "exit_reason": "stop_loss"
+          },
+          {
+            "entry_time": "2023-03-28 00:00:00",
+            "exit_time": "2023-03-31 00:00:00",
+            "entry_price": 186,
+            "exit_price": 189,
+            "type": "short",
+            "pnl": -0.016129032258064516,
+            "exit_reason": "stop_loss"
+          },
+          {
+            "entry_time": "2023-03-31 00:00:00",
+            "exit_time": "2023-04-03 00:00:00",
+            "entry_price": 189,
+            "exit_price": 192,
+            "type": "short",
+            "pnl": -0.015873015873015872,
+            "exit_reason": "stop_loss"
+          },
+          {
+            "entry_time": "2023-04-03 00:00:00",
+            "exit_time": "2023-04-06 00:00:00",
+            "entry_price": 192,
+            "exit_price": 195,
+            "type": "short",
+            "pnl": -0.015625,
+            "exit_reason": "stop_loss"
+          },
+          {
+            "entry_time": "2023-04-06 00:00:00",
+            "exit_time": "2023-04-09 00:00:00",
+            "entry_price": 195,
+            "exit_price": 198,
+            "type": "short",
+            "pnl": -0.015384615384615385,
+            "exit_reason": "stop_loss"
+          }
+        ]
+      }
+    },
+    "aggregate": {
+      "total_trades": 48,
+      "win_rate": 0.0,
+      "avg_win": 0,
+      "avg_loss": -0.01750438629755996,
+      "avg_pnl": -0.01750438629755996,
+      "sharpe_ratio": -12.377945375791628,
+      "max_drawdown": -0.820210542282878,
+      "profit_factor": 0.0,
+      "total_pnl": -0.24615384615384628
+    }
+  }
+}

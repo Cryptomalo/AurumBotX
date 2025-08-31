@@ -1,0 +1,233 @@
+{
+  "timestamp": "2025-08-25T01:58:16.032972",
+  "validation_time": 1.225259,
+  "overall_score": 74.98394888563219,
+  "system_status": "healthy",
+  "components": {
+    "trading_engines": {
+      "component": "trading_engines",
+      "status": "healthy",
+      "active_engines": 4,
+      "total_engines": 4,
+      "engines": {
+        "enhanced_bootstrap": {
+          "name": "Enhanced Bootstrap v2",
+          "status": "active",
+          "process_active": true,
+          "database_exists": true,
+          "log_recent": true,
+          "score": 100
+        },
+        "aggressive_trading": {
+          "name": "Aggressive Trading",
+          "status": "active",
+          "process_active": true,
+          "trades_executed": 21,
+          "score": 100
+        },
+        "real_data_trading": {
+          "name": "Real Data Trading",
+          "status": "active",
+          "process_active": true,
+          "binance_connected": true,
+          "database_exists": true,
+          "score": 100
+        },
+        "ai_optimization": {
+          "name": "AI Optimization",
+          "status": "active",
+          "ai_trained": true,
+          "training_sessions": 1,
+          "score": 100
+        }
+      },
+      "score": 100.0
+    },
+    "dashboards": {
+      "component": "dashboards",
+      "status": "critical",
+      "active_dashboards": 0,
+      "total_dashboards": 5,
+      "dashboards": {
+        "admin": {
+          "name": "Admin Dashboard",
+          "port": 8501,
+          "status": "inactive",
+          "process_active": false,
+          "http_responsive": true,
+          "score": 0
+        },
+        "premium": {
+          "name": "Premium Dashboard",
+          "port": 8502,
+          "status": "inactive",
+          "process_active": false,
+          "http_responsive": true,
+          "score": 0
+        },
+        "performance": {
+          "name": "Performance Dashboard",
+          "port": 8503,
+          "status": "inactive",
+          "process_active": false,
+          "http_responsive": true,
+          "score": 0
+        },
+        "config": {
+          "name": "Config Dashboard",
+          "port": 8504,
+          "status": "inactive",
+          "process_active": false,
+          "http_responsive": true,
+          "score": 0
+        },
+        "mobile": {
+          "name": "Mobile Dashboard",
+          "port": 8505,
+          "status": "inactive",
+          "process_active": false,
+          "http_responsive": true,
+          "score": 0
+        }
+      },
+      "score": 0.0
+    },
+    "data_sources": {
+      "component": "data_sources",
+      "status": "healthy",
+      "sources": {
+        "binance_testnet": {
+          "name": "Binance Testnet",
+          "status": "active",
+          "server_time": true,
+          "exchange_info": true,
+          "price_data": true,
+          "score": 100
+        },
+        "local_databases": {
+          "name": "Local Databases",
+          "status": "active",
+          "working_databases": 5,
+          "total_databases": 5,
+          "databases": {
+            "aggressive_trading.db": {
+              "exists": true,
+              "tables_count": 2,
+              "status": "active"
+            },
+            "real_data_trading.db": {
+              "exists": true,
+              "tables_count": 2,
+              "status": "active"
+            },
+            "ai_optimization.db": {
+              "exists": true,
+              "tables_count": 3,
+              "status": "active"
+            },
+            "enhanced_trading_v2.db": {
+              "exists": true,
+              "tables_count": 3,
+              "status": "active"
+            },
+            "local_storage/aurumbotx.db": {
+              "exists": true,
+              "tables_count": 5,
+              "status": "active"
+            }
+          },
+          "score": 100.0
+        },
+        "local_storage": {
+          "name": "Local Storage",
+          "status": "active",
+          "directories_exist": 5,
+          "total_directories": 5,
+          "write_test": true,
+          "read_test": true,
+          "score": 100
+        }
+      },
+      "score": 100.0
+    },
+    "integration": {
+      "component": "integration",
+      "status": "healthy",
+      "tests": {
+        "data_flow": {
+          "name": "Data Flow Test",
+          "status": "active",
+          "binance_connection": true,
+          "current_price": 112355.3,
+          "ai_predictions": true,
+          "trading_decisions": true,
+          "score": 100
+        },
+        "dashboard_connectivity": {
+          "name": "Dashboard Connectivity",
+          "status": "active",
+          "responsive_dashboards": 5,
+          "total_dashboards": 5,
+          "score": 100.0
+        },
+        "database_consistency": {
+          "name": "Database Consistency",
+          "status": "active",
+          "consistent_databases": 3,
+          "total_databases": 3,
+          "score": 100.0
+        },
+        "error_handling": {
+          "name": "Error Handling",
+          "status": "active",
+          "error_free_logs": 3,
+          "total_logs": 3,
+          "score": 100.0
+        }
+      },
+      "score": 100.0
+    },
+    "performance": {
+      "component": "performance",
+      "status": "healthy",
+      "metrics": {
+        "trading": {
+          "name": "Trading Performance",
+          "total_trades": 21,
+          "total_profit": 1.1081585994660004,
+          "win_rate": 52.38095238095239,
+          "score": 76.79587170894573
+        },
+        "ai": {
+          "name": "AI Performance",
+          "training_sessions": 1,
+          "best_model_score": 0.98926723151074,
+          "avg_confidence": 95.0,
+          "score": 97.963361575537
+        },
+        "system": {
+          "name": "System Performance",
+          "active_processes": 3,
+          "total_processes": 3,
+          "active_dashboards": 0,
+          "total_dashboards": 5,
+          "score": 50.0
+        }
+      },
+      "score": 74.91974442816091
+    }
+  },
+  "recommendations": [
+    "Riavviare trading engines inattivi per massimizzare performance",
+    "Verificare e riavviare dashboard Streamlit non responsive",
+    "Controllare connessioni dati e stabilit\u00e0 API Binance",
+    "Ottimizzare parametri trading per migliorare performance",
+    "Eseguire nuovo training AI con dati pi\u00f9 recenti"
+  ],
+  "next_steps": [
+    "Diagnosi approfondita errori",
+    "Ricostruzione componenti falliti",
+    "Backup e recovery dati",
+    "Restart completo sistema"
+  ]
+}

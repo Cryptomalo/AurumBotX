@@ -1,0 +1,19 @@
+{
+  "monitoring_completed": "2025-08-25T01:55:50.649750",
+  "total_uptime_hours": 24.41368190861111,
+  "final_stats": {
+    "cycles_completed": 2,
+    "trades_executed": 0,
+    "successful_trades": 0,
+    "failed_trades": 0,
+    "total_profit_usdt": 0.0,
+    "system_errors": 0,
+    "uptime_hours": 24.41368190861111,
+    "last_update": "2025-08-24T01:36:31.247650",
+    "current_btc_price": 115055.05,
+    "initial_usdt": 0.0,
+    "initial_btc": 0.0,
+    "current_price": 114963.21,
+    "active_trades": 0
+  }
+}

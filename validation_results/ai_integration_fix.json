@@ -1,0 +1,16 @@
+{
+  "ai_trading_operational": true,
+  "prediction_model_working": true,
+  "sentiment_analysis_working": false,
+  "signals_generated": true,
+  "issues_found": [
+    "AI non genera segnali",
+    "Sentiment Analysis error: 'SentimentAnalyzer' object has no attribute 'analyze_market_sentiment'",
+    "Data Loader error: unsupported format string passed to NoneType.__format__"
+  ],
+  "fixes_applied": [
+    "Soglia confidenza ridotta",
+    "Technical fallback improved",
+    "Fallback signals working"
+  ]
+}
