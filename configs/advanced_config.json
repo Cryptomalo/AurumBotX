@@ -1,0 +1,11 @@
+{
+  "trading_amount_eur": 200.0,
+  "risk_per_trade_pct": 10.0,
+  "min_confidence": 0.56,
+  "strategy": "swing_trading_6m",
+  "profit_target_pct": 5.0,
+  "stop_loss_pct": 1.9,
+  "max_daily_trades": 35,
+  "ai_enabled": true,
+  "fallback_enabled": true
+}

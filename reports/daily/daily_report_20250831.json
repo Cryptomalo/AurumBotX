@@ -1,0 +1,62 @@
+{
+  "date": "2025-08-31",
+  "timestamp": "2025-08-31T00:49:57.976958",
+  "health": {
+    "timestamp": "2025-08-31T00:49:57.975403",
+    "systems": {
+      "mega_aggressive": {
+        "status": "healthy",
+        "message": "Ultimo trade: 1 minuti fa",
+        "trades": 81,
+        "last_trade": "2025-08-31T00:49:22.170113",
+        "profit": 30214.03387337512
+      },
+      "ultra_aggressive": {
+        "status": "healthy",
+        "message": "Ultimo trade: 1 minuti fa",
+        "trades": 118,
+        "last_trade": "2025-08-31T00:49:22.486122",
+        "profit": 123.89506201580599
+      },
+      "mainnet_optimization": {
+        "status": "healthy",
+        "message": "Ultimo trade: 5 minuti fa",
+        "trades": 5,
+        "last_trade": "2025-08-31T00:45:22.237788",
+        "profit": 3.8052268062822234
+      }
+    },
+    "alerts": [],
+    "recommendations": []
+  },
+  "trends": {
+    "mega_aggressive": {
+      "avg_profit": 1109.0444739593574,
+      "win_rate": 70.0,
+      "trend": "declining",
+      "recent_trades": 10
+    },
+    "ultra_aggressive": {
+      "avg_profit": -0.6666153798523626,
+      "win_rate": 40.0,
+      "trend": "declining",
+      "recent_trades": 10
+    },
+    "mainnet_optimization": {
+      "error": "division by zero"
+    }
+  },
+  "recommendations": [
+    "\ud83d\udcc9 mega_aggressive: Performance in calo, considera ottimizzazione parametri",
+    "\ud83d\udcc9 ultra_aggressive: Performance in calo, considera ottimizzazione parametri",
+    "\u26a0\ufe0f ultra_aggressive: Win rate basso (40.0%), rivedi strategia",
+    "\ud83d\udcb0 Profitti elevati raggiunti, considera prelievo parziale"
+  ],
+  "summary": {
+    "total_systems": 3,
+    "healthy_systems": 3,
+    "total_trades": 204,
+    "total_profit": 30341.73416219721,
+    "alerts_count": 0
+  }
+}

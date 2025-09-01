@@ -1,0 +1,77 @@
+{
+  "timestamp": "2025-08-31T01:50:12.510789",
+  "system_specs": {
+    "cpu_cores": 4,
+    "cpu_physical": 2,
+    "memory_total_gb": 3.85,
+    "memory_available_gb": 0.52,
+    "disk_total_gb": 38.78,
+    "disk_free_gb": 30.15
+  },
+  "current_usage": {
+    "trading_bots": 3,
+    "dashboard_processes": 6,
+    "total_memory_used_gb": 3.33,
+    "memory_utilization_percent": 86.5
+  },
+  "bot_resource_usage": {
+    "memory_mb_avg": 99.9,
+    "cpu_percent_avg": 0.0,
+    "estimated": false,
+    "sample_size": 3
+  },
+  "dashboard_overhead": {
+    "total_memory_mb": 960.9899999999999,
+    "total_cpu_percent": 0.0,
+    "count": 6,
+    "avg_memory_mb": 160.16
+  },
+  "capacity_analysis": {
+    "theoretical_max": -12,
+    "practical_max": -12,
+    "memory_limit": -12,
+    "cpu_limit": 0,
+    "io_limit": 15,
+    "current_bots": 3,
+    "available_slots": 0
+  },
+  "recommendations": [
+    {
+      "type": "memory",
+      "priority": "high",
+      "message": "Memoria bassa (<1GB), considera upgrade RAM o riduzione bot",
+      "action": "Chiudi dashboard non essenziali o upgrade sistema"
+    }
+  ],
+  "scaling_plan": {
+    "current_capacity": {
+      "bots_active": 3,
+      "bots_max_safe": -12,
+      "utilization_percent": 0
+    },
+    "scaling_phases": []
+  },
+  "current_processes": [
+    {
+      "pid": 60108,
+      "name": "ultra_aggressive",
+      "memory_mb": 87.73,
+      "cpu_percent": 0.0,
+      "cmdline": "python3 ultra_aggressive_trading.py"
+    },
+    {
+      "pid": 66368,
+      "name": "mega_aggressive",
+      "memory_mb": 105.86,
+      "cpu_percent": 0.0,
+      "cmdline": "python3 mega_aggressive_trading.py"
+    },
+    {
+      "pid": 67526,
+      "name": "mainnet_optimization",
+      "memory_mb": 106.12,
+      "cpu_percent": 0.0,
+      "cmdline": "python3 mainnet_optimization_strategies.py"
+    }
+  ]
+}
