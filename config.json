@@ -1,0 +1,34 @@
+{
+  "database": {
+    "type": "sqlite",
+    "mega_aggressive": "mega_aggressive_trading.db",
+    "ultra_aggressive": "ultra_aggressive_trading.db",
+    "mainnet_strategy": "mega_mainnet_strategy.db",
+    "monitoring": "system_monitoring.db"
+  },
+  "trading": {
+    "initial_balance": 1000.0,
+    "demo_mode": true,
+    "testnet": true
+  },
+  "api": {
+    "binance_testnet": {
+      "base_url": "https://testnet.binance.vision",
+      "api_key": "DEMO_KEY",
+      "secret_key": "DEMO_SECRET",
+      "note": "Sostituire con chiavi reali per trading"
+    }
+  },
+  "dashboard": {
+    "host": "0.0.0.0",
+    "ports": {
+      "admin": 8501,
+      "premium": 8502,
+      "performance": 8503,
+      "config": 8504,
+      "mobile": 8505,
+      "ultra": 8506,
+      "unified": 8507
+    }
+  }
+}
