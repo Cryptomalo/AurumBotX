@@ -9,10 +9,10 @@ import logging
 # Configure logging
 logging.basicConfig(
     level=logging.INFO,
-    format=\'%(asctime)s - %(name)s - %(levelname)s - %(message)s\',
+    format="""%(asctime)s - %(name)s - %(levelname)s - %(message)s""",
     handlers=[
         logging.StreamHandler(),
-        logging.FileHandler(\'streamlit_app.log\')
+        logging.FileHandler("streamlit_app.log")
     ]
 )
 logger = logging.getLogger(__name__)
@@ -65,7 +65,7 @@ def display_dashboard():
             strategies = session.query(TradingStrategy).all()
             if strategies:
                 for strategy in strategies:
-                    st.write(f\'- ID: {strategy.id}, Nome: {strategy.name}, Descrizione: {strategy.description}\')
+                    st.write(f\'- ID: {strategy.id}, Nome: {strategy.name}, Descrizione: {strategy.description}\'
             else:
                 st.info(\'Nessuna strategia di trading trovata.\')
 
@@ -73,7 +73,7 @@ def display_dashboard():
             simulation_results = session.query(SimulationResult).all()
             if simulation_results:
                 for result in simulation_results:
-                    st.write(f\'- Simbolo: {result.symbol}, Saldo Finale: {result.final_balance}, Trades: {result.total_trades}\')
+                    st.write(f\'- Simbolo: {result.symbol}, Saldo Finale: {result.final_balance}, Trades: {result.total_trades}\'
             else:
                 st.info(\'Nessun risultato di simulazione trovato.\')
 
