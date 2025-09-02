@@ -1,0 +1,42 @@
+version: '3.8'
+
+services:
+  aurumbotx:
+    build: .
+    ports:
+      - "8501:8501"
+      - "8502:8502"
+      - "8503:8503"
+      - "8504:8504"
+      - "8505:8505"
+      - "8506:8506"
+      - "8507:8507"
+    environment:
+      - DATABASE_TYPE=sqlite
+      - INITIAL_BALANCE=250.0
+      - DEMO_MODE=true
+    volumes:
+      - ./data:/app/data
+      - ./logs:/app/logs
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8507/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+
+  postgres:
+    image: postgres:14
+    environment:
+      POSTGRES_DB: aurumbotx_db
+      POSTGRES_USER: aurumbotx_user
+      POSTGRES_PASSWORD: aurumbot2025
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    restart: unless-stopped
+
+volumes:
+  postgres_data:

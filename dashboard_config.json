@@ -1,7 +1,7 @@
 {
   "primary_database": "ultra_aggressive_trading.db",
   "secondary_database": "aggressive_trading.db",
-  "last_update": "2025-09-01T02:22:31.237613",
+  "last_update": "2025-09-01T22:33:44.100179",
   "data_source": "ultra_aggressive",
   "auto_refresh_seconds": 30,
   "show_comparison": true

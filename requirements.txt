@@ -1,1 +1,1 @@
-streamlit>=1.28.0\npandas>=1.5.0\nnumpy>=1.24.0\nplotly>=5.15.0\nrequests>=2.31.0\npython-binance>=1.0.19\nccxt>=4.0.0\nscikit-learn>=1.3.0\naiohttp>=3.8.0\npython-dotenv>=1.0.0\npsutil>=5.9.0\n
+streamlit>=1.28.0\npandas>=2.0.0\nnumpy>=1.24.0\nplotly>=5.15.0\nrequests>=2.31.0\nscikit-learn>=1.3.0\nta>=0.10.2\npython-binance>=1.0.17\nccxt>=4.0.0\nreportlab>=4.0.4\ncryptography>=41.0.0\npsycopg2-binary>=2.9.7\npython-dotenv>=1.0.0\nwatchdog>=3.0.0\nschedule>=1.2.0

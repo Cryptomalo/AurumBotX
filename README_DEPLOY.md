@@ -1,54 +1,129 @@
-# 🚀 AurumBotX - Deploy Gratuito
+# 🚀 AurumBotX - Deploy Guide
 
-## 📋 Deploy su Railway (Gratuito)
+## ⚡ Quick Start (2 minuti)
 
-### 🎯 Setup Rapido (5 minuti)
+### 🖥️ Locale
+```bash
+git clone https://github.com/Cryptomalo/AurumBotX.git
+cd AurumBotX
+./start_aurumbotx.sh
+```
 
-1. **Fork questo repository** su GitHub
-2. **Vai su [Railway.app](https://railway.app)**
-3. **Login con GitHub**
-4. **New Project → Deploy from GitHub**
-5. **Seleziona AurumBotX repository**
-6. **Deploy automatico!**
+### 🌐 Cloud Deploy
 
-### 🔗 Dopo il Deploy
+#### 🚀 Railway (RACCOMANDATO)
+1. Vai su [railway.app](https://railway.app)
+2. "Deploy from GitHub" → Seleziona AurumBotX
+3. ✅ Deploy automatico!
 
-- **Dashboard URL**: Disponibile nel Railway dashboard
-- **Auto-deploy**: Ogni push su GitHub
-- **Logs**: Visibili in Railway console
-- **Uptime**: 99%+ garantito
+#### ⚡ Heroku
+```bash
+heroku create aurumbotx-team
+git push heroku main
+heroku ps:scale web=1
+```
 
-### ⚙️ Configurazione
+#### 🌟 Render
+1. Connetti repository su [render.com](https://render.com)
+2. ✅ Auto-deploy configurato!
 
-1. **Environment Variables** in Railway:
-   ```
-   BINANCE_API_KEY=your_testnet_key
-   BINANCE_API_SECRET=your_testnet_secret
-   TRADING_MODE=testnet
-   ```
+#### 🐳 Docker
+```bash
+docker-compose up -d
+```
 
-2. **Custom Domain** (opzionale):
-   - Aggiungi dominio in Railway
-   - Configura DNS
-   - SSL automatico
+## 🔐 Accesso Team
 
-### 📊 Caratteristiche Deploy
+### 📊 Dashboard Principale
+- **URL**: http://localhost:8507 (locale) o URL cloud
+- **Login**: admin / admin123
+- **Funzioni**: Controllo completo sistema
 
-- ✅ **Gratuito**: $5 credito mensile
-- ✅ **Auto-scaling**: Automatico
-- ✅ **SSL**: Incluso
-- ✅ **Monitoring**: Integrato
-- ✅ **Logs**: Real-time
-- ✅ **GitHub Integration**: Auto-deploy
+### 👥 Gestione Team
+- **Admin**: Controllo totale
+- **Developer**: Sviluppo e deploy
+- **Viewer**: Solo visualizzazione
 
-### 🔄 Aggiornamenti
+### 🔑 Credenziali Sicure
+- Crittografia AES per credenziali sensibili
+- Gestione utenti con ruoli
+- Log accessi completi
 
-Ogni push su GitHub aggiorna automaticamente il deploy!
+## 📊 Funzionalità Team
 
-### 🆘 Supporto
+### ✅ Trading Data
+- Dati real-time da tutti i sistemi
+- Grafici performance interattivi
+- Export dati per analisi
 
-- **Railway Docs**: [docs.railway.app](https://docs.railway.app)
-- **GitHub Issues**: Per problemi specifici
-- **Discord**: Community Railway
+### ✅ System Control
+- Start/Stop bot da interfaccia
+- Monitoraggio processi
+- Controllo risorse
 
-## 🎉 Il tuo AurumBotX sarà online 24/7!
+### ✅ Credentials Management
+- Binance API keys sicure
+- Database credentials
+- Servizi esterni
+
+### ✅ Team Management
+- Creazione utenti
+- Gestione permessi
+- Log accessi
+
+## 🗄️ Database
+
+### SQLite (Default)
+- ✅ Zero configurazione
+- ✅ Funziona ovunque
+- ✅ Backup semplice
+
+### PostgreSQL (Production)
+- ✅ Performance superiori
+- ✅ Scalabilità enterprise
+- ✅ Backup avanzati
+
+## 🔧 Configurazione
+
+### File Principali
+- `.env` - Configurazione ambiente
+- `config.json` - Parametri sistema
+- `team_management.db` - Database team
+
+### Variabili Ambiente
+```bash
+DATABASE_TYPE=sqlite
+INITIAL_BALANCE=250.0
+DEMO_MODE=true
+ADMIN_USERNAME=admin
+ADMIN_PASSWORD=admin123
+```
+
+## 🚨 Troubleshooting
+
+### Problema: Port già in uso
+```bash
+lsof -ti:8507 | xargs kill -9
+./start_aurumbotx.sh
+```
+
+### Problema: Dipendenze mancanti
+```bash
+pip3 install -r requirements.txt
+```
+
+### Problema: Database locked
+```bash
+rm *.db
+./start_aurumbotx.sh
+```
+
+## 📞 Supporto
+
+- **Repository**: https://github.com/Cryptomalo/AurumBotX
+- **Issues**: GitHub Issues
+- **Team**: Dashboard integrata
+
+---
+
+**🎉 Sistema pronto per il tuo team!**

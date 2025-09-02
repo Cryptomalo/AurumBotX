@@ -1,0 +1,12 @@
+{
+  "services": [
+    {
+      "type": "web",
+      "name": "aurumbotx",
+      "env": "python",
+      "buildCommand": "pip install -r requirements.txt",
+      "startCommand": "streamlit run team_management_system.py --server.port=$PORT --server.address=0.0.0.0",
+      "healthCheckPath": "/health"
+    }
+  ]
+}
