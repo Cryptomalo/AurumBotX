@@ -1,0 +1,15 @@
+[Unit]
+Description=AurumBotX Trading System
+After=network.target
+
+[Service]
+Type=simple
+User=ubuntu
+WorkingDirectory=/home/ubuntu/AurumBotX
+ExecStart=/usr/bin/python3 unified_master_dashboard.py
+Restart=always
+RestartSec=10
+Environment=PYTHONUNBUFFERED=1
+
+[Install]
+WantedBy=multi-user.target

@@ -1,0 +1,19 @@
+{
+  "timestamp": "2025-09-04T11:13:08.858871",
+  "cycle_count": 135,
+  "real_trading_stats": {
+    "total_trades": 10,
+    "winning_trades": 5,
+    "total_fees": 6.231122771090391,
+    "total_profit_loss": -19.648097987604284,
+    "current_balance": 974.1207792413054,
+    "initial_capital": 1000.0,
+    "roi": -2.5879220758694603,
+    "win_rate": 50.0,
+    "avg_confidence": 0.5,
+    "net_profit": -25.879220758694675,
+    "data_source": "binance_testnet"
+  },
+  "final_report": false,
+  "version": "real_data_v1"
+}
