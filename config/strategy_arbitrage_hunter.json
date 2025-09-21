@@ -1,0 +1,34 @@
+{
+  "strategy_info": {
+    "name": "Arbitrage_Hunter",
+    "key": "arbitrage_hunter",
+    "version": "2.2",
+    "created": "2025-09-14T03:23:54.635895"
+  },
+  "capital_management": {
+    "total_capital": 55.51,
+    "allocated_capital": 8.3265,
+    "allocation_percentage": 15.0,
+    "max_position_size": 0.8,
+    "min_position_size": 0.2
+  },
+  "strategy_parameters": {
+    "expected_return": 0.015,
+    "risk_level": 0.1,
+    "confidence_threshold": 0.85,
+    "stop_loss": 0.05,
+    "take_profit": 0.0225
+  },
+  "execution": {
+    "frequency_seconds": 300,
+    "max_concurrent_positions": 3,
+    "order_type": "market",
+    "slippage_tolerance": 0.1
+  },
+  "risk_management": {
+    "max_daily_loss": 0.015,
+    "max_drawdown": 0.15,
+    "correlation_limit": 0.7,
+    "emergency_stop": true
+  }
+}

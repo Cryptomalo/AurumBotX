@@ -1,0 +1,134 @@
+{
+  "boost_config": {
+    "version": "2.1_boost",
+    "created": "2025-09-14T03:10:00Z",
+    "description": "Configurazione boost per performance 10-15x superiori",
+    "target_performance": "3-5 USDT/ora"
+  },
+  
+  "capital_management": {
+    "initial_capital": 50.95,
+    "target_capital": 600.0,
+    "growth_multiplier": 12.0,
+    "position_sizing": {
+      "base_percentage": 35.0,
+      "min_percentage": 20.0,
+      "max_percentage": 50.0,
+      "dynamic_adjustment": true,
+      "confidence_multiplier": true
+    }
+  },
+  
+  "primary_strategy": {
+    "name": "AI_Consensus_Strategy",
+    "description": "Decisioni basate su consensus di 327 modelli AI",
+    "risk_level": 0.45,
+    "capital_efficiency": 0.92,
+    "expected_win_rate": 0.78,
+    "expected_return": 0.14,
+    "position_size_factor": 0.35,
+    "stop_loss": 0.07,
+    "take_profit": 0.20,
+    "max_positions": 3,
+    "holding_time": "hours",
+    "min_confidence": 0.82
+  },
+  
+  "secondary_strategy": {
+    "name": "Breakout_Capture",
+    "description": "Cattura breakout da livelli di resistenza",
+    "risk_level": 0.40,
+    "capital_efficiency": 0.85,
+    "expected_win_rate": 0.65,
+    "expected_return": 0.16,
+    "position_size_factor": 0.30,
+    "stop_loss": 0.08,
+    "take_profit": 0.25,
+    "max_positions": 2,
+    "holding_time": "hours",
+    "min_confidence": 0.72
+  },
+  
+  "backup_strategy": {
+    "name": "Arbitrage_Hunter",
+    "description": "Opportunità arbitraggio sicure",
+    "risk_level": 0.10,
+    "capital_efficiency": 0.95,
+    "expected_win_rate": 0.88,
+    "expected_return": 0.015,
+    "position_size_factor": 0.50,
+    "stop_loss": 0.01,
+    "take_profit": 0.02,
+    "max_positions": 3,
+    "holding_time": "minutes",
+    "min_confidence": 0.85
+  },
+  
+  "trading_parameters": {
+    "frequency": {
+      "primary_strategy": "15-30 minutes",
+      "secondary_strategy": "30-60 minutes", 
+      "backup_strategy": "5-10 minutes"
+    },
+    "market_conditions": {
+      "bull_strong": ["AI_Consensus_Strategy", "Breakout_Capture"],
+      "bull_moderate": ["AI_Consensus_Strategy"],
+      "sideways": ["Arbitrage_Hunter"],
+      "volatile": ["Breakout_Capture", "Arbitrage_Hunter"],
+      "bear_moderate": ["Arbitrage_Hunter"],
+      "bear_strong": ["Arbitrage_Hunter"]
+    },
+    "ai_confidence_threshold": 0.75,
+    "max_concurrent_trades": 5,
+    "daily_trade_limit": 100
+  },
+  
+  "risk_management": {
+    "max_daily_loss": 5.0,
+    "max_drawdown": 10.0,
+    "position_correlation_limit": 0.7,
+    "emergency_stop_loss": 15.0,
+    "profit_protection": {
+      "enabled": true,
+      "threshold": 2.0,
+      "protection_percentage": 50.0
+    }
+  },
+  
+  "performance_targets": {
+    "hourly_target": 1.5,
+    "daily_target": 36.0,
+    "weekly_target": 252.0,
+    "monthly_target": 1080.0,
+    "roi_targets": {
+      "daily": 3.0,
+      "weekly": 21.0,
+      "monthly": 90.0
+    }
+  },
+  
+  "monitoring": {
+    "real_time_tracking": true,
+    "performance_alerts": true,
+    "milestone_notifications": [55, 60, 70, 80, 90, 100, 120, 150],
+    "telegram_integration": true,
+    "dashboard_updates": "real-time"
+  },
+  
+  "optimization": {
+    "dynamic_position_sizing": true,
+    "confidence_based_allocation": true,
+    "market_condition_adaptation": true,
+    "performance_based_strategy_selection": true,
+    "auto_parameter_tuning": true
+  },
+  
+  "execution": {
+    "order_type": "market",
+    "slippage_tolerance": 0.1,
+    "execution_delay": 0.5,
+    "retry_attempts": 3,
+    "timeout": 30
+  }
+}
+

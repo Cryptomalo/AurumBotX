@@ -1,0 +1,29 @@
+# AurumBotX v2.0 - Windows Package Info
+Package: AurumBotX-v2.0-Windows.zip
+Size: 242K
+Created: Sun Sep 14 03:04:19 EDT 2025
+Components: Complete trading system with GUI
+Platform: Windows 10/11 (64-bit)
+Python: 3.8+ required
+
+## Quick Start:
+1. Extract ZIP to folder
+2. Double-click AurumBotX_Launcher.bat
+3. Follow setup instructions
+4. Start trading!
+
+## Features:
+✅ Native Windows GUI
+✅ 24/7 Autonomous Trading
+✅ 12 AI Strategies
+✅ Real-time Monitoring
+✅ Auto-updates
+✅ Telegram Integration
+✅ Complete Documentation
+
+## Support:
+- README_WINDOWS.md (complete guide)
+- Telegram: @AurumBotX_Support
+- Email: support@aurumbotx.ai
+
+Ready for immediate use!

@@ -1,0 +1,83 @@
+{
+  "trading_mode": "mainnet",
+  "exchange": "binance",
+  "initial_capital": 30.0,
+  "currency": "USDT",
+  "challenge_name": "30_usdt_mainnet_challenge",
+  "target_amount": 240.0,
+  "growth_multiplier": 8.0,
+  "phases": {
+    "phase_1": {
+      "name": "Aggressive Growth",
+      "balance_range": [
+        30,
+        60
+      ],
+      "risk_per_trade": 0.35,
+      "stop_loss": 0.1,
+      "max_positions": 2,
+      "target": "30 \u2192 60 USDT"
+    },
+    "phase_2": {
+      "name": "Moderate Expansion",
+      "balance_range": [
+        60,
+        120
+      ],
+      "risk_per_trade": 0.25,
+      "stop_loss": 0.08,
+      "max_positions": 3,
+      "target": "60 \u2192 120 USDT"
+    },
+    "phase_3": {
+      "name": "Conservative Growth",
+      "balance_range": [
+        120,
+        240
+      ],
+      "risk_per_trade": 0.15,
+      "stop_loss": 0.06,
+      "max_positions": 4,
+      "target": "120 \u2192 240 USDT"
+    }
+  },
+  "trading_pairs": [
+    "BTCUSDT",
+    "ETHUSDT",
+    "ADAUSDT",
+    "SOLUSDT"
+  ],
+  "risk_management": {
+    "max_daily_loss": 0.05,
+    "max_drawdown": 0.15,
+    "emergency_stop_loss": 0.2,
+    "position_sizing": "dynamic",
+    "correlation_limit": 0.7
+  },
+  "ai_configuration": {
+    "confidence_threshold": 0.7,
+    "analysis_frequency": "4_hours",
+    "market_sentiment_weight": 0.4,
+    "technical_analysis_weight": 0.6
+  },
+  "performance_targets": {
+    "monthly_return": 0.2,
+    "win_rate": 0.7,
+    "sharpe_ratio": 2.0,
+    "max_consecutive_losses": 3,
+    "expected_completion": "3_months"
+  },
+  "schedule": {
+    "trading_hours": "24/7",
+    "analysis_interval": "4_hours",
+    "risk_check_interval": "30_minutes",
+    "report_frequency": "daily"
+  },
+  "notifications": {
+    "telegram_enabled": true,
+    "email_enabled": false,
+    "trade_notifications": true,
+    "error_notifications": true,
+    "daily_reports": true
+  }
+}

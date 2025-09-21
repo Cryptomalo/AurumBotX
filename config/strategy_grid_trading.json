@@ -1,0 +1,34 @@
+{
+  "strategy_info": {
+    "name": "Grid_Trading_Advanced",
+    "key": "grid_trading",
+    "version": "2.2",
+    "created": "2025-09-14T03:23:56.637073"
+  },
+  "capital_management": {
+    "total_capital": 55.51,
+    "allocated_capital": 5.551,
+    "allocation_percentage": 10.0,
+    "max_position_size": 0.8,
+    "min_position_size": 0.2
+  },
+  "strategy_parameters": {
+    "expected_return": 0.06,
+    "risk_level": 0.2,
+    "confidence_threshold": 0.7,
+    "stop_loss": 0.1,
+    "take_profit": 0.09
+  },
+  "execution": {
+    "frequency_seconds": 600,
+    "max_concurrent_positions": 3,
+    "order_type": "market",
+    "slippage_tolerance": 0.1
+  },
+  "risk_management": {
+    "max_daily_loss": 0.010000000000000002,
+    "max_drawdown": 0.15,
+    "correlation_limit": 0.7,
+    "emergency_stop": true
+  }
+}

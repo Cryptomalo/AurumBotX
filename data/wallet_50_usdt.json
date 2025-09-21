@@ -1,0 +1,116 @@
+{
+  "wallet_id": "aurumbotx_50usdt_main",
+  "created_date": "2025-09-13T11:55:00Z",
+  "last_updated": "2025-09-13T11:55:00Z",
+  "balance": {
+    "total_usdt": 51.65102614272285,
+    "available_usdt": 41.320820914178285,
+    "locked_usdt": 0.0,
+    "reserved_usdt": 5.0,
+    "emergency_reserve": 5.0
+  },
+  "trading_allocation": {
+    "active_trading": 40.0,
+    "risk_buffer": 5.0,
+    "emergency_fund": 5.0,
+    "allocation_percentage": {
+      "trading": 80,
+      "buffer": 10,
+      "emergency": 10
+    }
+  },
+  "position_sizing": {
+    "base_position_size": 8.0,
+    "max_position_size": 15.0,
+    "min_position_size": 5.0,
+    "position_size_multiplier": 1.0,
+    "dynamic_sizing": true
+  },
+  "risk_limits": {
+    "max_risk_per_trade": 7.5,
+    "daily_risk_limit": 2.5,
+    "max_drawdown_limit": 10.0,
+    "stop_loss_amount": 4.0,
+    "take_profit_target": 6.0
+  },
+  "performance_tracking": {
+    "starting_balance": 50.0,
+    "current_balance": 51.65102614272285,
+    "total_pnl": 1.9263321346662798,
+    "realized_pnl": 0.0,
+    "unrealized_pnl": 0.0,
+    "total_trades": 0,
+    "winning_trades": 0,
+    "losing_trades": 0,
+    "win_rate": 0.0,
+    "profit_factor": 0.0,
+    "sharpe_ratio": 0.0,
+    "max_drawdown": 0.0,
+    "roi_percentage": 3.3020522854456975
+  },
+  "trading_history": {
+    "total_volume": 0.0,
+    "total_fees_paid": 0.0,
+    "average_trade_size": 0.0,
+    "largest_win": 0.0,
+    "largest_loss": 0.0,
+    "consecutive_wins": 0,
+    "consecutive_losses": 0,
+    "best_day": 0.0,
+    "worst_day": 0.0
+  },
+  "milestones": [
+    {
+      "target": 60.0,
+      "percentage": 20,
+      "achieved": false,
+      "date_achieved": null
+    },
+    {
+      "target": 75.0,
+      "percentage": 50,
+      "achieved": false,
+      "date_achieved": null
+    },
+    {
+      "target": 100.0,
+      "percentage": 100,
+      "achieved": false,
+      "date_achieved": null
+    },
+    {
+      "target": 150.0,
+      "percentage": 200,
+      "achieved": false,
+      "date_achieved": null
+    },
+    {
+      "target": 250.0,
+      "percentage": 400,
+      "achieved": false,
+      "date_achieved": null
+    },
+    {
+      "target": 600.0,
+      "percentage": 1100,
+      "achieved": false,
+      "date_achieved": null
+    }
+  ],
+  "settings": {
+    "auto_compound": true,
+    "reinvest_profits": true,
+    "profit_withdrawal_threshold": 100.0,
+    "rebalance_frequency": "daily",
+    "risk_adjustment": "dynamic",
+    "performance_review": "weekly"
+  },
+  "alerts": {
+    "balance_alerts": true,
+    "profit_alerts": true,
+    "loss_alerts": true,
+    "milestone_alerts": true,
+    "risk_alerts": true,
+    "performance_alerts": true
+  }
+}

@@ -1,0 +1,34 @@
+{
+  "auto_check": true,
+  "check_interval_hours": 6,
+  "auto_download": true,
+  "auto_install": false,
+  "backup_before_update": true,
+  "max_backups": 5,
+  "update_channel": "stable",
+  "last_check": null,
+  "notifications": true,
+  "rollback_enabled": true,
+  "update_servers": {
+    "primary": "https://updates.aurumbotx.ai",
+    "github": "https://api.github.com/repos/aurumbotx/aurumbotx",
+    "fallback": "https://backup-updates.aurumbotx.ai"
+  },
+  "security": {
+    "verify_signatures": true,
+    "require_https": true,
+    "max_download_size_mb": 100
+  },
+  "ui": {
+    "show_notifications": true,
+    "auto_close_notifications": true,
+    "notification_timeout_seconds": 10
+  },
+  "advanced": {
+    "parallel_downloads": false,
+    "compression_level": 6,
+    "temp_cleanup": true,
+    "log_updates": true
+  }
+}
+

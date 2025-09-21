@@ -1,0 +1,125 @@
+{
+  "multi_bot_system": {
+    "total_bots": 8,
+    "total_capital": 240.0,
+    "capital_per_bot": 30.0,
+    "currency": "USDT",
+    "risk_management": "distributed",
+    "correlation_limit": 0.3
+  },
+  
+  "bots": [
+    {
+      "bot_id": 1,
+      "name": "Momentum Hunter",
+      "strategy": "momentum_trading",
+      "port": 8010,
+      "capital": 30.0,
+      "risk_per_trade": 0.03,
+      "max_positions": 2,
+      "timeframe": "15m",
+      "pairs": ["BTCUSDT", "ETHUSDT", "SOLUSDT"],
+      "description": "Cavalca i trend forti con momentum indicators"
+    },
+    {
+      "bot_id": 2,
+      "name": "Scalp Master",
+      "strategy": "scalping",
+      "port": 8011,
+      "capital": 30.0,
+      "risk_per_trade": 0.02,
+      "max_positions": 5,
+      "timeframe": "1m",
+      "pairs": ["BTCUSDT", "ETHUSDT", "BNBUSDT"],
+      "description": "Trading veloce su micro-movimenti"
+    },
+    {
+      "bot_id": 3,
+      "name": "Mean Reversion Pro",
+      "strategy": "mean_reversion",
+      "port": 8012,
+      "capital": 30.0,
+      "risk_per_trade": 0.04,
+      "max_positions": 3,
+      "timeframe": "5m",
+      "pairs": ["ADAUSDT", "DOTUSDT", "LINKUSDT"],
+      "description": "Sfrutta i rimbalzi dai livelli di supporto/resistenza"
+    },
+    {
+      "bot_id": 4,
+      "name": "Breakout Specialist",
+      "strategy": "breakout_trading",
+      "port": 8013,
+      "capital": 30.0,
+      "risk_per_trade": 0.05,
+      "max_positions": 2,
+      "timeframe": "30m",
+      "pairs": ["AVAXUSDT", "MATICUSDT", "ATOMUSDT"],
+      "description": "Cattura breakout da consolidamenti"
+    },
+    {
+      "bot_id": 5,
+      "name": "Grid Trader",
+      "strategy": "grid_trading",
+      "port": 8014,
+      "capital": 30.0,
+      "risk_per_trade": 0.02,
+      "max_positions": 10,
+      "timeframe": "1h",
+      "pairs": ["BTCUSDT", "ETHUSDT"],
+      "description": "Trading sistematico con griglia di ordini"
+    },
+    {
+      "bot_id": 6,
+      "name": "Meme Coin Hunter",
+      "strategy": "meme_coin_hunting",
+      "port": 8015,
+      "capital": 30.0,
+      "risk_per_trade": 0.08,
+      "max_positions": 3,
+      "timeframe": "5m",
+      "pairs": ["DOGEUSDT", "SHIBUSDT", "PEPEUSDT"],
+      "description": "Specializzato in meme coin e trend virali"
+    },
+    {
+      "bot_id": 7,
+      "name": "DCA Accumulator",
+      "strategy": "dca_strategy",
+      "port": 8016,
+      "capital": 30.0,
+      "risk_per_trade": 0.06,
+      "max_positions": 4,
+      "timeframe": "4h",
+      "pairs": ["BTCUSDT", "ETHUSDT", "ADAUSDT", "SOLUSDT"],
+      "description": "Accumulo graduale con Dollar Cost Averaging"
+    },
+    {
+      "bot_id": 8,
+      "name": "AI Sentiment Trader",
+      "strategy": "ai_sentiment_trading",
+      "port": 8017,
+      "capital": 30.0,
+      "risk_per_trade": 0.04,
+      "max_positions": 3,
+      "timeframe": "1h",
+      "pairs": ["BTCUSDT", "ETHUSDT", "BNBUSDT", "SOLUSDT"],
+      "description": "Trading basato su sentiment AI e news analysis"
+    }
+  ],
+  
+  "coordination": {
+    "master_port": 8020,
+    "sync_interval": 300,
+    "risk_coordination": true,
+    "profit_sharing": false,
+    "emergency_stop_all": true
+  },
+  
+  "monitoring": {
+    "dashboard_port": 8021,
+    "update_interval": 10,
+    "telegram_notifications": true,
+    "performance_tracking": true
+  }
+}
+
