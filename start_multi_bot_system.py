@@ -55,7 +55,7 @@ project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, project_root)
 
 # Import AurumBotX components
-from src.core.trading_engine_usdt import TradingEngineUSDT
+from src.core.trading_engine_usdt_sqlalchemy import TradingEngineUSDT
 from src.strategies.strategy_network import StrategyNetwork
 from src.core.risk_manager_usdt import RiskManagerUSDT
 

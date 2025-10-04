@@ -1,0 +1,23 @@
+{
+    "challenge_name": "50 USDT Live Testing",
+    "initial_capital": 50.0,
+    "target_capital": 100.0,
+    "trading_pairs": [
+        "BTC/USDT",
+        "ETH/USDT"
+    ],
+    "strategy_settings": {
+        "name": "ChallengeGrowthStrategyUSDT",
+        "parameters": {
+            "risk_level": "conservative",
+            "position_size_percentage": 5.0,
+            "stop_loss_percentage": 2.5,
+            "take_profit_percentage": 5.0
+        }
+    },
+    "risk_management": {
+        "max_drawdown_percentage": 15.0,
+        "max_concurrent_positions": 2
+    }
+}
+

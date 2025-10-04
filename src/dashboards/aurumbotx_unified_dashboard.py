@@ -85,7 +85,7 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 # Configuration
-API_BASE = "http://localhost:8005"
+API_BASE = "http://localhost:5678"
 DB_PATH = "../../data/aurumbotx.db"
 
 class AurumBotXDashboard:
@@ -232,6 +232,17 @@ def main():
             
         if st.button("🔄 Refresh Data"):
             st.rerun()
+
+        st.markdown("---")
+        st.markdown("### ⚠️ Emergency Actions")
+        if st.button("🚨 EMERGENCY STOP", type="secondary"):
+            st.warning("Attempting to trigger Emergency Stop...")
+            response = requests.post(f"{dashboard.api_base}/api/emergency-stop", json={"reason": "Manual stop from dashboard"})
+            if response.status_code == 200:
+                st.success("✅ Emergency Stop signal sent successfully!")
+                st.balloons()
+            else:
+                st.error(f"❌ Failed to trigger Emergency Stop: {response.text}")
     
     # Main content based on selected page
     if page == "🏠 Overview":

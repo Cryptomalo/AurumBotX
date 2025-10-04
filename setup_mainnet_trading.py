@@ -42,7 +42,7 @@ class MainnetSetup:
         print("-" * 50)
         
         # Check trading engine
-        engine_path = "src/core/trading_engine_usdt.py"
+        engine_path = "src/core/trading_engine_usdt_sqlalchemy.py"
         if os.path.exists(engine_path):
             self.log_step("Trading Engine", "success", "File presente")
         else:
@@ -315,8 +315,9 @@ def start_trading_engine():
         # Start trading engine
         print("🤖 Avvio Trading Engine...")
         trading_process = subprocess.Popen([
-            'python', 'src/core/trading_engine_usdt.py', '--config', 'config/mainnet_trading.json'
+            'python', 'src/core/trading_engine_usdt_sqlalchemy.py', '--config', 'config/mainnet_trading.json'
         ], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+
         
         time.sleep(2)
         

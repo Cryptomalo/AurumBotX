@@ -52,7 +52,7 @@ def test_trading_engine():
     
     try:
         # Test import trading engine
-        from src.core.trading_engine_usdt import TradingEngineUSDT
+        from src.core.trading_engine_usdt_sqlalchemy import TradingEngineUSDT
         print("✅ Trading Engine import: SUCCESS")
         
         # Initialize engine
@@ -110,7 +110,7 @@ def test_challenge_configuration():
     """Test 100 Euro Challenge configuration"""
     print("\n💰 Testing 100 Euro Challenge Configuration...")
     
-    config_file = "config/100_euro_challenge.json"
+    config_file = os.path.join(project_root, "config/100_euro_challenge.json")
     
     if os.path.exists(config_file):
         try:
@@ -221,7 +221,7 @@ def test_real_trading_readiness():
     
     # Check each component
     try:
-        from src.core.trading_engine_usdt import TradingEngineUSDT
+        from src.core.trading_engine_usdt_sqlalchemy import TradingEngineUSDT
         TradingEngineUSDT()
         readiness_checks["Trading Engine"] = True
     except:
@@ -255,7 +255,7 @@ def test_real_trading_readiness():
     except:
         pass
     
-    if os.path.exists("config/100_euro_challenge.json"):
+    if os.path.exists(os.path.join(project_root, "config/100_euro_challenge.json")):
         readiness_checks["Challenge Config"] = True
     
     # Calculate readiness percentage
