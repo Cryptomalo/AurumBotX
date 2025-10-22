@@ -1,0 +1,2 @@
+class MemeCoinHunter:
+    pass

@@ -1,0 +1,145 @@
+{
+  "name": "AurumBotX Enterprise Trading Dashboard",
+  "short_name": "AurumBotX",
+  "description": "Professional cryptocurrency trading bot dashboard with real-time monitoring and analytics",
+  "version": "2.1.0",
+  "start_url": "/",
+  "display": "standalone",
+  "orientation": "portrait-primary",
+  "theme_color": "#667eea",
+  "background_color": "#ffffff",
+  "scope": "/",
+  "lang": "en",
+  "categories": ["finance", "productivity", "business"],
+  "icons": [
+    {
+      "src": "data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 192 192'><rect width='192' height='192' fill='%23667eea' rx='20'/><text x='96' y='120' font-size='120' text-anchor='middle' fill='white'>🚀</text></svg>",
+      "sizes": "192x192",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 512 512'><rect width='512' height='512' fill='%23667eea' rx='50'/><text x='256' y='320' font-size='320' text-anchor='middle' fill='white'>🚀</text></svg>",
+      "sizes": "512x512",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ],
+  "screenshots": [
+    {
+      "src": "data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1280 720'><rect width='1280' height='720' fill='%23f8f9fa'/><rect x='0' y='0' width='1280' height='70' fill='%23667eea'/><text x='640' y='45' font-size='24' text-anchor='middle' fill='white'>AurumBotX Enterprise Dashboard</text><rect x='20' y='90' width='300' height='200' fill='white' stroke='%23e9ecef'/><text x='170' y='200' font-size='18' text-anchor='middle' fill='%23667eea'>Trading Overview</text></svg>",
+      "sizes": "1280x720",
+      "type": "image/svg+xml",
+      "form_factor": "wide",
+      "label": "Trading Dashboard Overview"
+    },
+    {
+      "src": "data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 390 844'><rect width='390' height='844' fill='%23f8f9fa'/><rect x='0' y='0' width='390' height='70' fill='%23667eea'/><text x='195' y='45' font-size='18' text-anchor='middle' fill='white'>AurumBotX Mobile</text><rect x='20' y='90' width='350' height='150' fill='white' stroke='%23e9ecef'/><text x='195' y='175' font-size='16' text-anchor='middle' fill='%23667eea'>Mobile Dashboard</text></svg>",
+      "sizes": "390x844",
+      "type": "image/svg+xml",
+      "form_factor": "narrow",
+      "label": "Mobile Trading Interface"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Trading Dashboard",
+      "short_name": "Dashboard",
+      "description": "View trading overview and performance metrics",
+      "url": "/#overview",
+      "icons": [
+        {
+          "src": "data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 96 96'><rect width='96' height='96' fill='%23667eea' rx='10'/><text x='48' y='60' font-size='60' text-anchor='middle' fill='white'>📊</text></svg>",
+          "sizes": "96x96",
+          "type": "image/svg+xml"
+        }
+      ]
+    },
+    {
+      "name": "Trading Controls",
+      "short_name": "Trading",
+      "description": "Start, stop, and configure trading strategies",
+      "url": "/#trading",
+      "icons": [
+        {
+          "src": "data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 96 96'><rect width='96' height='96' fill='%2328a745' rx='10'/><text x='48' y='60' font-size='60' text-anchor='middle' fill='white'>⚡</text></svg>",
+          "sizes": "96x96",
+          "type": "image/svg+xml"
+        }
+      ]
+    },
+    {
+      "name": "Portfolio",
+      "short_name": "Portfolio",
+      "description": "View portfolio allocation and performance",
+      "url": "/#portfolio",
+      "icons": [
+        {
+          "src": "data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 96 96'><rect width='96' height='96' fill='%23ffc107' rx='10'/><text x='48' y='60' font-size='60' text-anchor='middle' fill='white'>💼</text></svg>",
+          "sizes": "96x96",
+          "type": "image/svg+xml"
+        }
+      ]
+    },
+    {
+      "name": "Emergency Stop",
+      "short_name": "Emergency",
+      "description": "Immediately halt all trading operations",
+      "url": "/#emergency",
+      "icons": [
+        {
+          "src": "data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 96 96'><rect width='96' height='96' fill='%23dc3545' rx='10'/><text x='48' y='60' font-size='60' text-anchor='middle' fill='white'>🛑</text></svg>",
+          "sizes": "96x96",
+          "type": "image/svg+xml"
+        }
+      ]
+    }
+  ],
+  "related_applications": [
+    {
+      "platform": "web",
+      "url": "https://aurumbotx.com"
+    }
+  ],
+  "prefer_related_applications": false,
+  "edge_side_panel": {
+    "preferred_width": 400
+  },
+  "launch_handler": {
+    "client_mode": "focus-existing"
+  },
+  "handle_links": "preferred",
+  "capture_links": "existing-client-navigate",
+  "protocol_handlers": [
+    {
+      "protocol": "web+aurumbotx",
+      "url": "/?action=%s"
+    }
+  ],
+  "file_handlers": [
+    {
+      "action": "/import",
+      "accept": {
+        "application/json": [".json"],
+        "text/csv": [".csv"]
+      },
+      "launch_type": "single-client"
+    }
+  ],
+  "share_target": {
+    "action": "/share",
+    "method": "POST",
+    "enctype": "multipart/form-data",
+    "params": {
+      "title": "title",
+      "text": "text",
+      "url": "url",
+      "files": [
+        {
+          "name": "file",
+          "accept": ["application/json", "text/csv"]
+        }
+      ]
+    }
+  }
+}
