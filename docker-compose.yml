@@ -2,41 +2,58 @@ version: '3.8'
 
 services:
   aurumbotx:
-    build: .
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: aurumbotx_production
+    restart: always
     ports:
-      - "8501:8501"
-      - "8502:8502"
-      - "8503:8503"
-      - "8504:8504"
-      - "8505:8505"
-      - "8506:8506"
-      - "8507:8507"
-    environment:
-      - DATABASE_TYPE=sqlite
-      - INITIAL_BALANCE=250.0
-      - DEMO_MODE=true
+      - "8080:8080"  # Web PWA Interface
+      - "8502:8502"  # Modern Streamlit Dashboard
     volumes:
-      - ./data:/app/data
-      - ./logs:/app/logs
-    restart: unless-stopped
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8507/health"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-      start_period: 60s
+      # Mappa la directory corrente del progetto nel container
+      - .:/usr/src/app
+      # Mappa una directory per i dati persistenti (es. database SQLite, log, report)
+      - aurumbotx_data:/usr/src/app/data
+      - aurumbotx_logs:/usr/src/app/logs
+      - aurumbotx_reports:/usr/src/app/reports
+    environment:
+      # Variabili d'ambiente essenziali per la produzione
+      # Questi valori DEVONO essere sostituiti con i valori reali in produzione
+      BINANCE_API_KEY: ${BINANCE_API_KEY}
+      BINANCE_SECRET_KEY: ${BINANCE_SECRET_KEY}
+      TELEGRAM_BOT_TOKEN: ${TELEGRAM_BOT_TOKEN}
+      TELEGRAM_CHAT_ID: ${TELEGRAM_CHAT_ID}
+      AURUM_ENV: production
+      # Impostazioni Streamlit per il dashboard moderno
+      STREAMLIT_SERVER_PORT: 8502
+      STREAMLIT_SERVER_ADDRESS: 0.0.0.0
+      # Impostazioni per il database (SQLite di default, o Postgres se uncommentato)
+      DATABASE_URL: sqlite:///data/trading_engine.db
+    # healthcheck:
+    #   test: ["CMD", "curl", "-f", "http://localhost:8502"] # Sostituire con un endpoint di salute più robusto
+    #   interval: 30s
+    #   timeout: 10s
+    #   retries: 3
+    #   start_period: 60s
+    command: python start_aurumbotx.py
 
-  postgres:
-    image: postgres:14
-    environment:
-      POSTGRES_DB: aurumbotx_db
-      POSTGRES_USER: aurumbotx_user
-      POSTGRES_PASSWORD: aurumbot2025
-    volumes:
-      - postgres_data:/var/lib/postgresql/data
-    ports:
-      - "5432:5432"
-    restart: unless-stopped
+  # postgres:
+  #   image: postgres:14
+  #   container_name: aurumbotx_postgres
+  #   environment:
+  #     POSTGRES_DB: aurumbotx_db
+  #     POSTGRES_USER: aurumbotx_user
+  #     POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+  #   volumes:
+  #     - postgres_data:/var/lib/postgresql/data
+  #   ports:
+  #     - "5432:5432"
+  #   restart: unless-stopped
 
 volumes:
-  postgres_data:
+  aurumbotx_data:
+  aurumbotx_logs:
+  aurumbotx_reports:
+  # postgres_data:
+

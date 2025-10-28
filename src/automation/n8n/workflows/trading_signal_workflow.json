@@ -1,0 +1,105 @@
+{
+  "nodes": [
+    {
+      "parameters": {
+        "interval": [
+          {
+            "field": "hours",
+            "value": 4
+          }
+        ]
+      },
+      "name": "Schedule Trigger",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1,
+      "position": [240, 300]
+    },
+    {
+      "parameters": {
+        "url": "=http://localhost:5678/api/market-data",
+        "options": {
+          "json": true
+        }
+      },
+      "name": "Get Market Data",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 3,
+      "position": [480, 300]
+    },
+    {
+      "parameters": {
+        "model": "gpt-4-turbo",
+        "messages": [
+          {
+            "role": "user",
+            "content": "Analyze the following market data and provide a trading signal (BUY/SELL/HOLD) with a confidence score (0-100). Focus on identifying strong trends or reversals.\n\nMarket Data: {{ JSON.stringify($json.data) }}"
+          }
+        ],
+        "options": {
+          "temperature": 0.7,
+          "maxTokens": 200
+        },
+        "connection": "openrouter"
+      },
+      "name": "AI Analysis (Trading Signal)",
+      ""type": "n8n-nodes-base.basicLlmChain",
+      "typeVersion": 1,
+      "position": [720, 300]
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $env.TELEGRAM_CHAT_ID }}",
+        "text": "=🚨 **AurumBotX Trading Signal** 🚨\n\n**Market Data:**\n```json\n{{ JSON.stringify($json.data) }}\n```\n\n**AI Analysis:**\n{{ $json.ai_analysis.text }}\n\n**Signal:** {{ $json.signal }}\n**Confidence:** {{ $json.confidence }}%\n\n_Action required: Review and confirm._",
+        "parseMode": "Markdown"
+      },
+      "name": "Send Telegram Notification",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1,
+      "position": [960, 300]
+    }
+  ],
+  "connections": {
+    "Schedule Trigger": [
+      [
+        {
+          "node": "Get Market Data",
+          "type": "main",
+          "index": 0
+        }
+      ]
+    ],
+    "Get Market Data": [
+      [
+        {
+          "node": "AI Analysis (Trading Signal)",
+          "type": "main",
+          "index": 0
+        }
+      ]
+    ],
+    "AI Analysis (Trading Signal)": [
+      [
+        {
+          "node": "Send Telegram Notification",
+          "type": "main",
+          "index": 0
+        }
+      ]
+    ]
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "id": "trading_signal_workflow",
+  "meta": {
+    "instanceId": "trading_signal_workflow"
+  },
+  "name": "AurumBotX Trading Signal Automation",
+  "staticData": null,
+  "tags": [],
+  "triggerCount": 0,
+  "updatedAt": "2023-10-27T10:00:00.000Z",
+  "createdAt": "2023-10-27T10:00:00.000Z",
+  "versionId": "1"
+}
