@@ -1,0 +1,296 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Prossimi Passi e Timeline - AurumBotX</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css" rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Inter', sans-serif;
+            background: #FFFFFF;
+        }
+        
+        .slide-container {
+            width: 1280px;
+            min-height: 720px;
+            background: #FFFFFF;
+            display: flex;
+            flex-direction: column;
+            padding: 60px;
+            position: relative;
+        }
+        
+        .header {
+            margin-bottom: 40px;
+        }
+        
+        .title {
+            font-size: 44px;
+            font-weight: 800;
+            color: #1A3A52;
+            margin-bottom: 10px;
+        }
+        
+        .subtitle {
+            font-size: 16px;
+            color: #2E7D32;
+            font-weight: 600;
+        }
+        
+        .content {
+            display: flex;
+            gap: 50px;
+            flex: 1;
+        }
+        
+        .left-column {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            gap: 18px;
+            justify-content: center;
+        }
+        
+        .step {
+            display: flex;
+            gap: 15px;
+            align-items: flex-start;
+        }
+        
+        .step-number {
+            width: 50px;
+            height: 50px;
+            background: #2E7D32;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: 800;
+            font-size: 20px;
+            flex-shrink: 0;
+        }
+        
+        .step:nth-child(2) .step-number {
+            background: #1976D2;
+        }
+        
+        .step:nth-child(3) .step-number {
+            background: #F57C00;
+        }
+        
+        .step:nth-child(4) .step-number {
+            background: #C62828;
+        }
+        
+        .step:nth-child(5) .step-number {
+            background: #6A1B9A;
+        }
+        
+        .step-content h3 {
+            font-size: 14px;
+            font-weight: 700;
+            color: #1A3A52;
+            margin-bottom: 4px;
+        }
+        
+        .step-content p {
+            font-size: 12px;
+            color: #616161;
+            line-height: 1.6;
+        }
+        
+        .right-column {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            gap: 15px;
+        }
+        
+        .timeline-title {
+            font-size: 14px;
+            font-weight: 700;
+            color: #1A3A52;
+            margin-bottom: 10px;
+        }
+        
+        .timeline-item {
+            display: flex;
+            gap: 12px;
+            align-items: flex-start;
+            padding: 12px;
+            background: #F5F5F5;
+            border-radius: 6px;
+            border-left: 4px solid #2E7D32;
+        }
+        
+        .timeline-item:nth-child(2) {
+            border-left-color: #1976D2;
+        }
+        
+        .timeline-item:nth-child(3) {
+            border-left-color: #F57C00;
+        }
+        
+        .timeline-item:nth-child(4) {
+            border-left-color: #C62828;
+        }
+        
+        .timeline-item:nth-child(5) {
+            border-left-color: #6A1B9A;
+        }
+        
+        .timeline-day {
+            font-size: 11px;
+            font-weight: 700;
+            color: #2E7D32;
+            min-width: 50px;
+            flex-shrink: 0;
+        }
+        
+        .timeline-item:nth-child(2) .timeline-day {
+            color: #1976D2;
+        }
+        
+        .timeline-item:nth-child(3) .timeline-day {
+            color: #F57C00;
+        }
+        
+        .timeline-item:nth-child(4) .timeline-day {
+            color: #C62828;
+        }
+        
+        .timeline-item:nth-child(5) .timeline-day {
+            color: #6A1B9A;
+        }
+        
+        .timeline-milestone {
+            font-size: 12px;
+            color: #424242;
+            line-height: 1.5;
+        }
+        
+        .action-box {
+            background: #E8F5E9;
+            border-left: 4px solid #2E7D32;
+            padding: 15px;
+            border-radius: 6px;
+            margin-top: 20px;
+        }
+        
+        .action-box h4 {
+            font-size: 13px;
+            font-weight: 700;
+            color: #1B5E20;
+            margin-bottom: 8px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .action-box p {
+            font-size: 12px;
+            color: #1B5E20;
+            line-height: 1.6;
+        }
+    </style>
+</head>
+<body>
+    <div class="slide-container">
+        <div class="header">
+            <h1 class="title">Prossimi Passi e Timeline</h1>
+            <p class="subtitle">Roadmap di implementazione per i prossimi 30 giorni</p>
+        </div>
+        
+        <div class="content">
+            <div class="left-column">
+                <div class="step">
+                    <div class="step-number">1</div>
+                    <div class="step-content">
+                        <h3>Deployment Ambiente</h3>
+                        <p>Configurazione dell'ambiente VPS o locale con Docker e Docker Compose. Installazione di tutte le dipendenze e preparazione dell'infrastruttura.</p>
+                    </div>
+                </div>
+                
+                <div class="step">
+                    <div class="step-number">2</div>
+                    <div class="step-content">
+                        <h3>Configurazione Credenziali</h3>
+                        <p>Inserimento delle chiavi API HMAC di Binance e credenziali Telegram nel file .env. Validazione delle credenziali e test di connessione.</p>
+                    </div>
+                </div>
+                
+                <div class="step">
+                    <div class="step-number">3</div>
+                    <div class="step-content">
+                        <h3>Avvio del Bot</h3>
+                        <p>Lancio della piattaforma AurumBotX in modalità live con 50 USDT su Binance Mainnet. Avvio simultaneo di Dashboard, Web PWA e Telegram Bot.</p>
+                    </div>
+                </div>
+                
+                <div class="step">
+                    <div class="step-number">4</div>
+                    <div class="step-content">
+                        <h3>Monitoraggio Attivo</h3>
+                        <p>Tracciamento in tempo reale tramite dashboard Streamlit (8502) e Web PWA (8080). Ricezione di notifiche Telegram per ogni evento importante.</p>
+                    </div>
+                </div>
+                
+                <div class="step">
+                    <div class="step-number">5</div>
+                    <div class="step-content">
+                        <h3>Ottimizzazione Iterativa</h3>
+                        <p>Miglioramenti basati sui dati live e sulle performance osservate. Aggiornamenti automatici tramite il sistema di auto-update enterprise.</p>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="right-column">
+                <div class="timeline-title">📅 Timeline 30 Giorni</div>
+                
+                <div class="timeline-item">
+                    <div class="timeline-day">Giorno 1-2</div>
+                    <div class="timeline-milestone"><strong>Setup Completo:</strong> Deployment e configurazione ambiente</div>
+                </div>
+                
+                <div class="timeline-item">
+                    <div class="timeline-day">Giorno 3-9</div>
+                    <div class="timeline-milestone"><strong>Test Live (7 giorni):</strong> Primo ciclo di trading con 50 USDT</div>
+                </div>
+                
+                <div class="timeline-item">
+                    <div class="timeline-day">Giorno 10-16</div>
+                    <div class="timeline-milestone"><strong>Analisi & Ottimizzazione:</strong> Review performance e ajustamenti strategia</div>
+                </div>
+                
+                <div class="timeline-item">
+                    <div class="timeline-day">Giorno 17-23</div>
+                    <div class="timeline-milestone"><strong>Scaling Fase 1:</strong> Crescita verso 75-100 USDT</div>
+                </div>
+                
+                <div class="timeline-item">
+                    <div class="timeline-day">Giorno 24-30</div>
+                    <div class="timeline-milestone"><strong>Consolidamento:</strong> Stabilizzazione e preparazione Fase 2</div>
+                </div>
+                
+                <div class="action-box">
+                    <h4>
+                        <i class="fas fa-rocket"></i>
+                        Azione Immediata Richiesta
+                    </h4>
+                    <p>Per iniziare il deployment, seguire la documentazione in AURUMBOTX_ENTERPRISE_DOCUMENTATION.md e lo script deploy_vps.sh. Assicurarsi che le chiavi API Binance siano valide e il conto sia configurato correttamente.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</body>
+</html>

@@ -1,0 +1,200 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Caratteristiche Chiave - AurumBotX</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css" rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Inter', sans-serif;
+            background: #FFFFFF;
+        }
+        
+        .slide-container {
+            width: 1280px;
+            min-height: 720px;
+            background: #FFFFFF;
+            display: flex;
+            flex-direction: column;
+            padding: 60px;
+            position: relative;
+        }
+        
+        .header {
+            margin-bottom: 40px;
+        }
+        
+        .title {
+            font-size: 44px;
+            font-weight: 800;
+            color: #1A3A52;
+            margin-bottom: 10px;
+        }
+        
+        .subtitle {
+            font-size: 16px;
+            color: #2E7D32;
+            font-weight: 600;
+        }
+        
+        .features-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr;
+            gap: 30px;
+            flex: 1;
+            align-content: center;
+        }
+        
+        .feature {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+            padding: 25px;
+            background: #F9F9F9;
+            border-left: 5px solid #2E7D32;
+            min-height: 200px;
+            justify-content: flex-start;
+        }
+        
+        .feature.orange {
+            border-left-color: #F57C00;
+        }
+        
+        .feature.blue {
+            border-left-color: #1A3A52;
+        }
+        
+        .feature-icon {
+            font-size: 40px;
+            color: #2E7D32;
+            width: 60px;
+            height: 60px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: rgba(46, 125, 50, 0.1);
+        }
+        
+        .feature.orange .feature-icon {
+            color: #F57C00;
+            background: rgba(245, 124, 0, 0.1);
+        }
+        
+        .feature.blue .feature-icon {
+            color: #1A3A52;
+            background: rgba(26, 58, 82, 0.1);
+        }
+        
+        .feature-title {
+            font-size: 16px;
+            font-weight: 700;
+            color: #1A3A52;
+        }
+        
+        .feature-description {
+            font-size: 13px;
+            color: #616161;
+            line-height: 1.6;
+        }
+        
+        .feature-highlight {
+            font-size: 12px;
+            color: #2E7D32;
+            font-weight: 600;
+            margin-top: 10px;
+        }
+        
+        .feature.orange .feature-highlight {
+            color: #F57C00;
+        }
+        
+        .feature.blue .feature-highlight {
+            color: #1A3A52;
+        }
+    </style>
+</head>
+<body>
+    <div class="slide-container">
+        <div class="header">
+            <h1 class="title">Caratteristiche Chiave</h1>
+            <p class="subtitle">I 5 pilastri di AurumBotX</p>
+        </div>
+        
+        <div class="features-grid">
+            <div class="feature blue">
+                <div class="feature-icon">
+                    <i class="fas fa-cogs"></i>
+                </div>
+                <h3 class="feature-title">Motore di Trading</h3>
+                <p class="feature-description">
+                    Basato su SQLAlchemy con calcolo del costo reale (fee, slippage, spread). Esecuzione automatica dei trade con tracciamento completo.
+                </p>
+                <p class="feature-highlight">✓ Costi reali calcolati</p>
+            </div>
+            
+            <div class="feature orange">
+                <div class="feature-icon">
+                    <i class="fas fa-th"></i>
+                </div>
+                <h3 class="feature-title">Tre Interfacce Integrate</h3>
+                <p class="feature-description">
+                    Dashboard Streamlit moderna (8502), Web PWA (8080) e Bot Telegram per il controllo remoto 24/7 da qualsiasi dispositivo.
+                </p>
+                <p class="feature-highlight">✓ Accesso ubiquo</p>
+            </div>
+            
+            <div class="feature">
+                <div class="feature-icon">
+                    <i class="fas fa-shield-alt"></i>
+                </div>
+                <h3 class="feature-title">Sicurezza Avanzata</h3>
+                <p class="feature-description">
+                    Protocolli di sicurezza enterprise con Emergency Stop (doppia conferma), Circuit Breaker automatico e gestione del rischio adattiva.
+                </p>
+                <p class="feature-highlight">✓ Protezione capitale</p>
+            </div>
+            
+            <div class="feature orange">
+                <div class="feature-icon">
+                    <i class="fas fa-chart-line"></i>
+                </div>
+                <h3 class="feature-title">Analisi Avanzata</h3>
+                <p class="feature-description">
+                    Calcolo automatico di metriche finanziarie chiave (Sharpe Ratio, Profit Factor, Max Drawdown) e generazione di report PDF professionali.
+                </p>
+                <p class="feature-highlight">✓ Insights dettagliati</p>
+            </div>
+            
+            <div class="feature blue">
+                <div class="feature-icon">
+                    <i class="fas fa-rocket"></i>
+                </div>
+                <h3 class="feature-title">Deployment Enterprise</h3>
+                <p class="feature-description">
+                    Soluzione pronta per la produzione con containerizzazione Docker, script VPS automatici, CI/CD pipeline e packaging multi-piattaforma.
+                </p>
+                <p class="feature-highlight">✓ Scalabilità garantita</p>
+            </div>
+            
+            <div class="feature">
+                <div class="feature-icon">
+                    <i class="fas fa-brain"></i>
+                </div>
+                <h3 class="feature-title">327 Modelli AI</h3>
+                <p class="feature-description">
+                    Integrazione di 327 modelli AI avanzati per analisi multifattoriale, generazione segnali con confidence score e ottimizzazione adattiva delle strategie.
+                </p>
+                <p class="feature-highlight">✓ Intelligenza artificiale</p>
+            </div>
+        </div>
+    </div>
+</body>
+</html>

@@ -1,0 +1,241 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Architettura Tecnica - AurumBotX</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css" rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Inter', sans-serif;
+            background: #FFFFFF;
+        }
+        
+        .slide-container {
+            width: 1280px;
+            min-height: 720px;
+            background: #FFFFFF;
+            display: flex;
+            flex-direction: column;
+            padding: 60px;
+            position: relative;
+        }
+        
+        .header {
+            margin-bottom: 40px;
+        }
+        
+        .title {
+            font-size: 44px;
+            font-weight: 800;
+            color: #1A3A52;
+            margin-bottom: 10px;
+        }
+        
+        .subtitle {
+            font-size: 16px;
+            color: #2E7D32;
+            font-weight: 600;
+        }
+        
+        .architecture {
+            display: flex;
+            justify-content: space-between;
+            align-items: stretch;
+            gap: 30px;
+            flex: 1;
+        }
+        
+        .column {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+        
+        .column-title {
+            font-size: 16px;
+            font-weight: 700;
+            color: #1A3A52;
+            padding: 15px;
+            background: #F5F5F5;
+            border-radius: 8px;
+            text-align: center;
+        }
+        
+        .component {
+            background: #F5F5F5;
+            border-left: 4px solid #2E7D32;
+            padding: 15px;
+            border-radius: 6px;
+            display: flex;
+            gap: 12px;
+            align-items: flex-start;
+        }
+        
+        .component.orange {
+            border-left-color: #F57C00;
+        }
+        
+        .component.blue {
+            border-left-color: #1A3A52;
+        }
+        
+        .component-icon {
+            font-size: 24px;
+            color: #2E7D32;
+            flex-shrink: 0;
+            margin-top: 2px;
+        }
+        
+        .component.orange .component-icon {
+            color: #F57C00;
+        }
+        
+        .component.blue .component-icon {
+            color: #1A3A52;
+        }
+        
+        .component-content h4 {
+            font-size: 13px;
+            font-weight: 700;
+            color: #1A3A52;
+            margin-bottom: 4px;
+        }
+        
+        .component-content p {
+            font-size: 11px;
+            color: #616161;
+            line-height: 1.5;
+        }
+        
+        .arrow {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 24px;
+            color: #2E7D32;
+            font-weight: 700;
+        }
+        
+        .flow-description {
+            margin-top: 30px;
+            padding: 20px;
+            background: #F5F5F5;
+            border-radius: 8px;
+            font-size: 13px;
+            color: #424242;
+            line-height: 1.7;
+        }
+    </style>
+</head>
+<body>
+    <div class="slide-container">
+        <div class="header">
+            <h1 class="title">Architettura Tecnica</h1>
+            <p class="subtitle">Sistema modulare e distribuito per il trading algoritmico</p>
+        </div>
+        
+        <div class="architecture">
+            <div class="column">
+                <div class="column-title">📥 Input Layer</div>
+                
+                <div class="component orange">
+                    <div class="component-icon"><i class="fas fa-exchange-alt"></i></div>
+                    <div class="component-content">
+                        <h4>Binance API</h4>
+                        <p>Integrazione HMAC per trading reale e dati di mercato in tempo reale</p>
+                    </div>
+                </div>
+                
+                <div class="component orange">
+                    <div class="component-icon"><i class="fas fa-chart-line"></i></div>
+                    <div class="component-content">
+                        <h4>Market Data</h4>
+                        <p>Yahoo Finance per dati storici e analisi tecnica</p>
+                    </div>
+                </div>
+                
+                <div class="component orange">
+                    <div class="component-icon"><i class="fas fa-brain"></i></div>
+                    <div class="component-content">
+                        <h4>AI Models (327)</h4>
+                        <p>Analisi multifattoriale e generazione segnali</p>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="arrow">→</div>
+            
+            <div class="column">
+                <div class="column-title">⚙️ Core Layer</div>
+                
+                <div class="component blue">
+                    <div class="component-icon"><i class="fas fa-cogs"></i></div>
+                    <div class="component-content">
+                        <h4>Trading Engine</h4>
+                        <p>SQLAlchemy con calcolo costi reali (fee, slippage, spread)</p>
+                    </div>
+                </div>
+                
+                <div class="component blue">
+                    <div class="component-icon"><i class="fas fa-shield-alt"></i></div>
+                    <div class="component-content">
+                        <h4>Security Layer</h4>
+                        <p>Emergency Stop, Circuit Breaker, Risk Management</p>
+                    </div>
+                </div>
+                
+                <div class="component blue">
+                    <div class="component-icon"><i class="fas fa-database"></i></div>
+                    <div class="component-content">
+                        <h4>Database</h4>
+                        <p>SQLite persistente con tracciamento completo trades</p>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="arrow">→</div>
+            
+            <div class="column">
+                <div class="column-title">📤 Output Layer</div>
+                
+                <div class="component">
+                    <div class="component-icon"><i class="fas fa-chart-bar"></i></div>
+                    <div class="component-content">
+                        <h4>Dashboard (8502)</h4>
+                        <p>Streamlit moderna con Plotly interattivo</p>
+                    </div>
+                </div>
+                
+                <div class="component">
+                    <div class="component-icon"><i class="fas fa-globe"></i></div>
+                    <div class="component-content">
+                        <h4>Web PWA (8080)</h4>
+                        <p>Progressive Web App per accesso mobile</p>
+                    </div>
+                </div>
+                
+                <div class="component">
+                    <div class="component-icon"><i class="fas fa-paper-plane"></i></div>
+                    <div class="component-content">
+                        <h4>Telegram Bot</h4>
+                        <p>Controllo remoto con 12 comandi e notifiche</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="flow-description">
+            <strong>Flusso di Dati:</strong> I dati di mercato da Binance e Yahoo Finance vengono elaborati dai 327 modelli AI per generare segnali di trading. Il Trading Engine esegue i trade applicando i protocolli di sicurezza. I risultati vengono archiviati nel database e visualizzati in tempo reale tramite le tre interfacce integrate.
+        </div>
+    </div>
+</body>
+</html>

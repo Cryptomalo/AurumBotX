@@ -1,0 +1,211 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AurumBotX - Trading Algoritmico Enterprise</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css" rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Inter', sans-serif;
+            background: linear-gradient(135deg, #1A3A52 0%, #0F2438 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .slide-container {
+            width: 1280px;
+            min-height: 720px;
+            background: linear-gradient(135deg, #1A3A52 0%, #0F2438 100%);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 60px;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .slide-container::before {
+            content: '';
+            position: absolute;
+            top: -50%;
+            right: -10%;
+            width: 600px;
+            height: 600px;
+            background: radial-gradient(circle, rgba(46, 125, 50, 0.15) 0%, transparent 70%);
+            border-radius: 50%;
+            z-index: 1;
+        }
+        
+        .slide-container::after {
+            content: '';
+            position: absolute;
+            bottom: -30%;
+            left: -5%;
+            width: 400px;
+            height: 400px;
+            background: radial-gradient(circle, rgba(245, 124, 0, 0.1) 0%, transparent 70%);
+            border-radius: 50%;
+            z-index: 1;
+        }
+        
+        .content {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            width: 100%;
+            z-index: 2;
+            gap: 60px;
+        }
+        
+        .left-section {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+        }
+        
+        .title {
+            font-size: 72px;
+            font-weight: 800;
+            color: #FFFFFF;
+            margin-bottom: 20px;
+            letter-spacing: -1px;
+        }
+        
+        .subtitle {
+            font-size: 32px;
+            font-weight: 600;
+            color: #2E7D32;
+            margin-bottom: 30px;
+        }
+        
+        .description {
+            font-size: 18px;
+            color: #E0E0E0;
+            line-height: 1.6;
+            margin-bottom: 20px;
+            max-width: 500px;
+        }
+        
+        .tagline {
+            font-size: 16px;
+            color: #F57C00;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .tagline i {
+            font-size: 18px;
+        }
+        
+        .right-section {
+            flex: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+            height: 400px;
+        }
+        
+        .geometric-shape {
+            position: absolute;
+            width: 300px;
+            height: 300px;
+            background: linear-gradient(135deg, #2E7D32 0%, #1B5E20 100%);
+            border-radius: 20px;
+            transform: rotate(45deg);
+            opacity: 0.9;
+            box-shadow: 0 20px 60px rgba(46, 125, 50, 0.3);
+        }
+        
+        .geometric-shape::before {
+            content: '';
+            position: absolute;
+            width: 200px;
+            height: 200px;
+            background: linear-gradient(135deg, #F57C00 0%, #E65100 100%);
+            border-radius: 15px;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%) rotate(-45deg);
+            opacity: 0.8;
+        }
+        
+        .stats {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            display: flex;
+            justify-content: space-around;
+            padding-top: 40px;
+            border-top: 1px solid rgba(255, 255, 255, 0.1);
+            z-index: 3;
+        }
+        
+        .stat-item {
+            text-align: center;
+            flex: 1;
+        }
+        
+        .stat-value {
+            font-size: 28px;
+            font-weight: 800;
+            color: #2E7D32;
+        }
+        
+        .stat-label {
+            font-size: 12px;
+            color: #B0BEC5;
+            margin-top: 5px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+    </style>
+</head>
+<body>
+    <div class="slide-container">
+        <div class="content">
+            <div class="left-section">
+                <h1 class="title">AurumBotX</h1>
+                <h2 class="subtitle">Trading Algoritmico Enterprise</h2>
+                <p class="description">Piattaforma di trading automatizzato di livello enterprise progettata per la crescita aggressiva del capitale attraverso strategie AI avanzate su Binance.</p>
+                <p class="tagline">
+                    <i class="fas fa-brain"></i>
+                    Powered by 327 AI Models
+                </p>
+            </div>
+            <div class="right-section">
+                <div class="geometric-shape"></div>
+            </div>
+        </div>
+        
+        <div class="stats">
+            <div class="stat-item">
+                <div class="stat-value">1,100%</div>
+                <div class="stat-label">Obiettivo Crescita</div>
+            </div>
+            <div class="stat-item">
+                <div class="stat-value">50→600</div>
+                <div class="stat-label">USDT Target</div>
+            </div>
+            <div class="stat-item">
+                <div class="stat-value">24/7</div>
+                <div class="stat-label">Trading Automatico</div>
+            </div>
+        </div>
+    </div>
+</body>
+</html>

@@ -1,0 +1,269 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Roadmap di Crescita - AurumBotX</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css" rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Inter', sans-serif;
+            background: #FFFFFF;
+        }
+        
+        .slide-container {
+            width: 1280px;
+            min-height: 720px;
+            background: #FFFFFF;
+            display: flex;
+            flex-direction: column;
+            padding: 60px;
+            position: relative;
+        }
+        
+        .header {
+            margin-bottom: 40px;
+        }
+        
+        .title {
+            font-size: 44px;
+            font-weight: 800;
+            color: #1A3A52;
+            margin-bottom: 10px;
+        }
+        
+        .subtitle {
+            font-size: 16px;
+            color: #2E7D32;
+            font-weight: 600;
+        }
+        
+        .timeline-container {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            gap: 40px;
+        }
+        
+        .timeline {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            gap: 15px;
+            position: relative;
+            padding: 0 10px;
+        }
+        
+        .timeline::before {
+            content: '';
+            position: absolute;
+            top: 40px;
+            left: 0;
+            right: 0;
+            height: 3px;
+            background: linear-gradient(to right, #2E7D32, #F57C00);
+            z-index: 0;
+        }
+        
+        .phase {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            position: relative;
+            z-index: 1;
+        }
+        
+        .phase-icon {
+            width: 60px;
+            height: 60px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 24px;
+            font-weight: 700;
+            margin-bottom: 15px;
+            border: 3px solid white;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+        }
+        
+        .phase:nth-child(1) .phase-icon {
+            background: #2E7D32;
+        }
+        
+        .phase:nth-child(2) .phase-icon {
+            background: #1976D2;
+        }
+        
+        .phase:nth-child(3) .phase-icon {
+            background: #F57C00;
+        }
+        
+        .phase:nth-child(4) .phase-icon {
+            background: #C62828;
+        }
+        
+        .phase:nth-child(5) .phase-icon {
+            background: #6A1B9A;
+        }
+        
+        .phase-content {
+            text-align: center;
+            background: #F5F5F5;
+            padding: 15px;
+            border-radius: 8px;
+            width: 100%;
+        }
+        
+        .phase-name {
+            font-size: 13px;
+            font-weight: 700;
+            color: #1A3A52;
+            margin-bottom: 5px;
+        }
+        
+        .phase-duration {
+            font-size: 11px;
+            color: #616161;
+            margin-bottom: 8px;
+        }
+        
+        .phase-target {
+            font-size: 14px;
+            font-weight: 700;
+            color: #2E7D32;
+            margin-bottom: 8px;
+        }
+        
+        .phase-description {
+            font-size: 11px;
+            color: #616161;
+            line-height: 1.5;
+        }
+        
+        .details {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 20px;
+            margin-top: 30px;
+        }
+        
+        .detail-card {
+            background: #F5F5F5;
+            padding: 15px;
+            border-radius: 8px;
+            border-left: 4px solid #2E7D32;
+        }
+        
+        .detail-card h4 {
+            font-size: 13px;
+            font-weight: 700;
+            color: #1A3A52;
+            margin-bottom: 8px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .detail-card p {
+            font-size: 12px;
+            color: #616161;
+            line-height: 1.6;
+        }
+    </style>
+</head>
+<body>
+    <div class="slide-container">
+        <div class="header">
+            <h1 class="title">Roadmap di Crescita</h1>
+            <p class="subtitle">5 fasi strategiche per raggiungere l'obiettivo di 600 USDT</p>
+        </div>
+        
+        <div class="timeline-container">
+            <div class="timeline">
+                <div class="phase">
+                    <div class="phase-icon">1</div>
+                    <div class="phase-content">
+                        <div class="phase-name">Fase 1: Test Live</div>
+                        <div class="phase-duration">Settimane 1-2</div>
+                        <div class="phase-target">50 USDT</div>
+                        <div class="phase-description">Test live di 7 giorni su Binance Mainnet con capitale iniziale</div>
+                    </div>
+                </div>
+                
+                <div class="phase">
+                    <div class="phase-icon">2</div>
+                    <div class="phase-content">
+                        <div class="phase-name">Fase 2: Analisi</div>
+                        <div class="phase-duration">Settimane 3-4</div>
+                        <div class="phase-target">75 USDT</div>
+                        <div class="phase-description">Analisi risultati e ottimizzazione della strategia AI</div>
+                    </div>
+                </div>
+                
+                <div class="phase">
+                    <div class="phase-icon">3</div>
+                    <div class="phase-content">
+                        <div class="phase-name">Fase 3: Scaling</div>
+                        <div class="phase-duration">Settimane 5-8</div>
+                        <div class="phase-target">150 USDT</div>
+                        <div class="phase-description">Scaling graduale verso 150 USDT con strategie ottimizzate</div>
+                    </div>
+                </div>
+                
+                <div class="phase">
+                    <div class="phase-icon">4</div>
+                    <div class="phase-content">
+                        <div class="phase-name">Fase 4: Accelerazione</div>
+                        <div class="phase-duration">Settimane 9-16</div>
+                        <div class="phase-target">300 USDT</div>
+                        <div class="phase-description">Crescita accelerata verso 300 USDT con posizioni aumentate</div>
+                    </div>
+                </div>
+                
+                <div class="phase">
+                    <div class="phase-icon">5</div>
+                    <div class="phase-content">
+                        <div class="phase-name">Fase 5: Target</div>
+                        <div class="phase-duration">Settimane 17-24</div>
+                        <div class="phase-target">600 USDT</div>
+                        <div class="phase-description">Raggiungimento dell'obiettivo finale di 600 USDT</div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="details">
+                <div class="detail-card">
+                    <h4><i class="fas fa-sync-alt"></i> Monitoraggio Continuo</h4>
+                    <p>Tracciamento in tempo reale di performance, stato del sistema e anomalie tramite dashboard e notifiche Telegram.</p>
+                </div>
+                
+                <div class="detail-card">
+                    <h4><i class="fas fa-cogs"></i> Aggiornamenti Automatici</h4>
+                    <p>Distribuzione trasparente di nuove funzionalità e miglioramenti tramite il sistema di auto-update enterprise-grade.</p>
+                </div>
+                
+                <div class="detail-card">
+                    <h4><i class="fas fa-chart-line"></i> Ottimizzazione Iterativa</h4>
+                    <p>Miglioramento costante delle strategie AI e della gestione del rischio basato sui dati live.</p>
+                </div>
+                
+                <div class="detail-card">
+                    <h4><i class="fas fa-shield-alt"></i> Protezione del Capitale</h4>
+                    <p>Mantenimento rigoroso dei protocolli di sicurezza (Emergency Stop, Circuit Breaker) durante tutte le fasi.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</body>
+</html>

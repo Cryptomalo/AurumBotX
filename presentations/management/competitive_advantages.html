@@ -1,0 +1,294 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Vantaggi Competitivi - AurumBotX</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css" rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Inter', sans-serif;
+            background: #FFFFFF;
+        }
+        
+        .slide-container {
+            width: 1280px;
+            min-height: 720px;
+            background: #FFFFFF;
+            display: flex;
+            flex-direction: column;
+            padding: 60px;
+            position: relative;
+        }
+        
+        .header {
+            margin-bottom: 30px;
+        }
+        
+        .title {
+            font-size: 44px;
+            font-weight: 800;
+            color: #1A3A52;
+            margin-bottom: 10px;
+        }
+        
+        .subtitle {
+            font-size: 16px;
+            color: #2E7D32;
+            font-weight: 600;
+        }
+        
+        .comparison-table {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            gap: 0;
+        }
+        
+        .table-header {
+            display: grid;
+            grid-template-columns: 1.2fr 1.4fr 1.4fr;
+            gap: 20px;
+            padding: 20px;
+            background: #1A3A52;
+            color: white;
+            border-radius: 8px 8px 0 0;
+            font-weight: 700;
+            font-size: 14px;
+        }
+        
+        .table-row {
+            display: grid;
+            grid-template-columns: 1.2fr 1.4fr 1.4fr;
+            gap: 20px;
+            padding: 20px;
+            background: #F5F5F5;
+            border-bottom: 1px solid #E0E0E0;
+            align-items: center;
+        }
+        
+        .table-row:last-child {
+            border-bottom: none;
+            border-radius: 0 0 8px 8px;
+        }
+        
+        .table-row:nth-child(even) {
+            background: #FFFFFF;
+        }
+        
+        .dimension-cell {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+        
+        .dimension-icon {
+            font-size: 24px;
+            color: #2E7D32;
+            width: 40px;
+            height: 40px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: rgba(46, 125, 50, 0.1);
+            border-radius: 6px;
+            flex-shrink: 0;
+        }
+        
+        .dimension-name {
+            font-size: 13px;
+            font-weight: 700;
+            color: #1A3A52;
+        }
+        
+        .aurumbotx-cell {
+            background: rgba(46, 125, 50, 0.05);
+            padding: 15px;
+            border-radius: 6px;
+            border-left: 3px solid #2E7D32;
+        }
+        
+        .aurumbotx-cell p {
+            font-size: 12px;
+            color: #1B5E20;
+            font-weight: 600;
+            line-height: 1.6;
+        }
+        
+        .competitor-cell {
+            background: rgba(244, 67, 54, 0.05);
+            padding: 15px;
+            border-radius: 6px;
+            border-left: 3px solid #F44336;
+        }
+        
+        .competitor-cell p {
+            font-size: 12px;
+            color: #C62828;
+            line-height: 1.6;
+        }
+        
+        .advantage-badge {
+            display: inline-block;
+            background: #2E7D32;
+            color: white;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 10px;
+            font-weight: 700;
+            margin-top: 8px;
+        }
+        
+        .summary-box {
+            margin-top: 30px;
+            background: linear-gradient(135deg, rgba(46, 125, 50, 0.1) 0%, rgba(245, 124, 0, 0.05) 100%);
+            border-left: 4px solid #2E7D32;
+            padding: 20px;
+            border-radius: 8px;
+        }
+        
+        .summary-box h4 {
+            font-size: 14px;
+            font-weight: 700;
+            color: #1A3A52;
+            margin-bottom: 10px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .summary-box p {
+            font-size: 12px;
+            color: #424242;
+            line-height: 1.7;
+        }
+    </style>
+</head>
+<body>
+    <div class="slide-container">
+        <div class="header">
+            <h1 class="title">Vantaggi Competitivi</h1>
+            <p class="subtitle">AurumBotX vs Bot di Trading Tradizionali</p>
+        </div>
+        
+        <div class="comparison-table">
+            <div class="table-header">
+                <div>Dimensione</div>
+                <div>AurumBotX</div>
+                <div>Competitor Tipico</div>
+            </div>
+            
+            <div class="table-row">
+                <div class="dimension-cell">
+                    <div class="dimension-icon">
+                        <i class="fas fa-brain"></i>
+                    </div>
+                    <div class="dimension-name">Tecnologia AI</div>
+                </div>
+                <div class="aurumbotx-cell">
+                    <p><strong>327 Modelli AI</strong> avanzati (GPT-4, Claude, Gemini, Llama) per analisi multifattoriale e segnali con confidence score</p>
+                    <div class="advantage-badge">✓ Superiore</div>
+                </div>
+                <div class="competitor-cell">
+                    <p>Algoritmi statici o numero limitato di modelli (1-5). Analisi monofattoriale con bassa adattabilità</p>
+                </div>
+            </div>
+            
+            <div class="table-row">
+                <div class="dimension-cell">
+                    <div class="dimension-icon">
+                        <i class="fas fa-dollar-sign"></i>
+                    </div>
+                    <div class="dimension-name">Costo</div>
+                </div>
+                <div class="aurumbotx-cell">
+                    <p><strong>Completamente Gratuito</strong>. Nessun canone mensile, nessuna commissione sulla performance</p>
+                    <div class="advantage-badge">✓ Massimo Valore</div>
+                </div>
+                <div class="competitor-cell">
+                    <p>€50-500 al mese o 15-30% di commissione sulla performance. Costi totali annuali: €600-6000+</p>
+                </div>
+            </div>
+            
+            <div class="table-row">
+                <div class="dimension-cell">
+                    <div class="dimension-icon">
+                        <i class="fas fa-chart-line"></i>
+                    </div>
+                    <div class="dimension-name">Potenziale Crescita</div>
+                </div>
+                <div class="aurumbotx-cell">
+                    <p><strong>1,100% in 6 mesi</strong> (50 USDT → 600 USDT). ROI: 433% (conservativo) - 1,088% (ottimistico)</p>
+                    <div class="advantage-badge">✓ Aggressivo</div>
+                </div>
+                <div class="competitor-cell">
+                    <p>20-50% annuali. Rendimenti modesti e conservativi. Focus su stabilità vs crescita</p>
+                </div>
+            </div>
+            
+            <div class="table-row">
+                <div class="dimension-cell">
+                    <div class="dimension-icon">
+                        <i class="fas fa-eye"></i>
+                    </div>
+                    <div class="dimension-name">Trasparenza</div>
+                </div>
+                <div class="aurumbotx-cell">
+                    <p><strong>Open-Source</strong>. Architettura completamente trasparente. Accesso al codice sorgente e logica decisionale</p>
+                    <div class="advantage-badge">✓ Massima Trasparenza</div>
+                </div>
+                <div class="competitor-cell">
+                    <p>Sistemi 'Black Box'. Logica decisionale nascosta. Nessun accesso al codice o agli algoritmi</p>
+                </div>
+            </div>
+            
+            <div class="table-row">
+                <div class="dimension-cell">
+                    <div class="dimension-icon">
+                        <i class="fas fa-gamepad"></i>
+                    </div>
+                    <div class="dimension-name">Controllo Utente</div>
+                </div>
+                <div class="aurumbotx-cell">
+                    <p><strong>Pieno Controllo</strong>. Dashboard intuitive, Telegram Bot, Web PWA. Configurazione completa dei parametri</p>
+                    <div class="advantage-badge">✓ Controllo Totale</div>
+                </div>
+                <div class="competitor-cell">
+                    <p>Funzionalità limitate. Controllo ristretto. Dipendenza da piattaforme esterne. Poca flessibilità</p>
+                </div>
+            </div>
+            
+            <div class="table-row">
+                <div class="dimension-cell">
+                    <div class="dimension-icon">
+                        <i class="fas fa-coins"></i>
+                    </div>
+                    <div class="dimension-name">Mercato Target</div>
+                </div>
+                <div class="aurumbotx-cell">
+                    <p><strong>Crypto 24/7</strong> con alta volatilità e opportunità. Supporto per meme coin, altcoin, spot trading</p>
+                    <div class="advantage-badge">✓ Dinamico</div>
+                </div>
+                <div class="competitor-cell">
+                    <p>Forex, Azioni, Indici. Mercati meno dinamici. Orari limitati. Minore volatilità = minori opportunità</p>
+                </div>
+            </div>
+        </div>
+        
+        <div class="summary-box">
+            <h4>
+                <i class="fas fa-star"></i>
+                Conclusione
+            </h4>
+            <p>AurumBotX rappresenta un salto generazionale rispetto ai bot di trading tradizionali. Con 327 modelli AI avanzati, costo zero, potenziale di crescita del 1,100% e trasparenza totale, offre un valore ineguagliabile per chi desidera automatizzare il trading su crypto con pieno controllo e massima profittabilità.</p>
+        </div>
+    </div>
+</body>
+</html>

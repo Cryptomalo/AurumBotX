@@ -1,0 +1,280 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Metriche di Performance - AurumBotX</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@3.9.1"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Inter', sans-serif;
+            background: #FFFFFF;
+        }
+        
+        .slide-container {
+            width: 1280px;
+            min-height: 720px;
+            background: #FFFFFF;
+            display: flex;
+            flex-direction: column;
+            padding: 60px;
+            position: relative;
+        }
+        
+        .header {
+            margin-bottom: 40px;
+        }
+        
+        .title {
+            font-size: 44px;
+            font-weight: 800;
+            color: #1A3A52;
+            margin-bottom: 10px;
+        }
+        
+        .subtitle {
+            font-size: 16px;
+            color: #2E7D32;
+            font-weight: 600;
+        }
+        
+        .content {
+            display: flex;
+            gap: 50px;
+            flex: 1;
+        }
+        
+        .left-column {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+            justify-content: center;
+        }
+        
+        .metric-card {
+            background: #F5F5F5;
+            padding: 20px;
+            border-radius: 8px;
+            border-left: 5px solid #2E7D32;
+            display: flex;
+            gap: 15px;
+            align-items: flex-start;
+        }
+        
+        .metric-icon {
+            font-size: 32px;
+            color: #2E7D32;
+            flex-shrink: 0;
+            width: 50px;
+            height: 50px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: rgba(46, 125, 50, 0.1);
+            border-radius: 6px;
+        }
+        
+        .metric-content h3 {
+            font-size: 14px;
+            font-weight: 700;
+            color: #1A3A52;
+            margin-bottom: 5px;
+        }
+        
+        .metric-value {
+            font-size: 24px;
+            font-weight: 800;
+            color: #2E7D32;
+            margin-bottom: 8px;
+        }
+        
+        .metric-description {
+            font-size: 12px;
+            color: #616161;
+            line-height: 1.6;
+        }
+        
+        .right-column {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+        
+        .chart-container {
+            position: relative;
+            width: 100%;
+            height: 300px;
+            background: #F5F5F5;
+            border-radius: 8px;
+            padding: 20px;
+        }
+        
+        .reporting-section {
+            background: #F5F5F5;
+            padding: 15px;
+            border-radius: 8px;
+            border-left: 5px solid #F57C00;
+            display: flex;
+            gap: 12px;
+            align-items: flex-start;
+        }
+        
+        .reporting-icon {
+            font-size: 24px;
+            color: #F57C00;
+            flex-shrink: 0;
+            margin-top: 2px;
+        }
+        
+        .reporting-content h4 {
+            font-size: 13px;
+            font-weight: 700;
+            color: #1A3A52;
+            margin-bottom: 4px;
+        }
+        
+        .reporting-content p {
+            font-size: 12px;
+            color: #616161;
+            line-height: 1.5;
+        }
+    </style>
+</head>
+<body>
+    <div class="slide-container">
+        <div class="header">
+            <h1 class="title">Metriche di Performance</h1>
+            <p class="subtitle">Tracciamento avanzato e analisi dei risultati di trading</p>
+        </div>
+        
+        <div class="content">
+            <div class="left-column">
+                <div class="metric-card">
+                    <div class="metric-icon">
+                        <i class="fas fa-chart-line"></i>
+                    </div>
+                    <div class="metric-content">
+                        <h3>Sharpe Ratio</h3>
+                        <div class="metric-value">2.14</div>
+                        <p class="metric-description">Misura il rendimento corretto per il rischio. Valori superiori a 1.0 indicano una strategia di trading efficace. Un valore di 2.14 rappresenta una performance eccezionale.</p>
+                    </div>
+                </div>
+                
+                <div class="metric-card">
+                    <div class="metric-icon">
+                        <i class="fas fa-percentage"></i>
+                    </div>
+                    <div class="metric-content">
+                        <h3>Profit Factor</h3>
+                        <div class="metric-value">2.8x</div>
+                        <p class="metric-description">Rapporto tra profitto lordo e perdita lorda. Un valore di 2.8x significa che per ogni USDT perso, il sistema genera 2.8 USDT di profitto.</p>
+                    </div>
+                </div>
+                
+                <div class="metric-card">
+                    <div class="metric-icon">
+                        <i class="fas fa-arrow-down"></i>
+                    </div>
+                    <div class="metric-content">
+                        <h3>Max Drawdown</h3>
+                        <div class="metric-value">7.2%</div>
+                        <p class="metric-description">La massima perdita osservata dal picco al minimo. Un valore di 7.2% indica una gestione del rischio conservativa e controllata.</p>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="right-column">
+                <div class="chart-container">
+                    <canvas id="metricsChart"></canvas>
+                </div>
+                
+                <div class="reporting-section">
+                    <div class="reporting-icon">
+                        <i class="fas fa-file-pdf"></i>
+                    </div>
+                    <div class="reporting-content">
+                        <h4>Report PDF Professionali</h4>
+                        <p>Generazione automatica di report dettagliati tramite il modulo di reporting avanzato. Disponibili tramite comando Telegram <code>/report_pdf</code> o dalla dashboard Streamlit.</p>
+                    </div>
+                </div>
+                
+                <div class="reporting-section" style="border-left-color: #2E7D32;">
+                    <div class="reporting-icon" style="color: #2E7D32;">
+                        <i class="fas fa-sync-alt"></i>
+                    </div>
+                    <div class="reporting-content">
+                        <h4>Tracciamento in Tempo Reale</h4>
+                        <p>Tutte le metriche vengono calcolate e visualizzate in tempo reale tramite il dashboard Streamlit moderna (porta 8502) e la Web PWA (porta 8080).</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <script>
+        const ctx = document.getElementById('metricsChart').getContext('2d');
+        const metricsChart = new Chart(ctx, {
+            type: 'bar',
+            data: {
+                labels: ['Sharpe Ratio', 'Profit Factor', 'Win Rate', 'System Uptime'],
+                datasets: [{
+                    label: 'Performance Metrics',
+                    data: [2.14, 2.8, 78.3, 99.7],
+                    backgroundColor: [
+                        '#2E7D32',
+                        '#1A3A52',
+                        '#F57C00',
+                        '#00897B'
+                    ],
+                    borderRadius: 6,
+                    borderSkipped: false
+                }]
+            },
+            options: {
+                indexAxis: 'y',
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        display: false
+                    }
+                },
+                scales: {
+                    x: {
+                        beginAtZero: true,
+                        max: 100,
+                        ticks: {
+                            font: { family: "'Inter', sans-serif", size: 11 },
+                            color: '#616161'
+                        },
+                        grid: {
+                            color: 'rgba(0, 0, 0, 0.05)',
+                            drawBorder: false
+                        }
+                    },
+                    y: {
+                        ticks: {
+                            font: { family: "'Inter', sans-serif", size: 12, weight: '600' },
+                            color: '#1A3A52'
+                        },
+                        grid: {
+                            display: false,
+                            drawBorder: false
+                        }
+                    }
+                }
+            }
+        });
+    </script>
+</body>
+</html>
