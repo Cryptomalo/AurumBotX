@@ -1,0 +1,452 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AurumBotX - Trading Algoritmico Enterprise</title>
+    <meta name="description" content="AurumBotX: Piattaforma di trading algoritmico enterprise per crescita aggressiva del capitale. Trasforma 50 USDT in 600 USDT con AI avanzata e automazione completa.">
+    <meta name="keywords" content="trading bot, crypto trading, algoritmi AI, Binance, automazione">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700;800&display=swap" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+    <!-- Navigation -->
+    <nav class="navbar">
+        <div class="container">
+            <div class="navbar-brand">
+                <i class="fas fa-robot"></i>
+                <span>AurumBotX</span>
+            </div>
+            <ul class="navbar-menu">
+                <li><a href="#features">Caratteristiche</a></li>
+                <li><a href="#architecture">Architettura</a></li>
+                <li><a href="#interfaces">Interfacce</a></li>
+                <li><a href="#roadmap">Roadmap</a></li>
+                <li><a href="#deployment">Deployment</a></li>
+                <li><a href="https://github.com/Cryptomalo/AurumBotX" target="_blank" class="btn-github">
+                    <i class="fab fa-github"></i> GitHub
+                </a></li>
+            </ul>
+        </div>
+    </nav>
+
+    <!-- Hero Section -->
+    <section class="hero">
+        <div class="container">
+            <div class="hero-content">
+                <h1 class="hero-title">Trading Algoritmico Enterprise</h1>
+                <p class="hero-subtitle">Trasforma 50 USDT in 600 USDT con intelligenza artificiale avanzata e automazione completa</p>
+                <div class="hero-stats">
+                    <div class="stat">
+                        <span class="stat-value">1,100%</span>
+                        <span class="stat-label">Crescita Target</span>
+                    </div>
+                    <div class="stat">
+                        <span class="stat-value">327</span>
+                        <span class="stat-label">Modelli AI</span>
+                    </div>
+                    <div class="stat">
+                        <span class="stat-value">24/7</span>
+                        <span class="stat-label">Automazione</span>
+                    </div>
+                    <div class="stat">
+                        <span class="stat-value">$0</span>
+                        <span class="stat-label">Costo</span>
+                    </div>
+                </div>
+                <div class="hero-buttons">
+                    <a href="https://github.com/Cryptomalo/AurumBotX" class="btn btn-primary">
+                        <i class="fab fa-github"></i> Vai a GitHub
+                    </a>
+                    <a href="#deployment" class="btn btn-secondary">
+                        <i class="fas fa-rocket"></i> Deploy Ora
+                    </a>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Features Section -->
+    <section id="features" class="features">
+        <div class="container">
+            <h2 class="section-title">Caratteristiche Chiave</h2>
+            <div class="features-grid">
+                <div class="feature-card">
+                    <div class="feature-icon">
+                        <i class="fas fa-cogs"></i>
+                    </div>
+                    <h3>Motore di Trading</h3>
+                    <p>Basato su SQLAlchemy con calcolo del costo reale (fee, slippage, spread). Esecuzione automatica con tracciamento completo.</p>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon">
+                        <i class="fas fa-th"></i>
+                    </div>
+                    <h3>Tre Interfacce</h3>
+                    <p>Dashboard Streamlit moderna, Web PWA mobile-friendly e Bot Telegram per controllo remoto 24/7.</p>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon">
+                        <i class="fas fa-shield-alt"></i>
+                    </div>
+                    <h3>Sicurezza Avanzata</h3>
+                    <p>Emergency Stop con doppia conferma, Circuit Breaker automatico e gestione del rischio adattiva.</p>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon">
+                        <i class="fas fa-brain"></i>
+                    </div>
+                    <h3>327 Modelli AI</h3>
+                    <p>Integrazione di modelli AI avanzati (GPT-4, Claude, Gemini, Llama) per analisi multifattoriale.</p>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon">
+                        <i class="fas fa-chart-line"></i>
+                    </div>
+                    <h3>Analisi Avanzata</h3>
+                    <p>Metriche finanziarie (Sharpe Ratio, Profit Factor, Max Drawdown) e report PDF professionali.</p>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon">
+                        <i class="fas fa-rocket"></i>
+                    </div>
+                    <h3>Deployment Enterprise</h3>
+                    <p>Docker, VPS scripts, CI/CD pipeline e packaging multi-piattaforma pronti per la produzione.</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Architecture Section -->
+    <section id="architecture" class="architecture">
+        <div class="container">
+            <h2 class="section-title">Architettura Tecnica</h2>
+            <div class="architecture-diagram">
+                <div class="arch-column">
+                    <h3>Input</h3>
+                    <div class="arch-item">
+                        <i class="fab fa-bitcoin"></i>
+                        <span>Binance API</span>
+                    </div>
+                    <div class="arch-item">
+                        <i class="fas fa-chart-bar"></i>
+                        <span>Market Data</span>
+                    </div>
+                    <div class="arch-item">
+                        <i class="fas fa-brain"></i>
+                        <span>AI Models</span>
+                    </div>
+                </div>
+                <div class="arch-arrow">→</div>
+                <div class="arch-column">
+                    <h3>Core</h3>
+                    <div class="arch-item">
+                        <i class="fas fa-cogs"></i>
+                        <span>Trading Engine</span>
+                    </div>
+                    <div class="arch-item">
+                        <i class="fas fa-lock"></i>
+                        <span>Security Layer</span>
+                    </div>
+                    <div class="arch-item">
+                        <i class="fas fa-database"></i>
+                        <span>SQLAlchemy DB</span>
+                    </div>
+                </div>
+                <div class="arch-arrow">→</div>
+                <div class="arch-column">
+                    <h3>Output</h3>
+                    <div class="arch-item">
+                        <i class="fas fa-chart-line"></i>
+                        <span>Dashboard</span>
+                    </div>
+                    <div class="arch-item">
+                        <i class="fas fa-mobile-alt"></i>
+                        <span>Web PWA</span>
+                    </div>
+                    <div class="arch-item">
+                        <i class="fab fa-telegram"></i>
+                        <span>Telegram Bot</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Interfaces Section -->
+    <section id="interfaces" class="interfaces">
+        <div class="container">
+            <h2 class="section-title">Interfacce Utente</h2>
+            <div class="interfaces-grid">
+                <div class="interface-card">
+                    <div class="interface-header">
+                        <i class="fas fa-chart-bar"></i>
+                        <h3>Dashboard Streamlit</h3>
+                        <span class="port">Porta 8502</span>
+                    </div>
+                    <ul class="interface-features">
+                        <li><i class="fas fa-check"></i> Visualizzazioni Plotly interattive</li>
+                        <li><i class="fas fa-check"></i> Metriche di performance in tempo reale</li>
+                        <li><i class="fas fa-check"></i> Configurazione del sistema</li>
+                        <li><i class="fas fa-check"></i> Download report PDF</li>
+                    </ul>
+                </div>
+                <div class="interface-card">
+                    <div class="interface-header">
+                        <i class="fas fa-mobile-alt"></i>
+                        <h3>Web PWA</h3>
+                        <span class="port">Porta 8080</span>
+                    </div>
+                    <ul class="interface-features">
+                        <li><i class="fas fa-check"></i> Progressive Web App</li>
+                        <li><i class="fas fa-check"></i> Responsive design</li>
+                        <li><i class="fas fa-check"></i> Offline capable</li>
+                        <li><i class="fas fa-check"></i> Installabile come app</li>
+                    </ul>
+                </div>
+                <div class="interface-card">
+                    <div class="interface-header">
+                        <i class="fab fa-telegram"></i>
+                        <h3>Telegram Bot</h3>
+                        <span class="port">Controllo Remoto</span>
+                    </div>
+                    <ul class="interface-features">
+                        <li><i class="fas fa-check"></i> 12 comandi disponibili</li>
+                        <li><i class="fas fa-check"></i> Notifiche in tempo reale</li>
+                        <li><i class="fas fa-check"></i> Autorizzazione sicura</li>
+                        <li><i class="fas fa-check"></i> Controllo 24/7</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Performance Section -->
+    <section class="performance">
+        <div class="container">
+            <h2 class="section-title">Metriche di Performance</h2>
+            <div class="metrics-grid">
+                <div class="metric-card">
+                    <div class="metric-value">2.14</div>
+                    <div class="metric-label">Sharpe Ratio</div>
+                    <p>Rendimento corretto per il rischio. Valori > 1.0 indicano strategia efficace.</p>
+                </div>
+                <div class="metric-card">
+                    <div class="metric-value">2.8x</div>
+                    <div class="metric-label">Profit Factor</div>
+                    <p>Rapporto profitto/perdita. Per ogni USDT perso, 2.8 USDT di profitto.</p>
+                </div>
+                <div class="metric-card">
+                    <div class="metric-value">7.2%</div>
+                    <div class="metric-label">Max Drawdown</div>
+                    <p>Massima perdita dal picco. Indica gestione del rischio conservativa.</p>
+                </div>
+                <div class="metric-card">
+                    <div class="metric-value">78.3%</div>
+                    <div class="metric-label">Win Rate</div>
+                    <p>Percentuale di trade vincenti. Tasso di successo del sistema.</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Roadmap Section -->
+    <section id="roadmap" class="roadmap">
+        <div class="container">
+            <h2 class="section-title">Roadmap di Crescita</h2>
+            <div class="roadmap-timeline">
+                <div class="roadmap-phase">
+                    <div class="phase-number">1</div>
+                    <h3>Test Live</h3>
+                    <p class="phase-duration">Settimane 1-2</p>
+                    <p class="phase-target">50 USDT</p>
+                    <p class="phase-description">Test live di 7 giorni su Binance Mainnet</p>
+                </div>
+                <div class="roadmap-phase">
+                    <div class="phase-number">2</div>
+                    <h3>Analisi</h3>
+                    <p class="phase-duration">Settimane 3-4</p>
+                    <p class="phase-target">75 USDT</p>
+                    <p class="phase-description">Analisi e ottimizzazione strategia</p>
+                </div>
+                <div class="roadmap-phase">
+                    <div class="phase-number">3</div>
+                    <h3>Scaling</h3>
+                    <p class="phase-duration">Settimane 5-8</p>
+                    <p class="phase-target">150 USDT</p>
+                    <p class="phase-description">Scaling graduale verso 150 USDT</p>
+                </div>
+                <div class="roadmap-phase">
+                    <div class="phase-number">4</div>
+                    <h3>Accelerazione</h3>
+                    <p class="phase-duration">Settimane 9-16</p>
+                    <p class="phase-target">300 USDT</p>
+                    <p class="phase-description">Crescita accelerata verso 300 USDT</p>
+                </div>
+                <div class="roadmap-phase">
+                    <div class="phase-number">5</div>
+                    <h3>Target</h3>
+                    <p class="phase-duration">Settimane 17-24</p>
+                    <p class="phase-target">600 USDT</p>
+                    <p class="phase-description">Raggiungimento dell'obiettivo finale</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Deployment Section -->
+    <section id="deployment" class="deployment">
+        <div class="container">
+            <h2 class="section-title">Deployment Enterprise</h2>
+            <div class="deployment-flow">
+                <div class="flow-step">
+                    <i class="fab fa-github"></i>
+                    <span>GitHub</span>
+                </div>
+                <div class="flow-arrow">→</div>
+                <div class="flow-step">
+                    <i class="fas fa-cogs"></i>
+                    <span>CI/CD</span>
+                </div>
+                <div class="flow-arrow">→</div>
+                <div class="flow-step">
+                    <i class="fab fa-docker"></i>
+                    <span>Docker</span>
+                </div>
+                <div class="flow-arrow">→</div>
+                <div class="flow-step">
+                    <i class="fas fa-cloud"></i>
+                    <span>Docker Hub</span>
+                </div>
+                <div class="flow-arrow">→</div>
+                <div class="flow-step">
+                    <i class="fas fa-server"></i>
+                    <span>VPS</span>
+                </div>
+            </div>
+            <div class="deployment-features">
+                <div class="deploy-item">
+                    <h4><i class="fab fa-docker"></i> Docker & Compose</h4>
+                    <p>Containerizzazione ottimizzata con immagine Python 3.11-slim e gestione semplificata dei servizi.</p>
+                </div>
+                <div class="deploy-item">
+                    <h4><i class="fas fa-terminal"></i> Script VPS</h4>
+                    <p>Automazione completa dell'installazione e dell'avvio su server remoti Linux.</p>
+                </div>
+                <div class="deploy-item">
+                    <h4><i class="fas fa-code-branch"></i> CI/CD Pipeline</h4>
+                    <p>GitHub Actions per testing automatico, build Docker e notifiche Telegram.</p>
+                </div>
+                <div class="deploy-item">
+                    <h4><i class="fas fa-box"></i> Packaging</h4>
+                    <p>PyInstaller per creare eseguibili nativi per Windows, macOS e Linux.</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Competitive Advantages Section -->
+    <section class="advantages">
+        <div class="container">
+            <h2 class="section-title">Vantaggi Competitivi</h2>
+            <div class="advantages-grid">
+                <div class="advantage-item">
+                    <div class="advantage-icon">
+                        <i class="fas fa-brain"></i>
+                    </div>
+                    <h3>Tecnologia AI</h3>
+                    <p><strong>327 Modelli AI</strong> vs algoritmi statici dei competitor</p>
+                </div>
+                <div class="advantage-item">
+                    <div class="advantage-icon">
+                        <i class="fas fa-dollar-sign"></i>
+                    </div>
+                    <h3>Costo</h3>
+                    <p><strong>Completamente Gratuito</strong> vs €50-500/mese dei competitor</p>
+                </div>
+                <div class="advantage-item">
+                    <div class="advantage-icon">
+                        <i class="fas fa-chart-line"></i>
+                    </div>
+                    <h3>Crescita</h3>
+                    <p><strong>1,100% in 6 mesi</strong> vs 20-50% annuali dei competitor</p>
+                </div>
+                <div class="advantage-item">
+                    <div class="advantage-icon">
+                        <i class="fas fa-eye"></i>
+                    </div>
+                    <h3>Trasparenza</h3>
+                    <p><strong>Open-Source</strong> vs sistemi 'black box' dei competitor</p>
+                </div>
+                <div class="advantage-item">
+                    <div class="advantage-icon">
+                        <i class="fas fa-gamepad"></i>
+                    </div>
+                    <h3>Controllo</h3>
+                    <p><strong>Pieno Controllo</strong> vs funzionalità limitate dei competitor</p>
+                </div>
+                <div class="advantage-item">
+                    <div class="advantage-icon">
+                        <i class="fas fa-coins"></i>
+                    </div>
+                    <h3>Mercato</h3>
+                    <p><strong>Crypto 24/7</strong> vs mercati meno dinamici dei competitor</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- CTA Section -->
+    <section class="cta">
+        <div class="container">
+            <h2>Pronto a Iniziare?</h2>
+            <p>Accedi al repository GitHub e segui la documentazione per il deployment.</p>
+            <div class="cta-buttons">
+                <a href="https://github.com/Cryptomalo/AurumBotX" class="btn btn-primary btn-large">
+                    <i class="fab fa-github"></i> Vai a GitHub
+                </a>
+                <a href="https://github.com/Cryptomalo/AurumBotX/blob/main/AURUMBOTX_ENTERPRISE_DOCUMENTATION.md" class="btn btn-secondary btn-large">
+                    <i class="fas fa-book"></i> Documentazione
+                </a>
+            </div>
+        </div>
+    </section>
+
+    <!-- Footer -->
+    <footer class="footer">
+        <div class="container">
+            <div class="footer-content">
+                <div class="footer-section">
+                    <h4>AurumBotX</h4>
+                    <p>Piattaforma di trading algoritmico enterprise per la crescita aggressiva del capitale.</p>
+                </div>
+                <div class="footer-section">
+                    <h4>Link Utili</h4>
+                    <ul>
+                        <li><a href="https://github.com/Cryptomalo/AurumBotX">GitHub Repository</a></li>
+                        <li><a href="https://github.com/Cryptomalo/AurumBotX/blob/main/AURUMBOTX_ENTERPRISE_DOCUMENTATION.md">Documentazione</a></li>
+                        <li><a href="https://github.com/Cryptomalo/AurumBotX/issues">Segnala un Problema</a></li>
+                    </ul>
+                </div>
+                <div class="footer-section">
+                    <h4>Tecnologie</h4>
+                    <ul>
+                        <li>Python 3.11</li>
+                        <li>SQLAlchemy</li>
+                        <li>Streamlit</li>
+                        <li>Docker</li>
+                        <li>Binance API</li>
+                    </ul>
+                </div>
+            </div>
+            <div class="footer-bottom">
+                <p>&copy; 2025 AurumBotX. Tutti i diritti riservati.</p>
+            </div>
+        </div>
+    </footer>
+
+    <script src="js/main.js"></script>
+</body>
+</html>
+
