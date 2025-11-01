@@ -372,46 +372,57 @@ section {
 }
 
 /* ============================================
-   INTERFACES SECTION
+   DASHBOARDS SECTION
    ============================================ */
 
-.interfaces {
-    background: var(--light-bg);
+.dashboards {
+    background: var(--white);
 }
 
-.interfaces-grid {
+.section-subtitle {
+    text-align: center;
+    font-size: 18px;
+    color: var(--text-light);
+    margin-bottom: 60px;
+}
+
+.dashboards-grid {
     display: grid;
     grid-template-columns: repeat(3, 1fr);
     gap: 30px;
+    margin-bottom: 60px;
 }
 
-.interface-card {
+.dashboard-card {
     background: var(--white);
     border-radius: 12px;
     overflow: hidden;
-    border: 1px solid var(--border-color);
+    border: 2px solid var(--border-color);
     transition: all 0.3s ease;
+    display: flex;
+    flex-direction: column;
 }
 
-.interface-card:hover {
-    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
-    transform: translateY(-5px);
+.dashboard-card:hover {
+    box-shadow: 0 20px 50px rgba(0, 0, 0, 0.15);
+    transform: translateY(-10px);
+    border-color: var(--secondary-color);
 }
 
-.interface-header {
+.dashboard-header {
     background: linear-gradient(135deg, var(--primary-color) 0%, var(--secondary-color) 100%);
     color: var(--white);
     padding: 30px;
     text-align: center;
 }
 
-.interface-header i {
-    font-size: 36px;
+.dashboard-header i {
+    font-size: 40px;
     margin-bottom: 10px;
     display: block;
 }
 
-.interface-header h3 {
+.dashboard-header h3 {
     font-size: 20px;
     margin-bottom: 5px;
 }
@@ -423,26 +434,146 @@ section {
     margin-top: 5px;
 }
 
-.interface-features {
-    list-style: none;
+.dashboard-preview {
+    background: var(--light-bg);
     padding: 30px;
+    min-height: 150px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
 }
 
-.interface-features li {
+.preview-content {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 15px;
+    width: 100%;
+}
+
+.preview-item {
+    background: var(--white);
+    padding: 15px;
+    border-radius: 8px;
+    text-align: center;
+    border: 1px solid var(--border-color);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+}
+
+.preview-item i {
+    font-size: 24px;
+    color: var(--secondary-color);
+}
+
+.preview-item span {
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--text-dark);
+}
+
+.dashboard-features {
+    list-style: none;
+    padding: 25px 30px;
+    flex-grow: 1;
+}
+
+.dashboard-features li {
     padding: 10px 0;
     color: var(--text-dark);
     display: flex;
     align-items: center;
     gap: 10px;
+    font-size: 14px;
 }
 
-.interface-features i {
+.dashboard-features i {
     color: var(--secondary-color);
     font-weight: 700;
 }
 
+.btn-dashboard {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    margin: 20px 30px 30px;
+    padding: 12px 20px;
+    background: var(--secondary-color);
+    color: var(--white);
+    border-radius: 8px;
+    text-decoration: none;
+    font-weight: 600;
+    transition: all 0.3s ease;
+}
+
+.btn-dashboard:hover {
+    background: #1B5E20;
+    transform: translateY(-2px);
+    box-shadow: 0 10px 25px rgba(46, 125, 50, 0.3);
+}
+
+/* ============================================
+   INTERFACES SECTION
+   ============================================ */
+
+.interfaces {
+    background: var(--light-bg);
+}
+
+.interfaces-comparison {
+    background: var(--white);
+    border-radius: 12px;
+    overflow: hidden;
+    border: 1px solid var(--border-color);
+}
+
+.comparison-table {
+    width: 100%;
+    overflow-x: auto;
+}
+
+.comparison-table table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+.comparison-table th {
+    background: var(--primary-color);
+    color: var(--white);
+    padding: 20px;
+    text-align: left;
+    font-weight: 700;
+}
+
+.comparison-table td {
+    padding: 15px 20px;
+    border-bottom: 1px solid var(--border-color);
+}
+
+.comparison-table tr:last-child td {
+    border-bottom: none;
+}
+
+.comparison-table tr:nth-child(even) {
+    background: var(--light-bg);
+}
+
+.comparison-table .green {
+    color: var(--secondary-color);
+}
+
+.comparison-table .red {
+    color: #D32F2F;
+}
+
 @media (max-width: 768px) {
-    .interfaces-grid {
+    .dashboards-grid {
+        grid-template-columns: 1fr;
+    }
+    
+    .preview-content {
         grid-template-columns: 1fr;
     }
 }
