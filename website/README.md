@@ -4,7 +4,16 @@ Sito web ufficiale della piattaforma di trading algoritmico AurumBotX.
 
 ## Descrizione
 
-Questo è il sito web landing page per AurumBotX, una piattaforma enterprise di trading algoritmico progettata per la crescita aggressiva del capitale da 50 USDT a 600 USDT attraverso il trading automatizzato su Binance.
+Questo è il sito web landing page per AurumBotX, una piattaforma enterprise di trading algoritmico progettata per operare in modo stabile e affidabile con intelligenza artificiale che adatta dinamicamente le strategie in base ai dati di mercato in tempo reale.
+
+## Focus del Progetto
+
+**AurumBotX** si concentra su:
+- **Stabilità del Sistema**: 99.2% uptime garantito 24/7
+- **Trading Automatico**: Esecuzione automatica con gestione del rischio avanzata
+- **Strategie Algoritmiche**: Strategie create e testate per la stabilità
+- **AI Adattiva**: 327 modelli AI che modificano le strategie in base ai dati di mercato
+- **Controllo Totale**: Pieno controllo su parametri, strategie e decisioni
 
 ## Struttura dei File
 
@@ -21,12 +30,12 @@ website/
 ## Sezioni del Sito
 
 1. **Navigation** - Barra di navigazione sticky con link alle sezioni
-2. **Hero Section** - Introduzione impactante con statistiche chiave
+2. **Hero Section** - Introduzione al trading algoritmico adattivo
 3. **Features** - 6 caratteristiche principali di AurumBotX
-4. **Architecture** - Diagramma dell'architettura tecnica
-5. **Interfaces** - Le tre interfacce (Streamlit, Web PWA, Telegram)
-6. **Performance** - Metriche di performance (Sharpe, Profit Factor, Max Drawdown, Win Rate)
-7. **Roadmap** - Timeline di crescita in 5 fasi
+4. **Dashboards** - Le tre interfacce integrate (Web PWA, Streamlit, Telegram)
+5. **Interfaces** - Tabella comparativa delle interfacce
+6. **Performance** - Metriche di stabilità (Uptime, Max Drawdown, Sharpe Ratio, Strategia AI)
+7. **Roadmap** - Timeline di sviluppo in 5 fasi
 8. **Deployment** - Pipeline di deployment enterprise
 9. **Advantages** - 6 vantaggi competitivi vs competitor
 10. **CTA** - Call-to-action finale
@@ -166,7 +175,7 @@ Per domande o suggerimenti, apri un issue su GitHub.
 
 ---
 
-**Versione**: 1.0  
+**Versione**: 2.0  
 **Data**: Ottobre 2025  
-**Progetto**: AurumBotX v2.2
+**Progetto**: AurumBotX - Trading Algoritmico Stabile e Adattivo
 
