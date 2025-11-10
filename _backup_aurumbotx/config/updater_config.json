@@ -1,8 +1,0 @@
-{
-    "current_version": "1.0.0",
-    "update_server_url": "file:///tmp/test_aurumbotx_update/update_server",
-    "update_channel": "stable",
-    "auto_update_enabled": true,
-    "check_interval_hours": 1,
-    "last_check": "2025-10-25T05:56:06.962839"
-}
