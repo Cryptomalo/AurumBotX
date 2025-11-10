@@ -1,0 +1,670 @@
+{
+  "session_id": "HYPER_DEMO_20251110_070154",
+  "start_time": "2025-11-10T07:01:54.221958",
+  "capital": 1000.0,
+  "testnet": true,
+  "trades": [],
+  "performance": {
+    "total_trades": 0,
+    "winning_trades": 0,
+    "losing_trades": 0,
+    "win_rate": 0.0,
+    "total_pnl": 0.0,
+    "avg_pnl": 0.0,
+    "total_fees": 0.0,
+    "total_funding": 0.0,
+    "sharpe_ratio": 0.0,
+    "profit_factor": 0.0,
+    "final_capital": 1000.0
+  },
+  "ai_decisions": [
+    {
+      "symbol": "BTC",
+      "cycle": 1,
+      "timestamp": "2025-11-10T07:01:54.223219",
+      "action": "HOLD",
+      "confidence": 0.39316239316239315,
+      "models_voting": {
+        "BUY": 125,
+        "SELL": 88,
+        "HOLD": 138
+      },
+      "total_models": 351,
+      "market_metrics": {
+        "volatility": 0.25,
+        "win_rate": 0.65,
+        "trend": "NEUTRAL"
+      }
+    },
+    {
+      "symbol": "ETH",
+      "cycle": 1,
+      "timestamp": "2025-11-10T07:01:54.223482",
+      "action": "BUY",
+      "confidence": 0.42258064516129035,
+      "models_voting": {
+        "BUY": 131,
+        "SELL": 55,
+        "HOLD": 124
+      },
+      "total_models": 310,
+      "market_metrics": {
+        "volatility": 0.25,
+        "win_rate": 0.65,
+        "trend": "NEUTRAL"
+      }
+    },
+    {
+      "symbol": "SOL",
+      "cycle": 1,
+      "timestamp": "2025-11-10T07:01:54.223727",
+      "action": "HOLD",
+      "confidence": 0.4750733137829912,
+      "models_voting": {
+        "BUY": 127,
+        "SELL": 52,
+        "HOLD": 162
+      },
+      "total_models": 341,
+      "market_metrics": {
+        "volatility": 0.25,
+        "win_rate": 0.65,
+        "trend": "NEUTRAL"
+      }
+    },
+    {
+      "symbol": "BTC",
+      "cycle": 2,
+      "timestamp": "2025-11-10T07:01:54.524424",
+      "action": "HOLD",
+      "confidence": 0.48717948717948717,
+      "models_voting": {
+        "BUY": 115,
+        "SELL": 45,
+        "HOLD": 152
+      },
+      "total_models": 312,
+      "market_metrics": {
+        "volatility": 0.30000000000000004,
+        "win_rate": 0.7,
+        "trend": "NEUTRAL"
+      }
+    },
+    {
+      "symbol": "ETH",
+      "cycle": 2,
+      "timestamp": "2025-11-10T07:01:54.524639",
+      "action": "HOLD",
+      "confidence": 0.49214659685863876,
+      "models_voting": {
+        "BUY": 148,
+        "SELL": 46,
+        "HOLD": 188
+      },
+      "total_models": 382,
+      "market_metrics": {
+        "volatility": 0.30000000000000004,
+        "win_rate": 0.7,
+        "trend": "NEUTRAL"
+      }
+    },
+    {
+      "symbol": "SOL",
+      "cycle": 2,
+      "timestamp": "2025-11-10T07:01:54.524820",
+      "action": "HOLD",
+      "confidence": 0.46953405017921146,
+      "models_voting": {
+        "BUY": 87,
+        "SELL": 61,
+        "HOLD": 131
+      },
+      "total_models": 279,
+      "market_metrics": {
+        "volatility": 0.30000000000000004,
+        "win_rate": 0.7,
+        "trend": "NEUTRAL"
+      }
+    },
+    {
+      "symbol": "BTC",
+      "cycle": 3,
+      "timestamp": "2025-11-10T07:01:54.825376",
+      "action": "HOLD",
+      "confidence": 0.39937106918238996,
+      "models_voting": {
+        "BUY": 126,
+        "SELL": 65,
+        "HOLD": 127
+      },
+      "total_models": 318,
+      "market_metrics": {
+        "volatility": 0.35000000000000003,
+        "win_rate": 0.75,
+        "trend": "UP"
+      }
+    },
+    {
+      "symbol": "ETH",
+      "cycle": 3,
+      "timestamp": "2025-11-10T07:01:54.825574",
+      "action": "HOLD",
+      "confidence": 0.5013262599469496,
+      "models_voting": {
+        "BUY": 116,
+        "SELL": 72,
+        "HOLD": 189
+      },
+      "total_models": 377,
+      "market_metrics": {
+        "volatility": 0.35000000000000003,
+        "win_rate": 0.75,
+        "trend": "UP"
+      }
+    },
+    {
+      "symbol": "SOL",
+      "cycle": 3,
+      "timestamp": "2025-11-10T07:01:54.825741",
+      "action": "HOLD",
+      "confidence": 0.5405405405405406,
+      "models_voting": {
+        "BUY": 97,
+        "SELL": 73,
+        "HOLD": 200
+      },
+      "total_models": 370,
+      "market_metrics": {
+        "volatility": 0.35000000000000003,
+        "win_rate": 0.75,
+        "trend": "UP"
+      }
+    },
+    {
+      "symbol": "BTC",
+      "cycle": 4,
+      "timestamp": "2025-11-10T07:01:55.126417",
+      "action": "HOLD",
+      "confidence": 0.6360655737704918,
+      "models_voting": {
+        "BUY": 59,
+        "SELL": 52,
+        "HOLD": 194
+      },
+      "total_models": 305,
+      "market_metrics": {
+        "volatility": 0.4,
+        "win_rate": 0.8,
+        "trend": "NEUTRAL"
+      }
+    },
+    {
+      "symbol": "ETH",
+      "cycle": 4,
+      "timestamp": "2025-11-10T07:01:55.126634",
+      "action": "HOLD",
+      "confidence": 0.5476190476190477,
+      "models_voting": {
+        "BUY": 83,
+        "SELL": 69,
+        "HOLD": 184
+      },
+      "total_models": 336,
+      "market_metrics": {
+        "volatility": 0.4,
+        "win_rate": 0.8,
+        "trend": "NEUTRAL"
+      }
+    },
+    {
+      "symbol": "SOL",
+      "cycle": 4,
+      "timestamp": "2025-11-10T07:01:55.126831",
+      "action": "HOLD",
+      "confidence": 0.5433962264150943,
+      "models_voting": {
+        "BUY": 50,
+        "SELL": 71,
+        "HOLD": 144
+      },
+      "total_models": 265,
+      "market_metrics": {
+        "volatility": 0.4,
+        "win_rate": 0.8,
+        "trend": "NEUTRAL"
+      }
+    },
+    {
+      "symbol": "BTC",
+      "cycle": 5,
+      "timestamp": "2025-11-10T07:01:55.427468",
+      "action": "HOLD",
+      "confidence": 0.4298245614035088,
+      "models_voting": {
+        "BUY": 143,
+        "SELL": 52,
+        "HOLD": 147
+      },
+      "total_models": 342,
+      "market_metrics": {
+        "volatility": 0.45,
+        "win_rate": 0.6,
+        "trend": "DOWN"
+      }
+    },
+    {
+      "symbol": "ETH",
+      "cycle": 5,
+      "timestamp": "2025-11-10T07:01:55.427700",
+      "action": "HOLD",
+      "confidence": 0.5283842794759825,
+      "models_voting": {
+        "BUY": 50,
+        "SELL": 58,
+        "HOLD": 121
+      },
+      "total_models": 229,
+      "market_metrics": {
+        "volatility": 0.45,
+        "win_rate": 0.6,
+        "trend": "DOWN"
+      }
+    },
+    {
+      "symbol": "SOL",
+      "cycle": 5,
+      "timestamp": "2025-11-10T07:01:55.427892",
+      "action": "HOLD",
+      "confidence": 0.5353535353535354,
+      "models_voting": {
+        "BUY": 73,
+        "SELL": 65,
+        "HOLD": 159
+      },
+      "total_models": 297,
+      "market_metrics": {
+        "volatility": 0.45,
+        "win_rate": 0.6,
+        "trend": "DOWN"
+      }
+    },
+    {
+      "symbol": "BTC",
+      "cycle": 6,
+      "timestamp": "2025-11-10T07:01:55.728621",
+      "action": "HOLD",
+      "confidence": 0.46965699208443273,
+      "models_voting": {
+        "BUY": 133,
+        "SELL": 68,
+        "HOLD": 178
+      },
+      "total_models": 379,
+      "market_metrics": {
+        "volatility": 0.5,
+        "win_rate": 0.65,
+        "trend": "UP"
+      }
+    },
+    {
+      "symbol": "ETH",
+      "cycle": 6,
+      "timestamp": "2025-11-10T07:01:55.728889",
+      "action": "HOLD",
+      "confidence": 0.42857142857142855,
+      "models_voting": {
+        "BUY": 140,
+        "SELL": 52,
+        "HOLD": 144
+      },
+      "total_models": 336,
+      "market_metrics": {
+        "volatility": 0.5,
+        "win_rate": 0.65,
+        "trend": "UP"
+      }
+    },
+    {
+      "symbol": "SOL",
+      "cycle": 6,
+      "timestamp": "2025-11-10T07:01:55.729149",
+      "action": "HOLD",
+      "confidence": 0.5297805642633229,
+      "models_voting": {
+        "BUY": 66,
+        "SELL": 84,
+        "HOLD": 169
+      },
+      "total_models": 319,
+      "market_metrics": {
+        "volatility": 0.5,
+        "win_rate": 0.65,
+        "trend": "UP"
+      }
+    },
+    {
+      "symbol": "BTC",
+      "cycle": 7,
+      "timestamp": "2025-11-10T07:01:56.029926",
+      "action": "HOLD",
+      "confidence": 0.5387205387205387,
+      "models_voting": {
+        "BUY": 71,
+        "SELL": 66,
+        "HOLD": 160
+      },
+      "total_models": 297,
+      "market_metrics": {
+        "volatility": 0.55,
+        "win_rate": 0.7,
+        "trend": "NEUTRAL"
+      }
+    },
+    {
+      "symbol": "ETH",
+      "cycle": 7,
+      "timestamp": "2025-11-10T07:01:56.030255",
+      "action": "HOLD",
+      "confidence": 0.44876325088339225,
+      "models_voting": {
+        "BUY": 90,
+        "SELL": 66,
+        "HOLD": 127
+      },
+      "total_models": 283,
+      "market_metrics": {
+        "volatility": 0.55,
+        "win_rate": 0.7,
+        "trend": "NEUTRAL"
+      }
+    },
+    {
+      "symbol": "SOL",
+      "cycle": 7,
+      "timestamp": "2025-11-10T07:01:56.030545",
+      "action": "HOLD",
+      "confidence": 0.562874251497006,
+      "models_voting": {
+        "BUY": 86,
+        "SELL": 60,
+        "HOLD": 188
+      },
+      "total_models": 334,
+      "market_metrics": {
+        "volatility": 0.55,
+        "win_rate": 0.7,
+        "trend": "NEUTRAL"
+      }
+    },
+    {
+      "symbol": "BTC",
+      "cycle": 8,
+      "timestamp": "2025-11-10T07:01:56.331251",
+      "action": "HOLD",
+      "confidence": 0.4748201438848921,
+      "models_voting": {
+        "BUY": 74,
+        "SELL": 72,
+        "HOLD": 132
+      },
+      "total_models": 278,
+      "market_metrics": {
+        "volatility": 0.6000000000000001,
+        "win_rate": 0.75,
+        "trend": "NEUTRAL"
+      }
+    },
+    {
+      "symbol": "ETH",
+      "cycle": 8,
+      "timestamp": "2025-11-10T07:01:56.331433",
+      "action": "HOLD",
+      "confidence": 0.46946564885496184,
+      "models_voting": {
+        "BUY": 91,
+        "SELL": 48,
+        "HOLD": 123
+      },
+      "total_models": 262,
+      "market_metrics": {
+        "volatility": 0.6000000000000001,
+        "win_rate": 0.75,
+        "trend": "NEUTRAL"
+      }
+    },
+    {
+      "symbol": "SOL",
+      "cycle": 8,
+      "timestamp": "2025-11-10T07:01:56.331582",
+      "action": "HOLD",
+      "confidence": 0.42783505154639173,
+      "models_voting": {
+        "BUY": 134,
+        "SELL": 88,
+        "HOLD": 166
+      },
+      "total_models": 388,
+      "market_metrics": {
+        "volatility": 0.6000000000000001,
+        "win_rate": 0.75,
+        "trend": "NEUTRAL"
+      }
+    },
+    {
+      "symbol": "BTC",
+      "cycle": 9,
+      "timestamp": "2025-11-10T07:01:56.632176",
+      "action": "HOLD",
+      "confidence": 0.64,
+      "models_voting": {
+        "BUY": 53,
+        "SELL": 55,
+        "HOLD": 192
+      },
+      "total_models": 300,
+      "market_metrics": {
+        "volatility": 0.65,
+        "win_rate": 0.8,
+        "trend": "UP"
+      }
+    },
+    {
+      "symbol": "ETH",
+      "cycle": 9,
+      "timestamp": "2025-11-10T07:01:56.632372",
+      "action": "HOLD",
+      "confidence": 0.4827586206896552,
+      "models_voting": {
+        "BUY": 117,
+        "SELL": 63,
+        "HOLD": 168
+      },
+      "total_models": 348,
+      "market_metrics": {
+        "volatility": 0.65,
+        "win_rate": 0.8,
+        "trend": "UP"
+      }
+    },
+    {
+      "symbol": "SOL",
+      "cycle": 9,
+      "timestamp": "2025-11-10T07:01:56.632525",
+      "action": "HOLD",
+      "confidence": 0.5603448275862069,
+      "models_voting": {
+        "BUY": 57,
+        "SELL": 96,
+        "HOLD": 195
+      },
+      "total_models": 348,
+      "market_metrics": {
+        "volatility": 0.65,
+        "win_rate": 0.8,
+        "trend": "UP"
+      }
+    },
+    {
+      "symbol": "BTC",
+      "cycle": 10,
+      "timestamp": "2025-11-10T07:01:56.933095",
+      "action": "HOLD",
+      "confidence": 0.4254545454545455,
+      "models_voting": {
+        "BUY": 95,
+        "SELL": 63,
+        "HOLD": 117
+      },
+      "total_models": 275,
+      "market_metrics": {
+        "volatility": 0.2,
+        "win_rate": 0.6,
+        "trend": "DOWN"
+      }
+    },
+    {
+      "symbol": "ETH",
+      "cycle": 10,
+      "timestamp": "2025-11-10T07:01:56.933283",
+      "action": "HOLD",
+      "confidence": 0.5109717868338558,
+      "models_voting": {
+        "BUY": 61,
+        "SELL": 95,
+        "HOLD": 163
+      },
+      "total_models": 319,
+      "market_metrics": {
+        "volatility": 0.2,
+        "win_rate": 0.6,
+        "trend": "DOWN"
+      }
+    },
+    {
+      "symbol": "SOL",
+      "cycle": 10,
+      "timestamp": "2025-11-10T07:01:56.933430",
+      "action": "HOLD",
+      "confidence": 0.4828897338403042,
+      "models_voting": {
+        "BUY": 78,
+        "SELL": 58,
+        "HOLD": 127
+      },
+      "total_models": 263,
+      "market_metrics": {
+        "volatility": 0.2,
+        "win_rate": 0.6,
+        "trend": "DOWN"
+      }
+    },
+    {
+      "symbol": "BTC",
+      "cycle": 11,
+      "timestamp": "2025-11-10T07:01:57.234087",
+      "action": "HOLD",
+      "confidence": 0.39195979899497485,
+      "models_voting": {
+        "BUY": 146,
+        "SELL": 96,
+        "HOLD": 156
+      },
+      "total_models": 398,
+      "market_metrics": {
+        "volatility": 0.25,
+        "win_rate": 0.65,
+        "trend": "NEUTRAL"
+      }
+    },
+    {
+      "symbol": "ETH",
+      "cycle": 11,
+      "timestamp": "2025-11-10T07:01:57.234311",
+      "action": "BUY",
+      "confidence": 0.43312101910828027,
+      "models_voting": {
+        "BUY": 136,
+        "SELL": 46,
+        "HOLD": 132
+      },
+      "total_models": 314,
+      "market_metrics": {
+        "volatility": 0.25,
+        "win_rate": 0.65,
+        "trend": "NEUTRAL"
+      }
+    },
+    {
+      "symbol": "SOL",
+      "cycle": 11,
+      "timestamp": "2025-11-10T07:01:57.234485",
+      "action": "HOLD",
+      "confidence": 0.4251968503937008,
+      "models_voting": {
+        "BUY": 53,
+        "SELL": 93,
+        "HOLD": 108
+      },
+      "total_models": 254,
+      "market_metrics": {
+        "volatility": 0.25,
+        "win_rate": 0.65,
+        "trend": "NEUTRAL"
+      }
+    },
+    {
+      "symbol": "BTC",
+      "cycle": 12,
+      "timestamp": "2025-11-10T07:01:57.535096",
+      "action": "HOLD",
+      "confidence": 0.5038759689922481,
+      "models_voting": {
+        "BUY": 133,
+        "SELL": 59,
+        "HOLD": 195
+      },
+      "total_models": 387,
+      "market_metrics": {
+        "volatility": 0.30000000000000004,
+        "win_rate": 0.7,
+        "trend": "UP"
+      }
+    },
+    {
+      "symbol": "ETH",
+      "cycle": 12,
+      "timestamp": "2025-11-10T07:01:57.535308",
+      "action": "BUY",
+      "confidence": 0.4224137931034483,
+      "models_voting": {
+        "BUY": 147,
+        "SELL": 54,
+        "HOLD": 147
+      },
+      "total_models": 348,
+      "market_metrics": {
+        "volatility": 0.30000000000000004,
+        "win_rate": 0.7,
+        "trend": "UP"
+      }
+    },
+    {
+      "symbol": "SOL",
+      "cycle": 12,
+      "timestamp": "2025-11-10T07:01:57.535476",
+      "action": "BUY",
+      "confidence": 0.3806646525679758,
+      "models_voting": {
+        "BUY": 126,
+        "SELL": 100,
+        "HOLD": 105
+      },
+      "total_models": 331,
+      "market_metrics": {
+        "volatility": 0.30000000000000004,
+        "win_rate": 0.7,
+        "trend": "UP"
+      }
+    }
+  ]
+}

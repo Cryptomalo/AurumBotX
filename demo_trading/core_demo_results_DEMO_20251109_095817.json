@@ -1,0 +1,602 @@
+{
+  "session_id": "DEMO_20251109_095817",
+  "start_time": "2025-11-09T09:58:17.482309",
+  "capital": 1000.0,
+  "trades": [],
+  "performance": {
+    "total_trades": 0,
+    "buy_trades": 0,
+    "sell_trades": 0,
+    "total_pnl": 0,
+    "total_pnl_percent": 0.0,
+    "final_capital": 1000.0,
+    "end_time": "2025-11-09T09:58:20.993364",
+    "duration_seconds": 3.511074,
+    "cycles_executed": 7
+  },
+  "events": [
+    {
+      "timestamp": "2025-11-09T09:58:17.483175",
+      "type": "SYSTEM_START",
+      "message": "Core system avviato",
+      "data": {
+        "challenge_name": "50 USDT Live Testing",
+        "initial_capital": 50.0,
+        "target_capital": 100.0,
+        "trading_pairs": [
+          "BTC/USDT",
+          "ETH/USDT"
+        ],
+        "strategy_settings": {
+          "name": "ChallengeGrowthStrategyUSDT",
+          "parameters": {
+            "risk_level": "conservative",
+            "position_size_percentage": 5.0,
+            "stop_loss_percentage": 2.5,
+            "take_profit_percentage": 5.0
+          }
+        },
+        "risk_management": {
+          "max_drawdown_percentage": 15.0,
+          "max_concurrent_positions": 2
+        }
+      }
+    },
+    {
+      "timestamp": "2025-11-09T09:58:17.483562",
+      "type": "AI_DECISION",
+      "message": "AI ha deciso: HOLD per BTCUSDT",
+      "data": {
+        "symbol": "BTCUSDT",
+        "timestamp": "2025-11-09T09:58:17.483426",
+        "action": "HOLD",
+        "confidence": 0.5,
+        "reasoning": "AI consensus: Mercato neutrale, nessun segnale chiaro",
+        "models_consulted": 327,
+        "consensus_score": 0.5
+      }
+    },
+    {
+      "timestamp": "2025-11-09T09:58:17.483793",
+      "type": "AI_DECISION",
+      "message": "AI ha deciso: HOLD per ETHUSDT",
+      "data": {
+        "symbol": "ETHUSDT",
+        "timestamp": "2025-11-09T09:58:17.483648",
+        "action": "HOLD",
+        "confidence": 0.5,
+        "reasoning": "AI consensus: Mercato neutrale, nessun segnale chiaro",
+        "models_consulted": 327,
+        "consensus_score": 0.5
+      }
+    },
+    {
+      "timestamp": "2025-11-09T09:58:17.484030",
+      "type": "AI_DECISION",
+      "message": "AI ha deciso: HOLD per BNBUSDT",
+      "data": {
+        "symbol": "BNBUSDT",
+        "timestamp": "2025-11-09T09:58:17.483885",
+        "action": "HOLD",
+        "confidence": 0.5,
+        "reasoning": "AI consensus: Mercato neutrale, nessun segnale chiaro",
+        "models_consulted": 327,
+        "consensus_score": 0.5
+      }
+    },
+    {
+      "timestamp": "2025-11-09T09:58:17.484255",
+      "type": "AI_DECISION",
+      "message": "AI ha deciso: HOLD per ADAUSDT",
+      "data": {
+        "symbol": "ADAUSDT",
+        "timestamp": "2025-11-09T09:58:17.484119",
+        "action": "HOLD",
+        "confidence": 0.5,
+        "reasoning": "AI consensus: Mercato neutrale, nessun segnale chiaro",
+        "models_consulted": 327,
+        "consensus_score": 0.5
+      }
+    },
+    {
+      "timestamp": "2025-11-09T09:58:17.484482",
+      "type": "AI_DECISION",
+      "message": "AI ha deciso: HOLD per XRPUSDT",
+      "data": {
+        "symbol": "XRPUSDT",
+        "timestamp": "2025-11-09T09:58:17.484344",
+        "action": "HOLD",
+        "confidence": 0.5,
+        "reasoning": "AI consensus: Mercato neutrale, nessun segnale chiaro",
+        "models_consulted": 327,
+        "consensus_score": 0.5
+      }
+    },
+    {
+      "timestamp": "2025-11-09T09:58:17.985080",
+      "type": "AI_DECISION",
+      "message": "AI ha deciso: HOLD per BTCUSDT",
+      "data": {
+        "symbol": "BTCUSDT",
+        "timestamp": "2025-11-09T09:58:17.984977",
+        "action": "HOLD",
+        "confidence": 0.5,
+        "reasoning": "AI consensus: Mercato neutrale, nessun segnale chiaro",
+        "models_consulted": 327,
+        "consensus_score": 0.5
+      }
+    },
+    {
+      "timestamp": "2025-11-09T09:58:17.985258",
+      "type": "AI_DECISION",
+      "message": "AI ha deciso: HOLD per ETHUSDT",
+      "data": {
+        "symbol": "ETHUSDT",
+        "timestamp": "2025-11-09T09:58:17.985149",
+        "action": "HOLD",
+        "confidence": 0.5,
+        "reasoning": "AI consensus: Mercato neutrale, nessun segnale chiaro",
+        "models_consulted": 327,
+        "consensus_score": 0.5
+      }
+    },
+    {
+      "timestamp": "2025-11-09T09:58:17.985406",
+      "type": "AI_DECISION",
+      "message": "AI ha deciso: HOLD per BNBUSDT",
+      "data": {
+        "symbol": "BNBUSDT",
+        "timestamp": "2025-11-09T09:58:17.985318",
+        "action": "HOLD",
+        "confidence": 0.5,
+        "reasoning": "AI consensus: Mercato neutrale, nessun segnale chiaro",
+        "models_consulted": 327,
+        "consensus_score": 0.5
+      }
+    },
+    {
+      "timestamp": "2025-11-09T09:58:17.985556",
+      "type": "AI_DECISION",
+      "message": "AI ha deciso: HOLD per ADAUSDT",
+      "data": {
+        "symbol": "ADAUSDT",
+        "timestamp": "2025-11-09T09:58:17.985467",
+        "action": "HOLD",
+        "confidence": 0.5,
+        "reasoning": "AI consensus: Mercato neutrale, nessun segnale chiaro",
+        "models_consulted": 327,
+        "consensus_score": 0.5
+      }
+    },
+    {
+      "timestamp": "2025-11-09T09:58:17.985709",
+      "type": "AI_DECISION",
+      "message": "AI ha deciso: HOLD per XRPUSDT",
+      "data": {
+        "symbol": "XRPUSDT",
+        "timestamp": "2025-11-09T09:58:17.985613",
+        "action": "HOLD",
+        "confidence": 0.5,
+        "reasoning": "AI consensus: Mercato neutrale, nessun segnale chiaro",
+        "models_consulted": 327,
+        "consensus_score": 0.5
+      }
+    },
+    {
+      "timestamp": "2025-11-09T09:58:18.486406",
+      "type": "AI_DECISION",
+      "message": "AI ha deciso: HOLD per BTCUSDT",
+      "data": {
+        "symbol": "BTCUSDT",
+        "timestamp": "2025-11-09T09:58:18.486294",
+        "action": "HOLD",
+        "confidence": 0.5,
+        "reasoning": "AI consensus: Mercato neutrale, nessun segnale chiaro",
+        "models_consulted": 327,
+        "consensus_score": 0.5
+      }
+    },
+    {
+      "timestamp": "2025-11-09T09:58:18.486558",
+      "type": "AI_DECISION",
+      "message": "AI ha deciso: HOLD per ETHUSDT",
+      "data": {
+        "symbol": "ETHUSDT",
+        "timestamp": "2025-11-09T09:58:18.486469",
+        "action": "HOLD",
+        "confidence": 0.5,
+        "reasoning": "AI consensus: Mercato neutrale, nessun segnale chiaro",
+        "models_consulted": 327,
+        "consensus_score": 0.5
+      }
+    },
+    {
+      "timestamp": "2025-11-09T09:58:18.486710",
+      "type": "AI_DECISION",
+      "message": "AI ha deciso: HOLD per BNBUSDT",
+      "data": {
+        "symbol": "BNBUSDT",
+        "timestamp": "2025-11-09T09:58:18.486614",
+        "action": "HOLD",
+        "confidence": 0.5,
+        "reasoning": "AI consensus: Mercato neutrale, nessun segnale chiaro",
+        "models_consulted": 327,
+        "consensus_score": 0.5
+      }
+    },
+    {
+      "timestamp": "2025-11-09T09:58:18.486871",
+      "type": "AI_DECISION",
+      "message": "AI ha deciso: HOLD per ADAUSDT",
+      "data": {
+        "symbol": "ADAUSDT",
+        "timestamp": "2025-11-09T09:58:18.486766",
+        "action": "HOLD",
+        "confidence": 0.5,
+        "reasoning": "AI consensus: Mercato neutrale, nessun segnale chiaro",
+        "models_consulted": 327,
+        "consensus_score": 0.5
+      }
+    },
+    {
+      "timestamp": "2025-11-09T09:58:18.487013",
+      "type": "AI_DECISION",
+      "message": "AI ha deciso: HOLD per XRPUSDT",
+      "data": {
+        "symbol": "XRPUSDT",
+        "timestamp": "2025-11-09T09:58:18.486928",
+        "action": "HOLD",
+        "confidence": 0.5,
+        "reasoning": "AI consensus: Mercato neutrale, nessun segnale chiaro",
+        "models_consulted": 327,
+        "consensus_score": 0.5
+      }
+    },
+    {
+      "timestamp": "2025-11-09T09:58:18.987841",
+      "type": "AI_DECISION",
+      "message": "AI ha deciso: BUY per BTCUSDT",
+      "data": {
+        "symbol": "BTCUSDT",
+        "timestamp": "2025-11-09T09:58:18.987734",
+        "action": "BUY",
+        "confidence": 0.77,
+        "reasoning": "AI consensus: Segnale BUY da 251 modelli",
+        "models_consulted": 327,
+        "consensus_score": 0.77
+      }
+    },
+    {
+      "timestamp": "2025-11-09T09:58:18.987937",
+      "type": "ERROR",
+      "message": "Errore nel ciclo 4",
+      "data": {
+        "error": "'position_size_percent'"
+      }
+    },
+    {
+      "timestamp": "2025-11-09T09:58:18.988174",
+      "type": "AI_DECISION",
+      "message": "AI ha deciso: HOLD per BTCUSDT",
+      "data": {
+        "symbol": "BTCUSDT",
+        "timestamp": "2025-11-09T09:58:18.988085",
+        "action": "HOLD",
+        "confidence": 0.5,
+        "reasoning": "AI consensus: Mercato neutrale, nessun segnale chiaro",
+        "models_consulted": 327,
+        "consensus_score": 0.5
+      }
+    },
+    {
+      "timestamp": "2025-11-09T09:58:18.988335",
+      "type": "AI_DECISION",
+      "message": "AI ha deciso: HOLD per ETHUSDT",
+      "data": {
+        "symbol": "ETHUSDT",
+        "timestamp": "2025-11-09T09:58:18.988245",
+        "action": "HOLD",
+        "confidence": 0.5,
+        "reasoning": "AI consensus: Mercato neutrale, nessun segnale chiaro",
+        "models_consulted": 327,
+        "consensus_score": 0.5
+      }
+    },
+    {
+      "timestamp": "2025-11-09T09:58:18.988475",
+      "type": "AI_DECISION",
+      "message": "AI ha deciso: HOLD per BNBUSDT",
+      "data": {
+        "symbol": "BNBUSDT",
+        "timestamp": "2025-11-09T09:58:18.988392",
+        "action": "HOLD",
+        "confidence": 0.5,
+        "reasoning": "AI consensus: Mercato neutrale, nessun segnale chiaro",
+        "models_consulted": 327,
+        "consensus_score": 0.5
+      }
+    },
+    {
+      "timestamp": "2025-11-09T09:58:18.988618",
+      "type": "AI_DECISION",
+      "message": "AI ha deciso: HOLD per ADAUSDT",
+      "data": {
+        "symbol": "ADAUSDT",
+        "timestamp": "2025-11-09T09:58:18.988531",
+        "action": "HOLD",
+        "confidence": 0.5,
+        "reasoning": "AI consensus: Mercato neutrale, nessun segnale chiaro",
+        "models_consulted": 327,
+        "consensus_score": 0.5
+      }
+    },
+    {
+      "timestamp": "2025-11-09T09:58:18.988780",
+      "type": "AI_DECISION",
+      "message": "AI ha deciso: HOLD per XRPUSDT",
+      "data": {
+        "symbol": "XRPUSDT",
+        "timestamp": "2025-11-09T09:58:18.988691",
+        "action": "HOLD",
+        "confidence": 0.5,
+        "reasoning": "AI consensus: Mercato neutrale, nessun segnale chiaro",
+        "models_consulted": 327,
+        "consensus_score": 0.5
+      }
+    },
+    {
+      "timestamp": "2025-11-09T09:58:19.489347",
+      "type": "AI_DECISION",
+      "message": "AI ha deciso: HOLD per BTCUSDT",
+      "data": {
+        "symbol": "BTCUSDT",
+        "timestamp": "2025-11-09T09:58:19.489248",
+        "action": "HOLD",
+        "confidence": 0.5,
+        "reasoning": "AI consensus: Mercato neutrale, nessun segnale chiaro",
+        "models_consulted": 327,
+        "consensus_score": 0.5
+      }
+    },
+    {
+      "timestamp": "2025-11-09T09:58:19.489501",
+      "type": "AI_DECISION",
+      "message": "AI ha deciso: HOLD per ETHUSDT",
+      "data": {
+        "symbol": "ETHUSDT",
+        "timestamp": "2025-11-09T09:58:19.489411",
+        "action": "HOLD",
+        "confidence": 0.5,
+        "reasoning": "AI consensus: Mercato neutrale, nessun segnale chiaro",
+        "models_consulted": 327,
+        "consensus_score": 0.5
+      }
+    },
+    {
+      "timestamp": "2025-11-09T09:58:19.489643",
+      "type": "AI_DECISION",
+      "message": "AI ha deciso: HOLD per BNBUSDT",
+      "data": {
+        "symbol": "BNBUSDT",
+        "timestamp": "2025-11-09T09:58:19.489558",
+        "action": "HOLD",
+        "confidence": 0.5,
+        "reasoning": "AI consensus: Mercato neutrale, nessun segnale chiaro",
+        "models_consulted": 327,
+        "consensus_score": 0.5
+      }
+    },
+    {
+      "timestamp": "2025-11-09T09:58:19.489792",
+      "type": "AI_DECISION",
+      "message": "AI ha deciso: HOLD per ADAUSDT",
+      "data": {
+        "symbol": "ADAUSDT",
+        "timestamp": "2025-11-09T09:58:19.489707",
+        "action": "HOLD",
+        "confidence": 0.5,
+        "reasoning": "AI consensus: Mercato neutrale, nessun segnale chiaro",
+        "models_consulted": 327,
+        "consensus_score": 0.5
+      }
+    },
+    {
+      "timestamp": "2025-11-09T09:58:19.489932",
+      "type": "AI_DECISION",
+      "message": "AI ha deciso: HOLD per XRPUSDT",
+      "data": {
+        "symbol": "XRPUSDT",
+        "timestamp": "2025-11-09T09:58:19.489848",
+        "action": "HOLD",
+        "confidence": 0.5,
+        "reasoning": "AI consensus: Mercato neutrale, nessun segnale chiaro",
+        "models_consulted": 327,
+        "consensus_score": 0.5
+      }
+    },
+    {
+      "timestamp": "2025-11-09T09:58:19.990600",
+      "type": "AI_DECISION",
+      "message": "AI ha deciso: SELL per BTCUSDT",
+      "data": {
+        "symbol": "BTCUSDT",
+        "timestamp": "2025-11-09T09:58:19.990490",
+        "action": "SELL",
+        "confidence": 0.8099999999999999,
+        "reasoning": "AI consensus: Segnale SELL da 264 modelli",
+        "models_consulted": 327,
+        "consensus_score": 0.8099999999999999
+      }
+    },
+    {
+      "timestamp": "2025-11-09T09:58:19.990696",
+      "type": "ERROR",
+      "message": "Errore nel ciclo 7",
+      "data": {
+        "error": "'position_size_percent'"
+      }
+    },
+    {
+      "timestamp": "2025-11-09T09:58:19.990937",
+      "type": "AI_DECISION",
+      "message": "AI ha deciso: BUY per BTCUSDT",
+      "data": {
+        "symbol": "BTCUSDT",
+        "timestamp": "2025-11-09T09:58:19.990847",
+        "action": "BUY",
+        "confidence": 0.89,
+        "reasoning": "AI consensus: Segnale BUY da 291 modelli",
+        "models_consulted": 327,
+        "consensus_score": 0.89
+      }
+    },
+    {
+      "timestamp": "2025-11-09T09:58:19.991011",
+      "type": "ERROR",
+      "message": "Errore nel ciclo 8",
+      "data": {
+        "error": "'position_size_percent'"
+      }
+    },
+    {
+      "timestamp": "2025-11-09T09:58:19.991249",
+      "type": "AI_DECISION",
+      "message": "AI ha deciso: HOLD per BTCUSDT",
+      "data": {
+        "symbol": "BTCUSDT",
+        "timestamp": "2025-11-09T09:58:19.991165",
+        "action": "HOLD",
+        "confidence": 0.5,
+        "reasoning": "AI consensus: Mercato neutrale, nessun segnale chiaro",
+        "models_consulted": 327,
+        "consensus_score": 0.5
+      }
+    },
+    {
+      "timestamp": "2025-11-09T09:58:19.991389",
+      "type": "AI_DECISION",
+      "message": "AI ha deciso: HOLD per ETHUSDT",
+      "data": {
+        "symbol": "ETHUSDT",
+        "timestamp": "2025-11-09T09:58:19.991305",
+        "action": "HOLD",
+        "confidence": 0.5,
+        "reasoning": "AI consensus: Mercato neutrale, nessun segnale chiaro",
+        "models_consulted": 327,
+        "consensus_score": 0.5
+      }
+    },
+    {
+      "timestamp": "2025-11-09T09:58:19.991533",
+      "type": "AI_DECISION",
+      "message": "AI ha deciso: HOLD per BNBUSDT",
+      "data": {
+        "symbol": "BNBUSDT",
+        "timestamp": "2025-11-09T09:58:19.991447",
+        "action": "HOLD",
+        "confidence": 0.5,
+        "reasoning": "AI consensus: Mercato neutrale, nessun segnale chiaro",
+        "models_consulted": 327,
+        "consensus_score": 0.5
+      }
+    },
+    {
+      "timestamp": "2025-11-09T09:58:19.991683",
+      "type": "AI_DECISION",
+      "message": "AI ha deciso: HOLD per ADAUSDT",
+      "data": {
+        "symbol": "ADAUSDT",
+        "timestamp": "2025-11-09T09:58:19.991589",
+        "action": "HOLD",
+        "confidence": 0.5,
+        "reasoning": "AI consensus: Mercato neutrale, nessun segnale chiaro",
+        "models_consulted": 327,
+        "consensus_score": 0.5
+      }
+    },
+    {
+      "timestamp": "2025-11-09T09:58:19.991820",
+      "type": "AI_DECISION",
+      "message": "AI ha deciso: HOLD per XRPUSDT",
+      "data": {
+        "symbol": "XRPUSDT",
+        "timestamp": "2025-11-09T09:58:19.991738",
+        "action": "HOLD",
+        "confidence": 0.5,
+        "reasoning": "AI consensus: Mercato neutrale, nessun segnale chiaro",
+        "models_consulted": 327,
+        "consensus_score": 0.5
+      }
+    },
+    {
+      "timestamp": "2025-11-09T09:58:20.492525",
+      "type": "AI_DECISION",
+      "message": "AI ha deciso: HOLD per BTCUSDT",
+      "data": {
+        "symbol": "BTCUSDT",
+        "timestamp": "2025-11-09T09:58:20.492421",
+        "action": "HOLD",
+        "confidence": 0.5,
+        "reasoning": "AI consensus: Mercato neutrale, nessun segnale chiaro",
+        "models_consulted": 327,
+        "consensus_score": 0.5
+      }
+    },
+    {
+      "timestamp": "2025-11-09T09:58:20.492683",
+      "type": "AI_DECISION",
+      "message": "AI ha deciso: HOLD per ETHUSDT",
+      "data": {
+        "symbol": "ETHUSDT",
+        "timestamp": "2025-11-09T09:58:20.492587",
+        "action": "HOLD",
+        "confidence": 0.5,
+        "reasoning": "AI consensus: Mercato neutrale, nessun segnale chiaro",
+        "models_consulted": 327,
+        "consensus_score": 0.5
+      }
+    },
+    {
+      "timestamp": "2025-11-09T09:58:20.492823",
+      "type": "AI_DECISION",
+      "message": "AI ha deciso: HOLD per BNBUSDT",
+      "data": {
+        "symbol": "BNBUSDT",
+        "timestamp": "2025-11-09T09:58:20.492739",
+        "action": "HOLD",
+        "confidence": 0.5,
+        "reasoning": "AI consensus: Mercato neutrale, nessun segnale chiaro",
+        "models_consulted": 327,
+        "consensus_score": 0.5
+      }
+    },
+    {
+      "timestamp": "2025-11-09T09:58:20.492962",
+      "type": "AI_DECISION",
+      "message": "AI ha deciso: HOLD per ADAUSDT",
+      "data": {
+        "symbol": "ADAUSDT",
+        "timestamp": "2025-11-09T09:58:20.492878",
+        "action": "HOLD",
+        "confidence": 0.5,
+        "reasoning": "AI consensus: Mercato neutrale, nessun segnale chiaro",
+        "models_consulted": 327,
+        "consensus_score": 0.5
+      }
+    },
+    {
+      "timestamp": "2025-11-09T09:58:20.493147",
+      "type": "AI_DECISION",
+      "message": "AI ha deciso: HOLD per XRPUSDT",
+      "data": {
+        "symbol": "XRPUSDT",
+        "timestamp": "2025-11-09T09:58:20.493061",
+        "action": "HOLD",
+        "confidence": 0.5,
+        "reasoning": "AI consensus: Mercato neutrale, nessun segnale chiaro",
+        "models_consulted": 327,
+        "consensus_score": 0.5
+      }
+    }
+  ]
+}

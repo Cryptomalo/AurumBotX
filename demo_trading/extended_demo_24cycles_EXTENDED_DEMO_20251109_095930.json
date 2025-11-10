@@ -1,0 +1,3108 @@
+{
+  "session_id": "EXTENDED_DEMO_20251109_095930",
+  "start_time": "2025-11-09T09:59:30.031307",
+  "capital": 1000.0,
+  "num_cycles": 24,
+  "cycles_data": [
+    {
+      "cycle": 1,
+      "timestamp": "2025-11-09T09:59:30.031896",
+      "decisions": {
+        "BTCUSDT": {
+          "symbol": "BTCUSDT",
+          "cycle": 1,
+          "timestamp": "2025-11-09T09:59:30.032025",
+          "action": "HOLD",
+          "confidence": 0.7332121047362035,
+          "confidence_percent": "73.3%",
+          "reasoning": "Market neutral - RSI 31.0, MACD -0.40, Bollinger position 0.01, Trend NEUTRAL",
+          "ai_models_analysis": {
+            "total_models": 327,
+            "models_voting_buy": 65,
+            "models_voting_sell": 66,
+            "models_voting_hold": 196,
+            "consensus_type": "HOLD",
+            "consensus_strength": "59.9%"
+          }
+        },
+        "ETHUSDT": {
+          "symbol": "ETHUSDT",
+          "cycle": 1,
+          "timestamp": "2025-11-09T09:59:30.032109",
+          "action": "HOLD",
+          "confidence": 0.606098240725827,
+          "confidence_percent": "60.6%",
+          "reasoning": "Market neutral - RSI 31.0, MACD -0.40, Bollinger position 0.01, Trend NEUTRAL",
+          "ai_models_analysis": {
+            "total_models": 327,
+            "models_voting_buy": 65,
+            "models_voting_sell": 66,
+            "models_voting_hold": 196,
+            "consensus_type": "HOLD",
+            "consensus_strength": "59.9%"
+          }
+        },
+        "BNBUSDT": {
+          "symbol": "BNBUSDT",
+          "cycle": 1,
+          "timestamp": "2025-11-09T09:59:30.032183",
+          "action": "HOLD",
+          "confidence": 0.5070144666310695,
+          "confidence_percent": "50.7%",
+          "reasoning": "Market neutral - RSI 31.0, MACD -0.40, Bollinger position 0.01, Trend NEUTRAL",
+          "ai_models_analysis": {
+            "total_models": 327,
+            "models_voting_buy": 65,
+            "models_voting_sell": 66,
+            "models_voting_hold": 196,
+            "consensus_type": "HOLD",
+            "consensus_strength": "59.9%"
+          }
+        },
+        "ADAUSDT": {
+          "symbol": "ADAUSDT",
+          "cycle": 1,
+          "timestamp": "2025-11-09T09:59:30.032255",
+          "action": "HOLD",
+          "confidence": 0.4942856839188563,
+          "confidence_percent": "49.4%",
+          "reasoning": "Market neutral - RSI 31.0, MACD -0.40, Bollinger position 0.01, Trend NEUTRAL",
+          "ai_models_analysis": {
+            "total_models": 327,
+            "models_voting_buy": 65,
+            "models_voting_sell": 66,
+            "models_voting_hold": 196,
+            "consensus_type": "HOLD",
+            "consensus_strength": "59.9%"
+          }
+        },
+        "XRPUSDT": {
+          "symbol": "XRPUSDT",
+          "cycle": 1,
+          "timestamp": "2025-11-09T09:59:30.032326",
+          "action": "HOLD",
+          "confidence": 0.521603357254913,
+          "confidence_percent": "52.2%",
+          "reasoning": "Market neutral - RSI 31.0, MACD -0.40, Bollinger position 0.01, Trend NEUTRAL",
+          "ai_models_analysis": {
+            "total_models": 327,
+            "models_voting_buy": 65,
+            "models_voting_sell": 66,
+            "models_voting_hold": 196,
+            "consensus_type": "HOLD",
+            "consensus_strength": "59.9%"
+          }
+        }
+      },
+      "trades_executed": [],
+      "cycle_summary": {
+        "buy_decisions": 0,
+        "sell_decisions": 0,
+        "hold_decisions": 5,
+        "trades_executed": 0,
+        "total_pnl": 0.0,
+        "total_trades": 0
+      }
+    },
+    {
+      "cycle": 2,
+      "timestamp": "2025-11-09T09:59:30.232607",
+      "decisions": {
+        "BTCUSDT": {
+          "symbol": "BTCUSDT",
+          "cycle": 2,
+          "timestamp": "2025-11-09T09:59:30.232980",
+          "action": "HOLD",
+          "confidence": 0.5014593200155488,
+          "confidence_percent": "50.1%",
+          "reasoning": "Market neutral - RSI 32.0, MACD -0.30, Bollinger position 0.02, Trend NEUTRAL",
+          "ai_models_analysis": {
+            "total_models": 327,
+            "models_voting_buy": 65,
+            "models_voting_sell": 66,
+            "models_voting_hold": 196,
+            "consensus_type": "HOLD",
+            "consensus_strength": "59.9%"
+          }
+        },
+        "ETHUSDT": {
+          "symbol": "ETHUSDT",
+          "cycle": 2,
+          "timestamp": "2025-11-09T09:59:30.233084",
+          "action": "HOLD",
+          "confidence": 0.648411842547665,
+          "confidence_percent": "64.8%",
+          "reasoning": "Market neutral - RSI 32.0, MACD -0.30, Bollinger position 0.02, Trend NEUTRAL",
+          "ai_models_analysis": {
+            "total_models": 327,
+            "models_voting_buy": 65,
+            "models_voting_sell": 66,
+            "models_voting_hold": 196,
+            "consensus_type": "HOLD",
+            "consensus_strength": "59.9%"
+          }
+        },
+        "BNBUSDT": {
+          "symbol": "BNBUSDT",
+          "cycle": 2,
+          "timestamp": "2025-11-09T09:59:30.233166",
+          "action": "HOLD",
+          "confidence": 0.45946168752212263,
+          "confidence_percent": "45.9%",
+          "reasoning": "Market neutral - RSI 32.0, MACD -0.30, Bollinger position 0.02, Trend NEUTRAL",
+          "ai_models_analysis": {
+            "total_models": 327,
+            "models_voting_buy": 65,
+            "models_voting_sell": 66,
+            "models_voting_hold": 196,
+            "consensus_type": "HOLD",
+            "consensus_strength": "59.9%"
+          }
+        },
+        "ADAUSDT": {
+          "symbol": "ADAUSDT",
+          "cycle": 2,
+          "timestamp": "2025-11-09T09:59:30.233240",
+          "action": "HOLD",
+          "confidence": 0.5675702687406938,
+          "confidence_percent": "56.8%",
+          "reasoning": "Market neutral - RSI 32.0, MACD -0.30, Bollinger position 0.02, Trend NEUTRAL",
+          "ai_models_analysis": {
+            "total_models": 327,
+            "models_voting_buy": 65,
+            "models_voting_sell": 66,
+            "models_voting_hold": 196,
+            "consensus_type": "HOLD",
+            "consensus_strength": "59.9%"
+          }
+        },
+        "XRPUSDT": {
+          "symbol": "XRPUSDT",
+          "cycle": 2,
+          "timestamp": "2025-11-09T09:59:30.233334",
+          "action": "HOLD",
+          "confidence": 0.544162663293323,
+          "confidence_percent": "54.4%",
+          "reasoning": "Market neutral - RSI 32.0, MACD -0.30, Bollinger position 0.02, Trend NEUTRAL",
+          "ai_models_analysis": {
+            "total_models": 327,
+            "models_voting_buy": 65,
+            "models_voting_sell": 66,
+            "models_voting_hold": 196,
+            "consensus_type": "HOLD",
+            "consensus_strength": "59.9%"
+          }
+        }
+      },
+      "trades_executed": [],
+      "cycle_summary": {
+        "buy_decisions": 0,
+        "sell_decisions": 0,
+        "hold_decisions": 5,
+        "trades_executed": 0,
+        "total_pnl": 0.0,
+        "total_trades": 0
+      }
+    },
+    {
+      "cycle": 3,
+      "timestamp": "2025-11-09T09:59:30.433613",
+      "decisions": {
+        "BTCUSDT": {
+          "symbol": "BTCUSDT",
+          "cycle": 3,
+          "timestamp": "2025-11-09T09:59:30.433966",
+          "action": "HOLD",
+          "confidence": 0.5567240282818907,
+          "confidence_percent": "55.7%",
+          "reasoning": "Market neutral - RSI 33.0, MACD -0.20, Bollinger position 0.03, Trend UP",
+          "ai_models_analysis": {
+            "total_models": 327,
+            "models_voting_buy": 65,
+            "models_voting_sell": 66,
+            "models_voting_hold": 196,
+            "consensus_type": "HOLD",
+            "consensus_strength": "59.9%"
+          }
+        },
+        "ETHUSDT": {
+          "symbol": "ETHUSDT",
+          "cycle": 3,
+          "timestamp": "2025-11-09T09:59:30.434108",
+          "action": "HOLD",
+          "confidence": 0.608795957814684,
+          "confidence_percent": "60.9%",
+          "reasoning": "Market neutral - RSI 33.0, MACD -0.20, Bollinger position 0.03, Trend UP",
+          "ai_models_analysis": {
+            "total_models": 327,
+            "models_voting_buy": 65,
+            "models_voting_sell": 66,
+            "models_voting_hold": 196,
+            "consensus_type": "HOLD",
+            "consensus_strength": "59.9%"
+          }
+        },
+        "BNBUSDT": {
+          "symbol": "BNBUSDT",
+          "cycle": 3,
+          "timestamp": "2025-11-09T09:59:30.434184",
+          "action": "HOLD",
+          "confidence": 0.5092138497785421,
+          "confidence_percent": "50.9%",
+          "reasoning": "Market neutral - RSI 33.0, MACD -0.20, Bollinger position 0.03, Trend UP",
+          "ai_models_analysis": {
+            "total_models": 327,
+            "models_voting_buy": 65,
+            "models_voting_sell": 66,
+            "models_voting_hold": 196,
+            "consensus_type": "HOLD",
+            "consensus_strength": "59.9%"
+          }
+        },
+        "ADAUSDT": {
+          "symbol": "ADAUSDT",
+          "cycle": 3,
+          "timestamp": "2025-11-09T09:59:30.434256",
+          "action": "HOLD",
+          "confidence": 0.6775994309060522,
+          "confidence_percent": "67.8%",
+          "reasoning": "Market neutral - RSI 33.0, MACD -0.20, Bollinger position 0.03, Trend UP",
+          "ai_models_analysis": {
+            "total_models": 327,
+            "models_voting_buy": 65,
+            "models_voting_sell": 66,
+            "models_voting_hold": 196,
+            "consensus_type": "HOLD",
+            "consensus_strength": "59.9%"
+          }
+        },
+        "XRPUSDT": {
+          "symbol": "XRPUSDT",
+          "cycle": 3,
+          "timestamp": "2025-11-09T09:59:30.434324",
+          "action": "HOLD",
+          "confidence": 0.571645121866188,
+          "confidence_percent": "57.2%",
+          "reasoning": "Market neutral - RSI 33.0, MACD -0.20, Bollinger position 0.03, Trend UP",
+          "ai_models_analysis": {
+            "total_models": 327,
+            "models_voting_buy": 65,
+            "models_voting_sell": 66,
+            "models_voting_hold": 196,
+            "consensus_type": "HOLD",
+            "consensus_strength": "59.9%"
+          }
+        }
+      },
+      "trades_executed": [],
+      "cycle_summary": {
+        "buy_decisions": 0,
+        "sell_decisions": 0,
+        "hold_decisions": 5,
+        "trades_executed": 0,
+        "total_pnl": 0.0,
+        "total_trades": 0
+      }
+    },
+    {
+      "cycle": 4,
+      "timestamp": "2025-11-09T09:59:30.634544",
+      "decisions": {
+        "BTCUSDT": {
+          "symbol": "BTCUSDT",
+          "cycle": 4,
+          "timestamp": "2025-11-09T09:59:30.634917",
+          "action": "BUY",
+          "confidence": 0.6618080203821229,
+          "confidence_percent": "66.2%",
+          "reasoning": "RSI oversold (34.0), MACD bullish, Volume spike 0.96x, Trend NEUTRAL",
+          "ai_models_analysis": {
+            "total_models": 327,
+            "models_voting_buy": 216,
+            "models_voting_sell": 0,
+            "models_voting_hold": 111,
+            "consensus_type": "BUY",
+            "consensus_strength": "66.1%"
+          }
+        },
+        "ETHUSDT": {
+          "symbol": "ETHUSDT",
+          "cycle": 4,
+          "timestamp": "2025-11-09T09:59:30.635018",
+          "action": "BUY",
+          "confidence": 0.7473426657201592,
+          "confidence_percent": "74.7%",
+          "reasoning": "RSI oversold (34.0), MACD bullish, Volume spike 0.96x, Trend NEUTRAL",
+          "ai_models_analysis": {
+            "total_models": 327,
+            "models_voting_buy": 244,
+            "models_voting_sell": 0,
+            "models_voting_hold": 83,
+            "consensus_type": "BUY",
+            "consensus_strength": "74.6%"
+          }
+        },
+        "BNBUSDT": {
+          "symbol": "BNBUSDT",
+          "cycle": 4,
+          "timestamp": "2025-11-09T09:59:30.635099",
+          "action": "BUY",
+          "confidence": 0.7056443248190616,
+          "confidence_percent": "70.6%",
+          "reasoning": "RSI oversold (34.0), MACD bullish, Volume spike 0.96x, Trend NEUTRAL",
+          "ai_models_analysis": {
+            "total_models": 327,
+            "models_voting_buy": 230,
+            "models_voting_sell": 0,
+            "models_voting_hold": 97,
+            "consensus_type": "BUY",
+            "consensus_strength": "70.3%"
+          }
+        },
+        "ADAUSDT": {
+          "symbol": "ADAUSDT",
+          "cycle": 4,
+          "timestamp": "2025-11-09T09:59:30.635187",
+          "action": "BUY",
+          "confidence": 0.8995137126621534,
+          "confidence_percent": "90.0%",
+          "reasoning": "RSI oversold (34.0), MACD bullish, Volume spike 0.96x, Trend NEUTRAL",
+          "ai_models_analysis": {
+            "total_models": 327,
+            "models_voting_buy": 294,
+            "models_voting_sell": 0,
+            "models_voting_hold": 33,
+            "consensus_type": "BUY",
+            "consensus_strength": "89.9%"
+          }
+        },
+        "XRPUSDT": {
+          "symbol": "XRPUSDT",
+          "cycle": 4,
+          "timestamp": "2025-11-09T09:59:30.635258",
+          "action": "BUY",
+          "confidence": 0.8678944354118563,
+          "confidence_percent": "86.8%",
+          "reasoning": "RSI oversold (34.0), MACD bullish, Volume spike 0.96x, Trend NEUTRAL",
+          "ai_models_analysis": {
+            "total_models": 327,
+            "models_voting_buy": 283,
+            "models_voting_sell": 0,
+            "models_voting_hold": 44,
+            "consensus_type": "BUY",
+            "consensus_strength": "86.5%"
+          }
+        }
+      },
+      "trades_executed": [
+        {
+          "trade_id": "TRADE_1",
+          "symbol": "BTCUSDT",
+          "cycle": 4,
+          "timestamp": "2025-11-09T09:59:30.634917",
+          "action": "BUY",
+          "ai_confidence": 0.6618080203821229,
+          "status": "EXECUTED",
+          "type": "BUY",
+          "quantity": 0.28846153846153844,
+          "price": 104,
+          "cost": 30.0,
+          "fee": 0.03
+        },
+        {
+          "trade_id": "TRADE_2",
+          "symbol": "ETHUSDT",
+          "cycle": 4,
+          "timestamp": "2025-11-09T09:59:30.635018",
+          "action": "BUY",
+          "ai_confidence": 0.7473426657201592,
+          "status": "EXECUTED",
+          "type": "BUY",
+          "quantity": 0.28846153846153844,
+          "price": 104,
+          "cost": 30.0,
+          "fee": 0.03
+        },
+        {
+          "trade_id": "TRADE_3",
+          "symbol": "BNBUSDT",
+          "cycle": 4,
+          "timestamp": "2025-11-09T09:59:30.635099",
+          "action": "BUY",
+          "ai_confidence": 0.7056443248190616,
+          "status": "EXECUTED",
+          "type": "BUY",
+          "quantity": 0.28846153846153844,
+          "price": 104,
+          "cost": 30.0,
+          "fee": 0.03
+        },
+        {
+          "trade_id": "TRADE_4",
+          "symbol": "ADAUSDT",
+          "cycle": 4,
+          "timestamp": "2025-11-09T09:59:30.635187",
+          "action": "BUY",
+          "ai_confidence": 0.8995137126621534,
+          "status": "EXECUTED",
+          "type": "BUY",
+          "quantity": 0.28846153846153844,
+          "price": 104,
+          "cost": 30.0,
+          "fee": 0.03
+        },
+        {
+          "trade_id": "TRADE_5",
+          "symbol": "XRPUSDT",
+          "cycle": 4,
+          "timestamp": "2025-11-09T09:59:30.635258",
+          "action": "BUY",
+          "ai_confidence": 0.8678944354118563,
+          "status": "EXECUTED",
+          "type": "BUY",
+          "quantity": 0.28846153846153844,
+          "price": 104,
+          "cost": 30.0,
+          "fee": 0.03
+        }
+      ],
+      "cycle_summary": {
+        "buy_decisions": 5,
+        "sell_decisions": 0,
+        "hold_decisions": 0,
+        "trades_executed": 5,
+        "total_pnl": 0.0,
+        "total_trades": 5
+      }
+    },
+    {
+      "cycle": 5,
+      "timestamp": "2025-11-09T09:59:30.835534",
+      "decisions": {
+        "BTCUSDT": {
+          "symbol": "BTCUSDT",
+          "cycle": 5,
+          "timestamp": "2025-11-09T09:59:30.835979",
+          "action": "HOLD",
+          "confidence": 0.6851177208209056,
+          "confidence_percent": "68.5%",
+          "reasoning": "Market neutral - RSI 35.0, MACD 0.00, Bollinger position 0.05, Trend DOWN",
+          "ai_models_analysis": {
+            "total_models": 327,
+            "models_voting_buy": 65,
+            "models_voting_sell": 66,
+            "models_voting_hold": 196,
+            "consensus_type": "HOLD",
+            "consensus_strength": "59.9%"
+          }
+        },
+        "ETHUSDT": {
+          "symbol": "ETHUSDT",
+          "cycle": 5,
+          "timestamp": "2025-11-09T09:59:30.836098",
+          "action": "HOLD",
+          "confidence": 0.6248113402053497,
+          "confidence_percent": "62.5%",
+          "reasoning": "Market neutral - RSI 35.0, MACD 0.00, Bollinger position 0.05, Trend DOWN",
+          "ai_models_analysis": {
+            "total_models": 327,
+            "models_voting_buy": 65,
+            "models_voting_sell": 66,
+            "models_voting_hold": 196,
+            "consensus_type": "HOLD",
+            "consensus_strength": "59.9%"
+          }
+        },
+        "BNBUSDT": {
+          "symbol": "BNBUSDT",
+          "cycle": 5,
+          "timestamp": "2025-11-09T09:59:30.836198",
+          "action": "HOLD",
+          "confidence": 0.5752073178539455,
+          "confidence_percent": "57.5%",
+          "reasoning": "Market neutral - RSI 35.0, MACD 0.00, Bollinger position 0.05, Trend DOWN",
+          "ai_models_analysis": {
+            "total_models": 327,
+            "models_voting_buy": 65,
+            "models_voting_sell": 66,
+            "models_voting_hold": 196,
+            "consensus_type": "HOLD",
+            "consensus_strength": "59.9%"
+          }
+        },
+        "ADAUSDT": {
+          "symbol": "ADAUSDT",
+          "cycle": 5,
+          "timestamp": "2025-11-09T09:59:30.836296",
+          "action": "HOLD",
+          "confidence": 0.712727470505959,
+          "confidence_percent": "71.3%",
+          "reasoning": "Market neutral - RSI 35.0, MACD 0.00, Bollinger position 0.05, Trend DOWN",
+          "ai_models_analysis": {
+            "total_models": 327,
+            "models_voting_buy": 65,
+            "models_voting_sell": 66,
+            "models_voting_hold": 196,
+            "consensus_type": "HOLD",
+            "consensus_strength": "59.9%"
+          }
+        },
+        "XRPUSDT": {
+          "symbol": "XRPUSDT",
+          "cycle": 5,
+          "timestamp": "2025-11-09T09:59:30.836389",
+          "action": "HOLD",
+          "confidence": 0.46405775467901217,
+          "confidence_percent": "46.4%",
+          "reasoning": "Market neutral - RSI 35.0, MACD 0.00, Bollinger position 0.05, Trend DOWN",
+          "ai_models_analysis": {
+            "total_models": 327,
+            "models_voting_buy": 65,
+            "models_voting_sell": 66,
+            "models_voting_hold": 196,
+            "consensus_type": "HOLD",
+            "consensus_strength": "59.9%"
+          }
+        }
+      },
+      "trades_executed": [],
+      "cycle_summary": {
+        "buy_decisions": 0,
+        "sell_decisions": 0,
+        "hold_decisions": 5,
+        "trades_executed": 0,
+        "total_pnl": 0.0,
+        "total_trades": 5
+      }
+    },
+    {
+      "cycle": 6,
+      "timestamp": "2025-11-09T09:59:31.036652",
+      "decisions": {
+        "BTCUSDT": {
+          "symbol": "BTCUSDT",
+          "cycle": 6,
+          "timestamp": "2025-11-09T09:59:31.037041",
+          "action": "HOLD",
+          "confidence": 0.6909099504662497,
+          "confidence_percent": "69.1%",
+          "reasoning": "Market neutral - RSI 36.0, MACD 0.10, Bollinger position 0.06, Trend UP",
+          "ai_models_analysis": {
+            "total_models": 327,
+            "models_voting_buy": 65,
+            "models_voting_sell": 66,
+            "models_voting_hold": 196,
+            "consensus_type": "HOLD",
+            "consensus_strength": "59.9%"
+          }
+        },
+        "ETHUSDT": {
+          "symbol": "ETHUSDT",
+          "cycle": 6,
+          "timestamp": "2025-11-09T09:59:31.037177",
+          "action": "HOLD",
+          "confidence": 0.7062382057920896,
+          "confidence_percent": "70.6%",
+          "reasoning": "Market neutral - RSI 36.0, MACD 0.10, Bollinger position 0.06, Trend UP",
+          "ai_models_analysis": {
+            "total_models": 327,
+            "models_voting_buy": 65,
+            "models_voting_sell": 66,
+            "models_voting_hold": 196,
+            "consensus_type": "HOLD",
+            "consensus_strength": "59.9%"
+          }
+        },
+        "BNBUSDT": {
+          "symbol": "BNBUSDT",
+          "cycle": 6,
+          "timestamp": "2025-11-09T09:59:31.037278",
+          "action": "HOLD",
+          "confidence": 0.5678175715911689,
+          "confidence_percent": "56.8%",
+          "reasoning": "Market neutral - RSI 36.0, MACD 0.10, Bollinger position 0.06, Trend UP",
+          "ai_models_analysis": {
+            "total_models": 327,
+            "models_voting_buy": 65,
+            "models_voting_sell": 66,
+            "models_voting_hold": 196,
+            "consensus_type": "HOLD",
+            "consensus_strength": "59.9%"
+          }
+        },
+        "ADAUSDT": {
+          "symbol": "ADAUSDT",
+          "cycle": 6,
+          "timestamp": "2025-11-09T09:59:31.037398",
+          "action": "HOLD",
+          "confidence": 0.7405197711788052,
+          "confidence_percent": "74.1%",
+          "reasoning": "Market neutral - RSI 36.0, MACD 0.10, Bollinger position 0.06, Trend UP",
+          "ai_models_analysis": {
+            "total_models": 327,
+            "models_voting_buy": 65,
+            "models_voting_sell": 66,
+            "models_voting_hold": 196,
+            "consensus_type": "HOLD",
+            "consensus_strength": "59.9%"
+          }
+        },
+        "XRPUSDT": {
+          "symbol": "XRPUSDT",
+          "cycle": 6,
+          "timestamp": "2025-11-09T09:59:31.037524",
+          "action": "HOLD",
+          "confidence": 0.5399414981411114,
+          "confidence_percent": "54.0%",
+          "reasoning": "Market neutral - RSI 36.0, MACD 0.10, Bollinger position 0.06, Trend UP",
+          "ai_models_analysis": {
+            "total_models": 327,
+            "models_voting_buy": 65,
+            "models_voting_sell": 66,
+            "models_voting_hold": 196,
+            "consensus_type": "HOLD",
+            "consensus_strength": "59.9%"
+          }
+        }
+      },
+      "trades_executed": [],
+      "cycle_summary": {
+        "buy_decisions": 0,
+        "sell_decisions": 0,
+        "hold_decisions": 5,
+        "trades_executed": 0,
+        "total_pnl": 0.0,
+        "total_trades": 5
+      }
+    },
+    {
+      "cycle": 7,
+      "timestamp": "2025-11-09T09:59:31.237780",
+      "decisions": {
+        "BTCUSDT": {
+          "symbol": "BTCUSDT",
+          "cycle": 7,
+          "timestamp": "2025-11-09T09:59:31.238144",
+          "action": "SELL",
+          "confidence": 0.7074099771043347,
+          "confidence_percent": "70.7%",
+          "reasoning": "RSI overbought (37.0), MACD bearish, Profit taking signal, Trend NEUTRAL",
+          "ai_models_analysis": {
+            "total_models": 327,
+            "models_voting_buy": 0,
+            "models_voting_sell": 231,
+            "models_voting_hold": 96,
+            "consensus_type": "SELL",
+            "consensus_strength": "70.6%"
+          }
+        },
+        "ETHUSDT": {
+          "symbol": "ETHUSDT",
+          "cycle": 7,
+          "timestamp": "2025-11-09T09:59:31.238275",
+          "action": "SELL",
+          "confidence": 0.6480976991614973,
+          "confidence_percent": "64.8%",
+          "reasoning": "RSI overbought (37.0), MACD bearish, Profit taking signal, Trend NEUTRAL",
+          "ai_models_analysis": {
+            "total_models": 327,
+            "models_voting_buy": 0,
+            "models_voting_sell": 211,
+            "models_voting_hold": 116,
+            "consensus_type": "SELL",
+            "consensus_strength": "64.5%"
+          }
+        },
+        "BNBUSDT": {
+          "symbol": "BNBUSDT",
+          "cycle": 7,
+          "timestamp": "2025-11-09T09:59:31.238367",
+          "action": "SELL",
+          "confidence": 0.7458865299875188,
+          "confidence_percent": "74.6%",
+          "reasoning": "RSI overbought (37.0), MACD bearish, Profit taking signal, Trend NEUTRAL",
+          "ai_models_analysis": {
+            "total_models": 327,
+            "models_voting_buy": 0,
+            "models_voting_sell": 243,
+            "models_voting_hold": 84,
+            "consensus_type": "SELL",
+            "consensus_strength": "74.3%"
+          }
+        },
+        "ADAUSDT": {
+          "symbol": "ADAUSDT",
+          "cycle": 7,
+          "timestamp": "2025-11-09T09:59:31.238449",
+          "action": "SELL",
+          "confidence": 0.6279311128461238,
+          "confidence_percent": "62.8%",
+          "reasoning": "RSI overbought (37.0), MACD bearish, Profit taking signal, Trend NEUTRAL",
+          "ai_models_analysis": {
+            "total_models": 327,
+            "models_voting_buy": 0,
+            "models_voting_sell": 205,
+            "models_voting_hold": 122,
+            "consensus_type": "SELL",
+            "consensus_strength": "62.7%"
+          }
+        },
+        "XRPUSDT": {
+          "symbol": "XRPUSDT",
+          "cycle": 7,
+          "timestamp": "2025-11-09T09:59:31.238528",
+          "action": "SELL",
+          "confidence": 0.6297407088484883,
+          "confidence_percent": "63.0%",
+          "reasoning": "RSI overbought (37.0), MACD bearish, Profit taking signal, Trend NEUTRAL",
+          "ai_models_analysis": {
+            "total_models": 327,
+            "models_voting_buy": 0,
+            "models_voting_sell": 205,
+            "models_voting_hold": 122,
+            "consensus_type": "SELL",
+            "consensus_strength": "62.7%"
+          }
+        }
+      },
+      "trades_executed": [
+        {
+          "trade_id": "TRADE_6",
+          "symbol": "BTCUSDT",
+          "cycle": 7,
+          "timestamp": "2025-11-09T09:59:31.238144",
+          "action": "SELL",
+          "ai_confidence": 0.7074099771043347,
+          "status": "EXECUTED",
+          "type": "SELL",
+          "quantity": 0.2912621359223301,
+          "entry_price": 103,
+          "exit_price": 109,
+          "pnl": 1.7475728155339816,
+          "pnl_percent": 5.8252427184466065,
+          "fee": 0.031747572815533975
+        },
+        {
+          "trade_id": "TRADE_7",
+          "symbol": "ETHUSDT",
+          "cycle": 7,
+          "timestamp": "2025-11-09T09:59:31.238275",
+          "action": "SELL",
+          "ai_confidence": 0.6480976991614973,
+          "status": "EXECUTED",
+          "type": "SELL",
+          "quantity": 0.2912621359223301,
+          "entry_price": 103,
+          "exit_price": 109,
+          "pnl": 1.7475728155339816,
+          "pnl_percent": 5.8252427184466065,
+          "fee": 0.031747572815533975
+        },
+        {
+          "trade_id": "TRADE_8",
+          "symbol": "BNBUSDT",
+          "cycle": 7,
+          "timestamp": "2025-11-09T09:59:31.238367",
+          "action": "SELL",
+          "ai_confidence": 0.7458865299875188,
+          "status": "EXECUTED",
+          "type": "SELL",
+          "quantity": 0.2912621359223301,
+          "entry_price": 103,
+          "exit_price": 109,
+          "pnl": 1.7475728155339816,
+          "pnl_percent": 5.8252427184466065,
+          "fee": 0.031747572815533975
+        },
+        {
+          "trade_id": "TRADE_9",
+          "symbol": "ADAUSDT",
+          "cycle": 7,
+          "timestamp": "2025-11-09T09:59:31.238449",
+          "action": "SELL",
+          "ai_confidence": 0.6279311128461238,
+          "status": "EXECUTED",
+          "type": "SELL",
+          "quantity": 0.2912621359223301,
+          "entry_price": 103,
+          "exit_price": 109,
+          "pnl": 1.7475728155339816,
+          "pnl_percent": 5.8252427184466065,
+          "fee": 0.031747572815533975
+        },
+        {
+          "trade_id": "TRADE_10",
+          "symbol": "XRPUSDT",
+          "cycle": 7,
+          "timestamp": "2025-11-09T09:59:31.238528",
+          "action": "SELL",
+          "ai_confidence": 0.6297407088484883,
+          "status": "EXECUTED",
+          "type": "SELL",
+          "quantity": 0.2912621359223301,
+          "entry_price": 103,
+          "exit_price": 109,
+          "pnl": 1.7475728155339816,
+          "pnl_percent": 5.8252427184466065,
+          "fee": 0.031747572815533975
+        }
+      ],
+      "cycle_summary": {
+        "buy_decisions": 0,
+        "sell_decisions": 5,
+        "hold_decisions": 0,
+        "trades_executed": 5,
+        "total_pnl": 8.737864077669908,
+        "total_trades": 10
+      }
+    },
+    {
+      "cycle": 8,
+      "timestamp": "2025-11-09T09:59:31.438760",
+      "decisions": {
+        "BTCUSDT": {
+          "symbol": "BTCUSDT",
+          "cycle": 8,
+          "timestamp": "2025-11-09T09:59:31.439100",
+          "action": "BUY",
+          "confidence": 0.7742439321297513,
+          "confidence_percent": "77.4%",
+          "reasoning": "RSI oversold (38.0), MACD bullish, Volume spike 1.12x, Trend NEUTRAL",
+          "ai_models_analysis": {
+            "total_models": 327,
+            "models_voting_buy": 253,
+            "models_voting_sell": 0,
+            "models_voting_hold": 74,
+            "consensus_type": "BUY",
+            "consensus_strength": "77.4%"
+          }
+        },
+        "ETHUSDT": {
+          "symbol": "ETHUSDT",
+          "cycle": 8,
+          "timestamp": "2025-11-09T09:59:31.439189",
+          "action": "BUY",
+          "confidence": 0.7553897988733584,
+          "confidence_percent": "75.5%",
+          "reasoning": "RSI oversold (38.0), MACD bullish, Volume spike 1.12x, Trend NEUTRAL",
+          "ai_models_analysis": {
+            "total_models": 327,
+            "models_voting_buy": 247,
+            "models_voting_sell": 0,
+            "models_voting_hold": 80,
+            "consensus_type": "BUY",
+            "consensus_strength": "75.5%"
+          }
+        },
+        "BNBUSDT": {
+          "symbol": "BNBUSDT",
+          "cycle": 8,
+          "timestamp": "2025-11-09T09:59:31.439262",
+          "action": "BUY",
+          "confidence": 0.8388356958770867,
+          "confidence_percent": "83.9%",
+          "reasoning": "RSI oversold (38.0), MACD bullish, Volume spike 1.12x, Trend NEUTRAL",
+          "ai_models_analysis": {
+            "total_models": 327,
+            "models_voting_buy": 274,
+            "models_voting_sell": 0,
+            "models_voting_hold": 53,
+            "consensus_type": "BUY",
+            "consensus_strength": "83.8%"
+          }
+        },
+        "ADAUSDT": {
+          "symbol": "ADAUSDT",
+          "cycle": 8,
+          "timestamp": "2025-11-09T09:59:31.439330",
+          "action": "BUY",
+          "confidence": 0.6553090894623048,
+          "confidence_percent": "65.5%",
+          "reasoning": "RSI oversold (38.0), MACD bullish, Volume spike 1.12x, Trend NEUTRAL",
+          "ai_models_analysis": {
+            "total_models": 327,
+            "models_voting_buy": 214,
+            "models_voting_sell": 0,
+            "models_voting_hold": 113,
+            "consensus_type": "BUY",
+            "consensus_strength": "65.4%"
+          }
+        },
+        "XRPUSDT": {
+          "symbol": "XRPUSDT",
+          "cycle": 8,
+          "timestamp": "2025-11-09T09:59:31.439400",
+          "action": "BUY",
+          "confidence": 0.8489117473277383,
+          "confidence_percent": "84.9%",
+          "reasoning": "RSI oversold (38.0), MACD bullish, Volume spike 1.12x, Trend NEUTRAL",
+          "ai_models_analysis": {
+            "total_models": 327,
+            "models_voting_buy": 277,
+            "models_voting_sell": 0,
+            "models_voting_hold": 50,
+            "consensus_type": "BUY",
+            "consensus_strength": "84.7%"
+          }
+        }
+      },
+      "trades_executed": [
+        {
+          "trade_id": "TRADE_11",
+          "symbol": "BTCUSDT",
+          "cycle": 8,
+          "timestamp": "2025-11-09T09:59:31.439100",
+          "action": "BUY",
+          "ai_confidence": 0.7742439321297513,
+          "status": "EXECUTED",
+          "type": "BUY",
+          "quantity": 0.2777777777777778,
+          "price": 108,
+          "cost": 30.0,
+          "fee": 0.03
+        },
+        {
+          "trade_id": "TRADE_12",
+          "symbol": "ETHUSDT",
+          "cycle": 8,
+          "timestamp": "2025-11-09T09:59:31.439189",
+          "action": "BUY",
+          "ai_confidence": 0.7553897988733584,
+          "status": "EXECUTED",
+          "type": "BUY",
+          "quantity": 0.2777777777777778,
+          "price": 108,
+          "cost": 30.0,
+          "fee": 0.03
+        },
+        {
+          "trade_id": "TRADE_13",
+          "symbol": "BNBUSDT",
+          "cycle": 8,
+          "timestamp": "2025-11-09T09:59:31.439262",
+          "action": "BUY",
+          "ai_confidence": 0.8388356958770867,
+          "status": "EXECUTED",
+          "type": "BUY",
+          "quantity": 0.2777777777777778,
+          "price": 108,
+          "cost": 30.0,
+          "fee": 0.03
+        },
+        {
+          "trade_id": "TRADE_14",
+          "symbol": "ADAUSDT",
+          "cycle": 8,
+          "timestamp": "2025-11-09T09:59:31.439330",
+          "action": "BUY",
+          "ai_confidence": 0.6553090894623048,
+          "status": "EXECUTED",
+          "type": "BUY",
+          "quantity": 0.2777777777777778,
+          "price": 108,
+          "cost": 30.0,
+          "fee": 0.03
+        },
+        {
+          "trade_id": "TRADE_15",
+          "symbol": "XRPUSDT",
+          "cycle": 8,
+          "timestamp": "2025-11-09T09:59:31.439400",
+          "action": "BUY",
+          "ai_confidence": 0.8489117473277383,
+          "status": "EXECUTED",
+          "type": "BUY",
+          "quantity": 0.2777777777777778,
+          "price": 108,
+          "cost": 30.0,
+          "fee": 0.03
+        }
+      ],
+      "cycle_summary": {
+        "buy_decisions": 5,
+        "sell_decisions": 0,
+        "hold_decisions": 0,
+        "trades_executed": 5,
+        "total_pnl": 8.737864077669908,
+        "total_trades": 15
+      }
+    },
+    {
+      "cycle": 9,
+      "timestamp": "2025-11-09T09:59:31.639615",
+      "decisions": {
+        "BTCUSDT": {
+          "symbol": "BTCUSDT",
+          "cycle": 9,
+          "timestamp": "2025-11-09T09:59:31.639950",
+          "action": "HOLD",
+          "confidence": 0.4543031677266882,
+          "confidence_percent": "45.4%",
+          "reasoning": "Market neutral - RSI 39.0, MACD 0.40, Bollinger position 0.09, Trend UP",
+          "ai_models_analysis": {
+            "total_models": 327,
+            "models_voting_buy": 65,
+            "models_voting_sell": 66,
+            "models_voting_hold": 196,
+            "consensus_type": "HOLD",
+            "consensus_strength": "59.9%"
+          }
+        },
+        "ETHUSDT": {
+          "symbol": "ETHUSDT",
+          "cycle": 9,
+          "timestamp": "2025-11-09T09:59:31.640044",
+          "action": "HOLD",
+          "confidence": 0.5961802435475776,
+          "confidence_percent": "59.6%",
+          "reasoning": "Market neutral - RSI 39.0, MACD 0.40, Bollinger position 0.09, Trend UP",
+          "ai_models_analysis": {
+            "total_models": 327,
+            "models_voting_buy": 65,
+            "models_voting_sell": 66,
+            "models_voting_hold": 196,
+            "consensus_type": "HOLD",
+            "consensus_strength": "59.9%"
+          }
+        },
+        "BNBUSDT": {
+          "symbol": "BNBUSDT",
+          "cycle": 9,
+          "timestamp": "2025-11-09T09:59:31.640118",
+          "action": "HOLD",
+          "confidence": 0.5479374897019971,
+          "confidence_percent": "54.8%",
+          "reasoning": "Market neutral - RSI 39.0, MACD 0.40, Bollinger position 0.09, Trend UP",
+          "ai_models_analysis": {
+            "total_models": 327,
+            "models_voting_buy": 65,
+            "models_voting_sell": 66,
+            "models_voting_hold": 196,
+            "consensus_type": "HOLD",
+            "consensus_strength": "59.9%"
+          }
+        },
+        "ADAUSDT": {
+          "symbol": "ADAUSDT",
+          "cycle": 9,
+          "timestamp": "2025-11-09T09:59:31.640189",
+          "action": "HOLD",
+          "confidence": 0.4863021093877487,
+          "confidence_percent": "48.6%",
+          "reasoning": "Market neutral - RSI 39.0, MACD 0.40, Bollinger position 0.09, Trend UP",
+          "ai_models_analysis": {
+            "total_models": 327,
+            "models_voting_buy": 65,
+            "models_voting_sell": 66,
+            "models_voting_hold": 196,
+            "consensus_type": "HOLD",
+            "consensus_strength": "59.9%"
+          }
+        },
+        "XRPUSDT": {
+          "symbol": "XRPUSDT",
+          "cycle": 9,
+          "timestamp": "2025-11-09T09:59:31.640275",
+          "action": "HOLD",
+          "confidence": 0.7307873321312085,
+          "confidence_percent": "73.1%",
+          "reasoning": "Market neutral - RSI 39.0, MACD 0.40, Bollinger position 0.09, Trend UP",
+          "ai_models_analysis": {
+            "total_models": 327,
+            "models_voting_buy": 65,
+            "models_voting_sell": 66,
+            "models_voting_hold": 196,
+            "consensus_type": "HOLD",
+            "consensus_strength": "59.9%"
+          }
+        }
+      },
+      "trades_executed": [],
+      "cycle_summary": {
+        "buy_decisions": 0,
+        "sell_decisions": 0,
+        "hold_decisions": 5,
+        "trades_executed": 0,
+        "total_pnl": 8.737864077669908,
+        "total_trades": 15
+      }
+    },
+    {
+      "cycle": 10,
+      "timestamp": "2025-11-09T09:59:31.840557",
+      "decisions": {
+        "BTCUSDT": {
+          "symbol": "BTCUSDT",
+          "cycle": 10,
+          "timestamp": "2025-11-09T09:59:31.840903",
+          "action": "HOLD",
+          "confidence": 0.6087076985317542,
+          "confidence_percent": "60.9%",
+          "reasoning": "Market neutral - RSI 40.0, MACD -0.50, Bollinger position 0.10, Trend DOWN",
+          "ai_models_analysis": {
+            "total_models": 327,
+            "models_voting_buy": 65,
+            "models_voting_sell": 66,
+            "models_voting_hold": 196,
+            "consensus_type": "HOLD",
+            "consensus_strength": "59.9%"
+          }
+        },
+        "ETHUSDT": {
+          "symbol": "ETHUSDT",
+          "cycle": 10,
+          "timestamp": "2025-11-09T09:59:31.840996",
+          "action": "HOLD",
+          "confidence": 0.47783421544537447,
+          "confidence_percent": "47.8%",
+          "reasoning": "Market neutral - RSI 40.0, MACD -0.50, Bollinger position 0.10, Trend DOWN",
+          "ai_models_analysis": {
+            "total_models": 327,
+            "models_voting_buy": 65,
+            "models_voting_sell": 66,
+            "models_voting_hold": 196,
+            "consensus_type": "HOLD",
+            "consensus_strength": "59.9%"
+          }
+        },
+        "BNBUSDT": {
+          "symbol": "BNBUSDT",
+          "cycle": 10,
+          "timestamp": "2025-11-09T09:59:31.841068",
+          "action": "HOLD",
+          "confidence": 0.6660142223538608,
+          "confidence_percent": "66.6%",
+          "reasoning": "Market neutral - RSI 40.0, MACD -0.50, Bollinger position 0.10, Trend DOWN",
+          "ai_models_analysis": {
+            "total_models": 327,
+            "models_voting_buy": 65,
+            "models_voting_sell": 66,
+            "models_voting_hold": 196,
+            "consensus_type": "HOLD",
+            "consensus_strength": "59.9%"
+          }
+        },
+        "ADAUSDT": {
+          "symbol": "ADAUSDT",
+          "cycle": 10,
+          "timestamp": "2025-11-09T09:59:31.841138",
+          "action": "HOLD",
+          "confidence": 0.6007071934166648,
+          "confidence_percent": "60.1%",
+          "reasoning": "Market neutral - RSI 40.0, MACD -0.50, Bollinger position 0.10, Trend DOWN",
+          "ai_models_analysis": {
+            "total_models": 327,
+            "models_voting_buy": 65,
+            "models_voting_sell": 66,
+            "models_voting_hold": 196,
+            "consensus_type": "HOLD",
+            "consensus_strength": "59.9%"
+          }
+        },
+        "XRPUSDT": {
+          "symbol": "XRPUSDT",
+          "cycle": 10,
+          "timestamp": "2025-11-09T09:59:31.841205",
+          "action": "HOLD",
+          "confidence": 0.5338873645759238,
+          "confidence_percent": "53.4%",
+          "reasoning": "Market neutral - RSI 40.0, MACD -0.50, Bollinger position 0.10, Trend DOWN",
+          "ai_models_analysis": {
+            "total_models": 327,
+            "models_voting_buy": 65,
+            "models_voting_sell": 66,
+            "models_voting_hold": 196,
+            "consensus_type": "HOLD",
+            "consensus_strength": "59.9%"
+          }
+        }
+      },
+      "trades_executed": [],
+      "cycle_summary": {
+        "buy_decisions": 0,
+        "sell_decisions": 0,
+        "hold_decisions": 5,
+        "trades_executed": 0,
+        "total_pnl": 8.737864077669908,
+        "total_trades": 15
+      }
+    },
+    {
+      "cycle": 11,
+      "timestamp": "2025-11-09T09:59:32.041473",
+      "decisions": {
+        "BTCUSDT": {
+          "symbol": "BTCUSDT",
+          "cycle": 11,
+          "timestamp": "2025-11-09T09:59:32.041832",
+          "action": "HOLD",
+          "confidence": 0.571327552403171,
+          "confidence_percent": "57.1%",
+          "reasoning": "Market neutral - RSI 41.0, MACD -0.40, Bollinger position 0.11, Trend NEUTRAL",
+          "ai_models_analysis": {
+            "total_models": 327,
+            "models_voting_buy": 65,
+            "models_voting_sell": 66,
+            "models_voting_hold": 196,
+            "consensus_type": "HOLD",
+            "consensus_strength": "59.9%"
+          }
+        },
+        "ETHUSDT": {
+          "symbol": "ETHUSDT",
+          "cycle": 11,
+          "timestamp": "2025-11-09T09:59:32.041922",
+          "action": "HOLD",
+          "confidence": 0.5874131773881429,
+          "confidence_percent": "58.7%",
+          "reasoning": "Market neutral - RSI 41.0, MACD -0.40, Bollinger position 0.11, Trend NEUTRAL",
+          "ai_models_analysis": {
+            "total_models": 327,
+            "models_voting_buy": 65,
+            "models_voting_sell": 66,
+            "models_voting_hold": 196,
+            "consensus_type": "HOLD",
+            "consensus_strength": "59.9%"
+          }
+        },
+        "BNBUSDT": {
+          "symbol": "BNBUSDT",
+          "cycle": 11,
+          "timestamp": "2025-11-09T09:59:32.042009",
+          "action": "HOLD",
+          "confidence": 0.5943241896931302,
+          "confidence_percent": "59.4%",
+          "reasoning": "Market neutral - RSI 41.0, MACD -0.40, Bollinger position 0.11, Trend NEUTRAL",
+          "ai_models_analysis": {
+            "total_models": 327,
+            "models_voting_buy": 65,
+            "models_voting_sell": 66,
+            "models_voting_hold": 196,
+            "consensus_type": "HOLD",
+            "consensus_strength": "59.9%"
+          }
+        },
+        "ADAUSDT": {
+          "symbol": "ADAUSDT",
+          "cycle": 11,
+          "timestamp": "2025-11-09T09:59:32.042126",
+          "action": "HOLD",
+          "confidence": 0.6413368037802608,
+          "confidence_percent": "64.1%",
+          "reasoning": "Market neutral - RSI 41.0, MACD -0.40, Bollinger position 0.11, Trend NEUTRAL",
+          "ai_models_analysis": {
+            "total_models": 327,
+            "models_voting_buy": 65,
+            "models_voting_sell": 66,
+            "models_voting_hold": 196,
+            "consensus_type": "HOLD",
+            "consensus_strength": "59.9%"
+          }
+        },
+        "XRPUSDT": {
+          "symbol": "XRPUSDT",
+          "cycle": 11,
+          "timestamp": "2025-11-09T09:59:32.042195",
+          "action": "HOLD",
+          "confidence": 0.5063714486058676,
+          "confidence_percent": "50.6%",
+          "reasoning": "Market neutral - RSI 41.0, MACD -0.40, Bollinger position 0.11, Trend NEUTRAL",
+          "ai_models_analysis": {
+            "total_models": 327,
+            "models_voting_buy": 65,
+            "models_voting_sell": 66,
+            "models_voting_hold": 196,
+            "consensus_type": "HOLD",
+            "consensus_strength": "59.9%"
+          }
+        }
+      },
+      "trades_executed": [],
+      "cycle_summary": {
+        "buy_decisions": 0,
+        "sell_decisions": 0,
+        "hold_decisions": 5,
+        "trades_executed": 0,
+        "total_pnl": 8.737864077669908,
+        "total_trades": 15
+      }
+    },
+    {
+      "cycle": 12,
+      "timestamp": "2025-11-09T09:59:32.242377",
+      "decisions": {
+        "BTCUSDT": {
+          "symbol": "BTCUSDT",
+          "cycle": 12,
+          "timestamp": "2025-11-09T09:59:32.242704",
+          "action": "BUY",
+          "confidence": 0.8684887202421562,
+          "confidence_percent": "86.8%",
+          "reasoning": "RSI oversold (42.0), MACD bullish, Volume spike 1.28x, Trend UP",
+          "ai_models_analysis": {
+            "total_models": 327,
+            "models_voting_buy": 283,
+            "models_voting_sell": 0,
+            "models_voting_hold": 44,
+            "consensus_type": "BUY",
+            "consensus_strength": "86.5%"
+          }
+        },
+        "ETHUSDT": {
+          "symbol": "ETHUSDT",
+          "cycle": 12,
+          "timestamp": "2025-11-09T09:59:32.242814",
+          "action": "BUY",
+          "confidence": 0.7859450718124861,
+          "confidence_percent": "78.6%",
+          "reasoning": "RSI oversold (42.0), MACD bullish, Volume spike 1.28x, Trend UP",
+          "ai_models_analysis": {
+            "total_models": 327,
+            "models_voting_buy": 257,
+            "models_voting_sell": 0,
+            "models_voting_hold": 70,
+            "consensus_type": "BUY",
+            "consensus_strength": "78.6%"
+          }
+        },
+        "BNBUSDT": {
+          "symbol": "BNBUSDT",
+          "cycle": 12,
+          "timestamp": "2025-11-09T09:59:32.242888",
+          "action": "BUY",
+          "confidence": 0.7696634282665118,
+          "confidence_percent": "77.0%",
+          "reasoning": "RSI oversold (42.0), MACD bullish, Volume spike 1.28x, Trend UP",
+          "ai_models_analysis": {
+            "total_models": 327,
+            "models_voting_buy": 251,
+            "models_voting_sell": 0,
+            "models_voting_hold": 76,
+            "consensus_type": "BUY",
+            "consensus_strength": "76.8%"
+          }
+        },
+        "ADAUSDT": {
+          "symbol": "ADAUSDT",
+          "cycle": 12,
+          "timestamp": "2025-11-09T09:59:32.242957",
+          "action": "BUY",
+          "confidence": 0.7227746634593065,
+          "confidence_percent": "72.3%",
+          "reasoning": "RSI oversold (42.0), MACD bullish, Volume spike 1.28x, Trend UP",
+          "ai_models_analysis": {
+            "total_models": 327,
+            "models_voting_buy": 236,
+            "models_voting_sell": 0,
+            "models_voting_hold": 91,
+            "consensus_type": "BUY",
+            "consensus_strength": "72.2%"
+          }
+        },
+        "XRPUSDT": {
+          "symbol": "XRPUSDT",
+          "cycle": 12,
+          "timestamp": "2025-11-09T09:59:32.243024",
+          "action": "BUY",
+          "confidence": 0.8835482632696972,
+          "confidence_percent": "88.4%",
+          "reasoning": "RSI oversold (42.0), MACD bullish, Volume spike 1.28x, Trend UP",
+          "ai_models_analysis": {
+            "total_models": 327,
+            "models_voting_buy": 288,
+            "models_voting_sell": 0,
+            "models_voting_hold": 39,
+            "consensus_type": "BUY",
+            "consensus_strength": "88.1%"
+          }
+        }
+      },
+      "trades_executed": [
+        {
+          "trade_id": "TRADE_16",
+          "symbol": "BTCUSDT",
+          "cycle": 12,
+          "timestamp": "2025-11-09T09:59:32.242704",
+          "action": "BUY",
+          "ai_confidence": 0.8684887202421562,
+          "status": "EXECUTED",
+          "type": "BUY",
+          "quantity": 0.26785714285714285,
+          "price": 112,
+          "cost": 30.0,
+          "fee": 0.03
+        },
+        {
+          "trade_id": "TRADE_17",
+          "symbol": "ETHUSDT",
+          "cycle": 12,
+          "timestamp": "2025-11-09T09:59:32.242814",
+          "action": "BUY",
+          "ai_confidence": 0.7859450718124861,
+          "status": "EXECUTED",
+          "type": "BUY",
+          "quantity": 0.26785714285714285,
+          "price": 112,
+          "cost": 30.0,
+          "fee": 0.03
+        },
+        {
+          "trade_id": "TRADE_18",
+          "symbol": "BNBUSDT",
+          "cycle": 12,
+          "timestamp": "2025-11-09T09:59:32.242888",
+          "action": "BUY",
+          "ai_confidence": 0.7696634282665118,
+          "status": "EXECUTED",
+          "type": "BUY",
+          "quantity": 0.26785714285714285,
+          "price": 112,
+          "cost": 30.0,
+          "fee": 0.03
+        },
+        {
+          "trade_id": "TRADE_19",
+          "symbol": "ADAUSDT",
+          "cycle": 12,
+          "timestamp": "2025-11-09T09:59:32.242957",
+          "action": "BUY",
+          "ai_confidence": 0.7227746634593065,
+          "status": "EXECUTED",
+          "type": "BUY",
+          "quantity": 0.26785714285714285,
+          "price": 112,
+          "cost": 30.0,
+          "fee": 0.03
+        },
+        {
+          "trade_id": "TRADE_20",
+          "symbol": "XRPUSDT",
+          "cycle": 12,
+          "timestamp": "2025-11-09T09:59:32.243024",
+          "action": "BUY",
+          "ai_confidence": 0.8835482632696972,
+          "status": "EXECUTED",
+          "type": "BUY",
+          "quantity": 0.26785714285714285,
+          "price": 112,
+          "cost": 30.0,
+          "fee": 0.03
+        }
+      ],
+      "cycle_summary": {
+        "buy_decisions": 5,
+        "sell_decisions": 0,
+        "hold_decisions": 0,
+        "trades_executed": 5,
+        "total_pnl": 8.737864077669908,
+        "total_trades": 20
+      }
+    },
+    {
+      "cycle": 13,
+      "timestamp": "2025-11-09T09:59:32.443301",
+      "decisions": {
+        "BTCUSDT": {
+          "symbol": "BTCUSDT",
+          "cycle": 13,
+          "timestamp": "2025-11-09T09:59:32.443641",
+          "action": "HOLD",
+          "confidence": 0.4737867203032306,
+          "confidence_percent": "47.4%",
+          "reasoning": "Market neutral - RSI 43.0, MACD -0.20, Bollinger position 0.13, Trend NEUTRAL",
+          "ai_models_analysis": {
+            "total_models": 327,
+            "models_voting_buy": 65,
+            "models_voting_sell": 66,
+            "models_voting_hold": 196,
+            "consensus_type": "HOLD",
+            "consensus_strength": "59.9%"
+          }
+        },
+        "ETHUSDT": {
+          "symbol": "ETHUSDT",
+          "cycle": 13,
+          "timestamp": "2025-11-09T09:59:32.443741",
+          "action": "HOLD",
+          "confidence": 0.7252507690108221,
+          "confidence_percent": "72.5%",
+          "reasoning": "Market neutral - RSI 43.0, MACD -0.20, Bollinger position 0.13, Trend NEUTRAL",
+          "ai_models_analysis": {
+            "total_models": 327,
+            "models_voting_buy": 65,
+            "models_voting_sell": 66,
+            "models_voting_hold": 196,
+            "consensus_type": "HOLD",
+            "consensus_strength": "59.9%"
+          }
+        },
+        "BNBUSDT": {
+          "symbol": "BNBUSDT",
+          "cycle": 13,
+          "timestamp": "2025-11-09T09:59:32.443833",
+          "action": "HOLD",
+          "confidence": 0.6277018837450774,
+          "confidence_percent": "62.8%",
+          "reasoning": "Market neutral - RSI 43.0, MACD -0.20, Bollinger position 0.13, Trend NEUTRAL",
+          "ai_models_analysis": {
+            "total_models": 327,
+            "models_voting_buy": 65,
+            "models_voting_sell": 66,
+            "models_voting_hold": 196,
+            "consensus_type": "HOLD",
+            "consensus_strength": "59.9%"
+          }
+        },
+        "ADAUSDT": {
+          "symbol": "ADAUSDT",
+          "cycle": 13,
+          "timestamp": "2025-11-09T09:59:32.443910",
+          "action": "HOLD",
+          "confidence": 0.6969552581486751,
+          "confidence_percent": "69.7%",
+          "reasoning": "Market neutral - RSI 43.0, MACD -0.20, Bollinger position 0.13, Trend NEUTRAL",
+          "ai_models_analysis": {
+            "total_models": 327,
+            "models_voting_buy": 65,
+            "models_voting_sell": 66,
+            "models_voting_hold": 196,
+            "consensus_type": "HOLD",
+            "consensus_strength": "59.9%"
+          }
+        },
+        "XRPUSDT": {
+          "symbol": "XRPUSDT",
+          "cycle": 13,
+          "timestamp": "2025-11-09T09:59:32.443978",
+          "action": "HOLD",
+          "confidence": 0.5201491432437989,
+          "confidence_percent": "52.0%",
+          "reasoning": "Market neutral - RSI 43.0, MACD -0.20, Bollinger position 0.13, Trend NEUTRAL",
+          "ai_models_analysis": {
+            "total_models": 327,
+            "models_voting_buy": 65,
+            "models_voting_sell": 66,
+            "models_voting_hold": 196,
+            "consensus_type": "HOLD",
+            "consensus_strength": "59.9%"
+          }
+        }
+      },
+      "trades_executed": [],
+      "cycle_summary": {
+        "buy_decisions": 0,
+        "sell_decisions": 0,
+        "hold_decisions": 5,
+        "trades_executed": 0,
+        "total_pnl": 8.737864077669908,
+        "total_trades": 20
+      }
+    },
+    {
+      "cycle": 14,
+      "timestamp": "2025-11-09T09:59:32.644254",
+      "decisions": {
+        "BTCUSDT": {
+          "symbol": "BTCUSDT",
+          "cycle": 14,
+          "timestamp": "2025-11-09T09:59:32.644601",
+          "action": "SELL",
+          "confidence": 0.6224991450506866,
+          "confidence_percent": "62.2%",
+          "reasoning": "RSI overbought (44.0), MACD bearish, Profit taking signal, Trend NEUTRAL",
+          "ai_models_analysis": {
+            "total_models": 327,
+            "models_voting_buy": 0,
+            "models_voting_sell": 203,
+            "models_voting_hold": 124,
+            "consensus_type": "SELL",
+            "consensus_strength": "62.1%"
+          }
+        },
+        "ETHUSDT": {
+          "symbol": "ETHUSDT",
+          "cycle": 14,
+          "timestamp": "2025-11-09T09:59:32.644754",
+          "action": "SELL",
+          "confidence": 0.7943567623495053,
+          "confidence_percent": "79.4%",
+          "reasoning": "RSI overbought (44.0), MACD bearish, Profit taking signal, Trend NEUTRAL",
+          "ai_models_analysis": {
+            "total_models": 327,
+            "models_voting_buy": 0,
+            "models_voting_sell": 259,
+            "models_voting_hold": 68,
+            "consensus_type": "SELL",
+            "consensus_strength": "79.2%"
+          }
+        },
+        "BNBUSDT": {
+          "symbol": "BNBUSDT",
+          "cycle": 14,
+          "timestamp": "2025-11-09T09:59:32.644834",
+          "action": "SELL",
+          "confidence": 0.8098710420456837,
+          "confidence_percent": "81.0%",
+          "reasoning": "RSI overbought (44.0), MACD bearish, Profit taking signal, Trend NEUTRAL",
+          "ai_models_analysis": {
+            "total_models": 327,
+            "models_voting_buy": 0,
+            "models_voting_sell": 264,
+            "models_voting_hold": 63,
+            "consensus_type": "SELL",
+            "consensus_strength": "80.7%"
+          }
+        },
+        "ADAUSDT": {
+          "symbol": "ADAUSDT",
+          "cycle": 14,
+          "timestamp": "2025-11-09T09:59:32.644907",
+          "action": "SELL",
+          "confidence": 0.8379839886959307,
+          "confidence_percent": "83.8%",
+          "reasoning": "RSI overbought (44.0), MACD bearish, Profit taking signal, Trend NEUTRAL",
+          "ai_models_analysis": {
+            "total_models": 327,
+            "models_voting_buy": 0,
+            "models_voting_sell": 274,
+            "models_voting_hold": 53,
+            "consensus_type": "SELL",
+            "consensus_strength": "83.8%"
+          }
+        },
+        "XRPUSDT": {
+          "symbol": "XRPUSDT",
+          "cycle": 14,
+          "timestamp": "2025-11-09T09:59:32.644993",
+          "action": "SELL",
+          "confidence": 0.6013245187068148,
+          "confidence_percent": "60.1%",
+          "reasoning": "RSI overbought (44.0), MACD bearish, Profit taking signal, Trend NEUTRAL",
+          "ai_models_analysis": {
+            "total_models": 327,
+            "models_voting_buy": 0,
+            "models_voting_sell": 196,
+            "models_voting_hold": 131,
+            "consensus_type": "SELL",
+            "consensus_strength": "59.9%"
+          }
+        }
+      },
+      "trades_executed": [
+        {
+          "trade_id": "TRADE_21",
+          "symbol": "BTCUSDT",
+          "cycle": 14,
+          "timestamp": "2025-11-09T09:59:32.644601",
+          "action": "SELL",
+          "ai_confidence": 0.6224991450506866,
+          "status": "EXECUTED",
+          "type": "SELL",
+          "quantity": 0.2727272727272727,
+          "entry_price": 110,
+          "exit_price": 116,
+          "pnl": 1.6363636363636367,
+          "pnl_percent": 5.454545454545457,
+          "fee": 0.031636363636363636
+        },
+        {
+          "trade_id": "TRADE_22",
+          "symbol": "ETHUSDT",
+          "cycle": 14,
+          "timestamp": "2025-11-09T09:59:32.644754",
+          "action": "SELL",
+          "ai_confidence": 0.7943567623495053,
+          "status": "EXECUTED",
+          "type": "SELL",
+          "quantity": 0.2727272727272727,
+          "entry_price": 110,
+          "exit_price": 116,
+          "pnl": 1.6363636363636367,
+          "pnl_percent": 5.454545454545457,
+          "fee": 0.031636363636363636
+        },
+        {
+          "trade_id": "TRADE_23",
+          "symbol": "BNBUSDT",
+          "cycle": 14,
+          "timestamp": "2025-11-09T09:59:32.644834",
+          "action": "SELL",
+          "ai_confidence": 0.8098710420456837,
+          "status": "EXECUTED",
+          "type": "SELL",
+          "quantity": 0.2727272727272727,
+          "entry_price": 110,
+          "exit_price": 116,
+          "pnl": 1.6363636363636367,
+          "pnl_percent": 5.454545454545457,
+          "fee": 0.031636363636363636
+        },
+        {
+          "trade_id": "TRADE_24",
+          "symbol": "ADAUSDT",
+          "cycle": 14,
+          "timestamp": "2025-11-09T09:59:32.644907",
+          "action": "SELL",
+          "ai_confidence": 0.8379839886959307,
+          "status": "EXECUTED",
+          "type": "SELL",
+          "quantity": 0.2727272727272727,
+          "entry_price": 110,
+          "exit_price": 116,
+          "pnl": 1.6363636363636367,
+          "pnl_percent": 5.454545454545457,
+          "fee": 0.031636363636363636
+        },
+        {
+          "trade_id": "TRADE_25",
+          "symbol": "XRPUSDT",
+          "cycle": 14,
+          "timestamp": "2025-11-09T09:59:32.644993",
+          "action": "SELL",
+          "ai_confidence": 0.6013245187068148,
+          "status": "EXECUTED",
+          "type": "SELL",
+          "quantity": 0.2727272727272727,
+          "entry_price": 110,
+          "exit_price": 116,
+          "pnl": 1.6363636363636367,
+          "pnl_percent": 5.454545454545457,
+          "fee": 0.031636363636363636
+        }
+      ],
+      "cycle_summary": {
+        "buy_decisions": 0,
+        "sell_decisions": 5,
+        "hold_decisions": 0,
+        "trades_executed": 5,
+        "total_pnl": 16.91968225948809,
+        "total_trades": 25
+      }
+    },
+    {
+      "cycle": 15,
+      "timestamp": "2025-11-09T09:59:32.845193",
+      "decisions": {
+        "BTCUSDT": {
+          "symbol": "BTCUSDT",
+          "cycle": 15,
+          "timestamp": "2025-11-09T09:59:32.845535",
+          "action": "HOLD",
+          "confidence": 0.6219170633690476,
+          "confidence_percent": "62.2%",
+          "reasoning": "Market neutral - RSI 45.0, MACD 0.00, Bollinger position 0.15, Trend UP",
+          "ai_models_analysis": {
+            "total_models": 327,
+            "models_voting_buy": 65,
+            "models_voting_sell": 66,
+            "models_voting_hold": 196,
+            "consensus_type": "HOLD",
+            "consensus_strength": "59.9%"
+          }
+        },
+        "ETHUSDT": {
+          "symbol": "ETHUSDT",
+          "cycle": 15,
+          "timestamp": "2025-11-09T09:59:32.845651",
+          "action": "HOLD",
+          "confidence": 0.6275970163887593,
+          "confidence_percent": "62.8%",
+          "reasoning": "Market neutral - RSI 45.0, MACD 0.00, Bollinger position 0.15, Trend UP",
+          "ai_models_analysis": {
+            "total_models": 327,
+            "models_voting_buy": 65,
+            "models_voting_sell": 66,
+            "models_voting_hold": 196,
+            "consensus_type": "HOLD",
+            "consensus_strength": "59.9%"
+          }
+        },
+        "BNBUSDT": {
+          "symbol": "BNBUSDT",
+          "cycle": 15,
+          "timestamp": "2025-11-09T09:59:32.845741",
+          "action": "HOLD",
+          "confidence": 0.5659178229842041,
+          "confidence_percent": "56.6%",
+          "reasoning": "Market neutral - RSI 45.0, MACD 0.00, Bollinger position 0.15, Trend UP",
+          "ai_models_analysis": {
+            "total_models": 327,
+            "models_voting_buy": 65,
+            "models_voting_sell": 66,
+            "models_voting_hold": 196,
+            "consensus_type": "HOLD",
+            "consensus_strength": "59.9%"
+          }
+        },
+        "ADAUSDT": {
+          "symbol": "ADAUSDT",
+          "cycle": 15,
+          "timestamp": "2025-11-09T09:59:32.845815",
+          "action": "HOLD",
+          "confidence": 0.6006821970442897,
+          "confidence_percent": "60.1%",
+          "reasoning": "Market neutral - RSI 45.0, MACD 0.00, Bollinger position 0.15, Trend UP",
+          "ai_models_analysis": {
+            "total_models": 327,
+            "models_voting_buy": 65,
+            "models_voting_sell": 66,
+            "models_voting_hold": 196,
+            "consensus_type": "HOLD",
+            "consensus_strength": "59.9%"
+          }
+        },
+        "XRPUSDT": {
+          "symbol": "XRPUSDT",
+          "cycle": 15,
+          "timestamp": "2025-11-09T09:59:32.845891",
+          "action": "HOLD",
+          "confidence": 0.6545830278794981,
+          "confidence_percent": "65.5%",
+          "reasoning": "Market neutral - RSI 45.0, MACD 0.00, Bollinger position 0.15, Trend UP",
+          "ai_models_analysis": {
+            "total_models": 327,
+            "models_voting_buy": 65,
+            "models_voting_sell": 66,
+            "models_voting_hold": 196,
+            "consensus_type": "HOLD",
+            "consensus_strength": "59.9%"
+          }
+        }
+      },
+      "trades_executed": [],
+      "cycle_summary": {
+        "buy_decisions": 0,
+        "sell_decisions": 0,
+        "hold_decisions": 5,
+        "trades_executed": 0,
+        "total_pnl": 16.91968225948809,
+        "total_trades": 25
+      }
+    },
+    {
+      "cycle": 16,
+      "timestamp": "2025-11-09T09:59:33.046142",
+      "decisions": {
+        "BTCUSDT": {
+          "symbol": "BTCUSDT",
+          "cycle": 16,
+          "timestamp": "2025-11-09T09:59:33.046449",
+          "action": "BUY",
+          "confidence": 0.8745049499161723,
+          "confidence_percent": "87.5%",
+          "reasoning": "RSI oversold (46.0), MACD bullish, Volume spike 1.44x, Trend NEUTRAL",
+          "ai_models_analysis": {
+            "total_models": 327,
+            "models_voting_buy": 285,
+            "models_voting_sell": 0,
+            "models_voting_hold": 42,
+            "consensus_type": "BUY",
+            "consensus_strength": "87.2%"
+          }
+        },
+        "ETHUSDT": {
+          "symbol": "ETHUSDT",
+          "cycle": 16,
+          "timestamp": "2025-11-09T09:59:33.046579",
+          "action": "BUY",
+          "confidence": 0.6635839780307726,
+          "confidence_percent": "66.4%",
+          "reasoning": "RSI oversold (46.0), MACD bullish, Volume spike 1.44x, Trend NEUTRAL",
+          "ai_models_analysis": {
+            "total_models": 327,
+            "models_voting_buy": 216,
+            "models_voting_sell": 0,
+            "models_voting_hold": 111,
+            "consensus_type": "BUY",
+            "consensus_strength": "66.1%"
+          }
+        },
+        "BNBUSDT": {
+          "symbol": "BNBUSDT",
+          "cycle": 16,
+          "timestamp": "2025-11-09T09:59:33.046654",
+          "action": "BUY",
+          "confidence": 0.8336998729402975,
+          "confidence_percent": "83.4%",
+          "reasoning": "RSI oversold (46.0), MACD bullish, Volume spike 1.44x, Trend NEUTRAL",
+          "ai_models_analysis": {
+            "total_models": 327,
+            "models_voting_buy": 272,
+            "models_voting_sell": 0,
+            "models_voting_hold": 55,
+            "consensus_type": "BUY",
+            "consensus_strength": "83.2%"
+          }
+        },
+        "ADAUSDT": {
+          "symbol": "ADAUSDT",
+          "cycle": 16,
+          "timestamp": "2025-11-09T09:59:33.046739",
+          "action": "BUY",
+          "confidence": 0.8319670057549846,
+          "confidence_percent": "83.2%",
+          "reasoning": "RSI oversold (46.0), MACD bullish, Volume spike 1.44x, Trend NEUTRAL",
+          "ai_models_analysis": {
+            "total_models": 327,
+            "models_voting_buy": 272,
+            "models_voting_sell": 0,
+            "models_voting_hold": 55,
+            "consensus_type": "BUY",
+            "consensus_strength": "83.2%"
+          }
+        },
+        "XRPUSDT": {
+          "symbol": "XRPUSDT",
+          "cycle": 16,
+          "timestamp": "2025-11-09T09:59:33.046810",
+          "action": "BUY",
+          "confidence": 0.6753350127924282,
+          "confidence_percent": "67.5%",
+          "reasoning": "RSI oversold (46.0), MACD bullish, Volume spike 1.44x, Trend NEUTRAL",
+          "ai_models_analysis": {
+            "total_models": 327,
+            "models_voting_buy": 220,
+            "models_voting_sell": 0,
+            "models_voting_hold": 107,
+            "consensus_type": "BUY",
+            "consensus_strength": "67.3%"
+          }
+        }
+      },
+      "trades_executed": [
+        {
+          "trade_id": "TRADE_26",
+          "symbol": "BTCUSDT",
+          "cycle": 16,
+          "timestamp": "2025-11-09T09:59:33.046449",
+          "action": "BUY",
+          "ai_confidence": 0.8745049499161723,
+          "status": "EXECUTED",
+          "type": "BUY",
+          "quantity": 0.25862068965517243,
+          "price": 116,
+          "cost": 30.0,
+          "fee": 0.03
+        },
+        {
+          "trade_id": "TRADE_27",
+          "symbol": "ETHUSDT",
+          "cycle": 16,
+          "timestamp": "2025-11-09T09:59:33.046579",
+          "action": "BUY",
+          "ai_confidence": 0.6635839780307726,
+          "status": "EXECUTED",
+          "type": "BUY",
+          "quantity": 0.25862068965517243,
+          "price": 116,
+          "cost": 30.0,
+          "fee": 0.03
+        },
+        {
+          "trade_id": "TRADE_28",
+          "symbol": "BNBUSDT",
+          "cycle": 16,
+          "timestamp": "2025-11-09T09:59:33.046654",
+          "action": "BUY",
+          "ai_confidence": 0.8336998729402975,
+          "status": "EXECUTED",
+          "type": "BUY",
+          "quantity": 0.25862068965517243,
+          "price": 116,
+          "cost": 30.0,
+          "fee": 0.03
+        },
+        {
+          "trade_id": "TRADE_29",
+          "symbol": "ADAUSDT",
+          "cycle": 16,
+          "timestamp": "2025-11-09T09:59:33.046739",
+          "action": "BUY",
+          "ai_confidence": 0.8319670057549846,
+          "status": "EXECUTED",
+          "type": "BUY",
+          "quantity": 0.25862068965517243,
+          "price": 116,
+          "cost": 30.0,
+          "fee": 0.03
+        },
+        {
+          "trade_id": "TRADE_30",
+          "symbol": "XRPUSDT",
+          "cycle": 16,
+          "timestamp": "2025-11-09T09:59:33.046810",
+          "action": "BUY",
+          "ai_confidence": 0.6753350127924282,
+          "status": "EXECUTED",
+          "type": "BUY",
+          "quantity": 0.25862068965517243,
+          "price": 116,
+          "cost": 30.0,
+          "fee": 0.03
+        }
+      ],
+      "cycle_summary": {
+        "buy_decisions": 5,
+        "sell_decisions": 0,
+        "hold_decisions": 0,
+        "trades_executed": 5,
+        "total_pnl": 16.91968225948809,
+        "total_trades": 30
+      }
+    },
+    {
+      "cycle": 17,
+      "timestamp": "2025-11-09T09:59:33.247074",
+      "decisions": {
+        "BTCUSDT": {
+          "symbol": "BTCUSDT",
+          "cycle": 17,
+          "timestamp": "2025-11-09T09:59:33.247424",
+          "action": "HOLD",
+          "confidence": 0.5785240800841942,
+          "confidence_percent": "57.9%",
+          "reasoning": "Market neutral - RSI 47.0, MACD 0.20, Bollinger position 0.17, Trend NEUTRAL",
+          "ai_models_analysis": {
+            "total_models": 327,
+            "models_voting_buy": 65,
+            "models_voting_sell": 66,
+            "models_voting_hold": 196,
+            "consensus_type": "HOLD",
+            "consensus_strength": "59.9%"
+          }
+        },
+        "ETHUSDT": {
+          "symbol": "ETHUSDT",
+          "cycle": 17,
+          "timestamp": "2025-11-09T09:59:33.247527",
+          "action": "HOLD",
+          "confidence": 0.5020466550644493,
+          "confidence_percent": "50.2%",
+          "reasoning": "Market neutral - RSI 47.0, MACD 0.20, Bollinger position 0.17, Trend NEUTRAL",
+          "ai_models_analysis": {
+            "total_models": 327,
+            "models_voting_buy": 65,
+            "models_voting_sell": 66,
+            "models_voting_hold": 196,
+            "consensus_type": "HOLD",
+            "consensus_strength": "59.9%"
+          }
+        },
+        "BNBUSDT": {
+          "symbol": "BNBUSDT",
+          "cycle": 17,
+          "timestamp": "2025-11-09T09:59:33.247609",
+          "action": "HOLD",
+          "confidence": 0.5717366590412958,
+          "confidence_percent": "57.2%",
+          "reasoning": "Market neutral - RSI 47.0, MACD 0.20, Bollinger position 0.17, Trend NEUTRAL",
+          "ai_models_analysis": {
+            "total_models": 327,
+            "models_voting_buy": 65,
+            "models_voting_sell": 66,
+            "models_voting_hold": 196,
+            "consensus_type": "HOLD",
+            "consensus_strength": "59.9%"
+          }
+        },
+        "ADAUSDT": {
+          "symbol": "ADAUSDT",
+          "cycle": 17,
+          "timestamp": "2025-11-09T09:59:33.247689",
+          "action": "HOLD",
+          "confidence": 0.6635747963374861,
+          "confidence_percent": "66.4%",
+          "reasoning": "Market neutral - RSI 47.0, MACD 0.20, Bollinger position 0.17, Trend NEUTRAL",
+          "ai_models_analysis": {
+            "total_models": 327,
+            "models_voting_buy": 65,
+            "models_voting_sell": 66,
+            "models_voting_hold": 196,
+            "consensus_type": "HOLD",
+            "consensus_strength": "59.9%"
+          }
+        },
+        "XRPUSDT": {
+          "symbol": "XRPUSDT",
+          "cycle": 17,
+          "timestamp": "2025-11-09T09:59:33.247757",
+          "action": "HOLD",
+          "confidence": 0.5566849879286889,
+          "confidence_percent": "55.7%",
+          "reasoning": "Market neutral - RSI 47.0, MACD 0.20, Bollinger position 0.17, Trend NEUTRAL",
+          "ai_models_analysis": {
+            "total_models": 327,
+            "models_voting_buy": 65,
+            "models_voting_sell": 66,
+            "models_voting_hold": 196,
+            "consensus_type": "HOLD",
+            "consensus_strength": "59.9%"
+          }
+        }
+      },
+      "trades_executed": [],
+      "cycle_summary": {
+        "buy_decisions": 0,
+        "sell_decisions": 0,
+        "hold_decisions": 5,
+        "trades_executed": 0,
+        "total_pnl": 16.91968225948809,
+        "total_trades": 30
+      }
+    },
+    {
+      "cycle": 18,
+      "timestamp": "2025-11-09T09:59:33.447955",
+      "decisions": {
+        "BTCUSDT": {
+          "symbol": "BTCUSDT",
+          "cycle": 18,
+          "timestamp": "2025-11-09T09:59:33.448270",
+          "action": "HOLD",
+          "confidence": 0.6546030244429542,
+          "confidence_percent": "65.5%",
+          "reasoning": "Market neutral - RSI 48.0, MACD 0.30, Bollinger position 0.18, Trend UP",
+          "ai_models_analysis": {
+            "total_models": 327,
+            "models_voting_buy": 65,
+            "models_voting_sell": 66,
+            "models_voting_hold": 196,
+            "consensus_type": "HOLD",
+            "consensus_strength": "59.9%"
+          }
+        },
+        "ETHUSDT": {
+          "symbol": "ETHUSDT",
+          "cycle": 18,
+          "timestamp": "2025-11-09T09:59:33.448359",
+          "action": "HOLD",
+          "confidence": 0.6263247432097329,
+          "confidence_percent": "62.6%",
+          "reasoning": "Market neutral - RSI 48.0, MACD 0.30, Bollinger position 0.18, Trend UP",
+          "ai_models_analysis": {
+            "total_models": 327,
+            "models_voting_buy": 65,
+            "models_voting_sell": 66,
+            "models_voting_hold": 196,
+            "consensus_type": "HOLD",
+            "consensus_strength": "59.9%"
+          }
+        },
+        "BNBUSDT": {
+          "symbol": "BNBUSDT",
+          "cycle": 18,
+          "timestamp": "2025-11-09T09:59:33.448436",
+          "action": "HOLD",
+          "confidence": 0.7295794863321761,
+          "confidence_percent": "73.0%",
+          "reasoning": "Market neutral - RSI 48.0, MACD 0.30, Bollinger position 0.18, Trend UP",
+          "ai_models_analysis": {
+            "total_models": 327,
+            "models_voting_buy": 65,
+            "models_voting_sell": 66,
+            "models_voting_hold": 196,
+            "consensus_type": "HOLD",
+            "consensus_strength": "59.9%"
+          }
+        },
+        "ADAUSDT": {
+          "symbol": "ADAUSDT",
+          "cycle": 18,
+          "timestamp": "2025-11-09T09:59:33.448505",
+          "action": "HOLD",
+          "confidence": 0.6193745110881108,
+          "confidence_percent": "61.9%",
+          "reasoning": "Market neutral - RSI 48.0, MACD 0.30, Bollinger position 0.18, Trend UP",
+          "ai_models_analysis": {
+            "total_models": 327,
+            "models_voting_buy": 65,
+            "models_voting_sell": 66,
+            "models_voting_hold": 196,
+            "consensus_type": "HOLD",
+            "consensus_strength": "59.9%"
+          }
+        },
+        "XRPUSDT": {
+          "symbol": "XRPUSDT",
+          "cycle": 18,
+          "timestamp": "2025-11-09T09:59:33.448586",
+          "action": "HOLD",
+          "confidence": 0.49292869485952484,
+          "confidence_percent": "49.3%",
+          "reasoning": "Market neutral - RSI 48.0, MACD 0.30, Bollinger position 0.18, Trend UP",
+          "ai_models_analysis": {
+            "total_models": 327,
+            "models_voting_buy": 65,
+            "models_voting_sell": 66,
+            "models_voting_hold": 196,
+            "consensus_type": "HOLD",
+            "consensus_strength": "59.9%"
+          }
+        }
+      },
+      "trades_executed": [],
+      "cycle_summary": {
+        "buy_decisions": 0,
+        "sell_decisions": 0,
+        "hold_decisions": 5,
+        "trades_executed": 0,
+        "total_pnl": 16.91968225948809,
+        "total_trades": 30
+      }
+    },
+    {
+      "cycle": 19,
+      "timestamp": "2025-11-09T09:59:33.648796",
+      "decisions": {
+        "BTCUSDT": {
+          "symbol": "BTCUSDT",
+          "cycle": 19,
+          "timestamp": "2025-11-09T09:59:33.649104",
+          "action": "HOLD",
+          "confidence": 0.5417392308848141,
+          "confidence_percent": "54.2%",
+          "reasoning": "Market neutral - RSI 49.0, MACD 0.40, Bollinger position 0.19, Trend NEUTRAL",
+          "ai_models_analysis": {
+            "total_models": 327,
+            "models_voting_buy": 65,
+            "models_voting_sell": 66,
+            "models_voting_hold": 196,
+            "consensus_type": "HOLD",
+            "consensus_strength": "59.9%"
+          }
+        },
+        "ETHUSDT": {
+          "symbol": "ETHUSDT",
+          "cycle": 19,
+          "timestamp": "2025-11-09T09:59:33.649190",
+          "action": "HOLD",
+          "confidence": 0.6497734468065527,
+          "confidence_percent": "65.0%",
+          "reasoning": "Market neutral - RSI 49.0, MACD 0.40, Bollinger position 0.19, Trend NEUTRAL",
+          "ai_models_analysis": {
+            "total_models": 327,
+            "models_voting_buy": 65,
+            "models_voting_sell": 66,
+            "models_voting_hold": 196,
+            "consensus_type": "HOLD",
+            "consensus_strength": "59.9%"
+          }
+        },
+        "BNBUSDT": {
+          "symbol": "BNBUSDT",
+          "cycle": 19,
+          "timestamp": "2025-11-09T09:59:33.649277",
+          "action": "HOLD",
+          "confidence": 0.655058986013238,
+          "confidence_percent": "65.5%",
+          "reasoning": "Market neutral - RSI 49.0, MACD 0.40, Bollinger position 0.19, Trend NEUTRAL",
+          "ai_models_analysis": {
+            "total_models": 327,
+            "models_voting_buy": 65,
+            "models_voting_sell": 66,
+            "models_voting_hold": 196,
+            "consensus_type": "HOLD",
+            "consensus_strength": "59.9%"
+          }
+        },
+        "ADAUSDT": {
+          "symbol": "ADAUSDT",
+          "cycle": 19,
+          "timestamp": "2025-11-09T09:59:33.649347",
+          "action": "HOLD",
+          "confidence": 0.5298531732103238,
+          "confidence_percent": "53.0%",
+          "reasoning": "Market neutral - RSI 49.0, MACD 0.40, Bollinger position 0.19, Trend NEUTRAL",
+          "ai_models_analysis": {
+            "total_models": 327,
+            "models_voting_buy": 65,
+            "models_voting_sell": 66,
+            "models_voting_hold": 196,
+            "consensus_type": "HOLD",
+            "consensus_strength": "59.9%"
+          }
+        },
+        "XRPUSDT": {
+          "symbol": "XRPUSDT",
+          "cycle": 19,
+          "timestamp": "2025-11-09T09:59:33.649414",
+          "action": "HOLD",
+          "confidence": 0.46024429560589897,
+          "confidence_percent": "46.0%",
+          "reasoning": "Market neutral - RSI 49.0, MACD 0.40, Bollinger position 0.19, Trend NEUTRAL",
+          "ai_models_analysis": {
+            "total_models": 327,
+            "models_voting_buy": 65,
+            "models_voting_sell": 66,
+            "models_voting_hold": 196,
+            "consensus_type": "HOLD",
+            "consensus_strength": "59.9%"
+          }
+        }
+      },
+      "trades_executed": [],
+      "cycle_summary": {
+        "buy_decisions": 0,
+        "sell_decisions": 0,
+        "hold_decisions": 5,
+        "trades_executed": 0,
+        "total_pnl": 16.91968225948809,
+        "total_trades": 30
+      }
+    },
+    {
+      "cycle": 20,
+      "timestamp": "2025-11-09T09:59:33.849669",
+      "decisions": {
+        "BTCUSDT": {
+          "symbol": "BTCUSDT",
+          "cycle": 20,
+          "timestamp": "2025-11-09T09:59:33.849982",
+          "action": "BUY",
+          "confidence": 0.8296092589479588,
+          "confidence_percent": "83.0%",
+          "reasoning": "RSI oversold (50.0), MACD bullish, Volume spike 1.60x, Trend DOWN",
+          "ai_models_analysis": {
+            "total_models": 327,
+            "models_voting_buy": 271,
+            "models_voting_sell": 0,
+            "models_voting_hold": 56,
+            "consensus_type": "BUY",
+            "consensus_strength": "82.9%"
+          }
+        },
+        "ETHUSDT": {
+          "symbol": "ETHUSDT",
+          "cycle": 20,
+          "timestamp": "2025-11-09T09:59:33.850102",
+          "action": "BUY",
+          "confidence": 0.7494341251192732,
+          "confidence_percent": "74.9%",
+          "reasoning": "RSI oversold (50.0), MACD bullish, Volume spike 1.60x, Trend DOWN",
+          "ai_models_analysis": {
+            "total_models": 327,
+            "models_voting_buy": 245,
+            "models_voting_sell": 0,
+            "models_voting_hold": 82,
+            "consensus_type": "BUY",
+            "consensus_strength": "74.9%"
+          }
+        },
+        "BNBUSDT": {
+          "symbol": "BNBUSDT",
+          "cycle": 20,
+          "timestamp": "2025-11-09T09:59:33.850193",
+          "action": "BUY",
+          "confidence": 0.7192537767620422,
+          "confidence_percent": "71.9%",
+          "reasoning": "RSI oversold (50.0), MACD bullish, Volume spike 1.60x, Trend DOWN",
+          "ai_models_analysis": {
+            "total_models": 327,
+            "models_voting_buy": 235,
+            "models_voting_sell": 0,
+            "models_voting_hold": 92,
+            "consensus_type": "BUY",
+            "consensus_strength": "71.9%"
+          }
+        },
+        "ADAUSDT": {
+          "symbol": "ADAUSDT",
+          "cycle": 20,
+          "timestamp": "2025-11-09T09:59:33.850263",
+          "action": "BUY",
+          "confidence": 0.8529196601373601,
+          "confidence_percent": "85.3%",
+          "reasoning": "RSI oversold (50.0), MACD bullish, Volume spike 1.60x, Trend DOWN",
+          "ai_models_analysis": {
+            "total_models": 327,
+            "models_voting_buy": 278,
+            "models_voting_sell": 0,
+            "models_voting_hold": 49,
+            "consensus_type": "BUY",
+            "consensus_strength": "85.0%"
+          }
+        },
+        "XRPUSDT": {
+          "symbol": "XRPUSDT",
+          "cycle": 20,
+          "timestamp": "2025-11-09T09:59:33.850330",
+          "action": "BUY",
+          "confidence": 0.8630037040516607,
+          "confidence_percent": "86.3%",
+          "reasoning": "RSI oversold (50.0), MACD bullish, Volume spike 1.60x, Trend DOWN",
+          "ai_models_analysis": {
+            "total_models": 327,
+            "models_voting_buy": 282,
+            "models_voting_sell": 0,
+            "models_voting_hold": 45,
+            "consensus_type": "BUY",
+            "consensus_strength": "86.2%"
+          }
+        }
+      },
+      "trades_executed": [
+        {
+          "trade_id": "TRADE_31",
+          "symbol": "BTCUSDT",
+          "cycle": 20,
+          "timestamp": "2025-11-09T09:59:33.849982",
+          "action": "BUY",
+          "ai_confidence": 0.8296092589479588,
+          "status": "EXECUTED",
+          "type": "BUY",
+          "quantity": 0.25,
+          "price": 120,
+          "cost": 30.0,
+          "fee": 0.03
+        },
+        {
+          "trade_id": "TRADE_32",
+          "symbol": "ETHUSDT",
+          "cycle": 20,
+          "timestamp": "2025-11-09T09:59:33.850102",
+          "action": "BUY",
+          "ai_confidence": 0.7494341251192732,
+          "status": "EXECUTED",
+          "type": "BUY",
+          "quantity": 0.25,
+          "price": 120,
+          "cost": 30.0,
+          "fee": 0.03
+        },
+        {
+          "trade_id": "TRADE_33",
+          "symbol": "BNBUSDT",
+          "cycle": 20,
+          "timestamp": "2025-11-09T09:59:33.850193",
+          "action": "BUY",
+          "ai_confidence": 0.7192537767620422,
+          "status": "EXECUTED",
+          "type": "BUY",
+          "quantity": 0.25,
+          "price": 120,
+          "cost": 30.0,
+          "fee": 0.03
+        },
+        {
+          "trade_id": "TRADE_34",
+          "symbol": "ADAUSDT",
+          "cycle": 20,
+          "timestamp": "2025-11-09T09:59:33.850263",
+          "action": "BUY",
+          "ai_confidence": 0.8529196601373601,
+          "status": "EXECUTED",
+          "type": "BUY",
+          "quantity": 0.25,
+          "price": 120,
+          "cost": 30.0,
+          "fee": 0.03
+        },
+        {
+          "trade_id": "TRADE_35",
+          "symbol": "XRPUSDT",
+          "cycle": 20,
+          "timestamp": "2025-11-09T09:59:33.850330",
+          "action": "BUY",
+          "ai_confidence": 0.8630037040516607,
+          "status": "EXECUTED",
+          "type": "BUY",
+          "quantity": 0.25,
+          "price": 120,
+          "cost": 30.0,
+          "fee": 0.03
+        }
+      ],
+      "cycle_summary": {
+        "buy_decisions": 5,
+        "sell_decisions": 0,
+        "hold_decisions": 0,
+        "trades_executed": 5,
+        "total_pnl": 16.91968225948809,
+        "total_trades": 35
+      }
+    },
+    {
+      "cycle": 21,
+      "timestamp": "2025-11-09T09:59:34.050602",
+      "decisions": {
+        "BTCUSDT": {
+          "symbol": "BTCUSDT",
+          "cycle": 21,
+          "timestamp": "2025-11-09T09:59:34.050940",
+          "action": "SELL",
+          "confidence": 0.6329373929272103,
+          "confidence_percent": "63.3%",
+          "reasoning": "RSI overbought (51.0), MACD bearish, Profit taking signal, Trend UP",
+          "ai_models_analysis": {
+            "total_models": 327,
+            "models_voting_buy": 0,
+            "models_voting_sell": 206,
+            "models_voting_hold": 121,
+            "consensus_type": "SELL",
+            "consensus_strength": "63.0%"
+          }
+        },
+        "ETHUSDT": {
+          "symbol": "ETHUSDT",
+          "cycle": 21,
+          "timestamp": "2025-11-09T09:59:34.051055",
+          "action": "SELL",
+          "confidence": 0.6557887835526159,
+          "confidence_percent": "65.6%",
+          "reasoning": "RSI overbought (51.0), MACD bearish, Profit taking signal, Trend UP",
+          "ai_models_analysis": {
+            "total_models": 327,
+            "models_voting_buy": 0,
+            "models_voting_sell": 214,
+            "models_voting_hold": 113,
+            "consensus_type": "SELL",
+            "consensus_strength": "65.4%"
+          }
+        },
+        "BNBUSDT": {
+          "symbol": "BNBUSDT",
+          "cycle": 21,
+          "timestamp": "2025-11-09T09:59:34.051133",
+          "action": "SELL",
+          "confidence": 0.7921170085669812,
+          "confidence_percent": "79.2%",
+          "reasoning": "RSI overbought (51.0), MACD bearish, Profit taking signal, Trend UP",
+          "ai_models_analysis": {
+            "total_models": 327,
+            "models_voting_buy": 0,
+            "models_voting_sell": 259,
+            "models_voting_hold": 68,
+            "consensus_type": "SELL",
+            "consensus_strength": "79.2%"
+          }
+        },
+        "ADAUSDT": {
+          "symbol": "ADAUSDT",
+          "cycle": 21,
+          "timestamp": "2025-11-09T09:59:34.051206",
+          "action": "SELL",
+          "confidence": 0.7897022629639486,
+          "confidence_percent": "79.0%",
+          "reasoning": "RSI overbought (51.0), MACD bearish, Profit taking signal, Trend UP",
+          "ai_models_analysis": {
+            "total_models": 327,
+            "models_voting_buy": 0,
+            "models_voting_sell": 258,
+            "models_voting_hold": 69,
+            "consensus_type": "SELL",
+            "consensus_strength": "78.9%"
+          }
+        },
+        "XRPUSDT": {
+          "symbol": "XRPUSDT",
+          "cycle": 21,
+          "timestamp": "2025-11-09T09:59:34.051277",
+          "action": "SELL",
+          "confidence": 0.6064935632086504,
+          "confidence_percent": "60.6%",
+          "reasoning": "RSI overbought (51.0), MACD bearish, Profit taking signal, Trend UP",
+          "ai_models_analysis": {
+            "total_models": 327,
+            "models_voting_buy": 0,
+            "models_voting_sell": 198,
+            "models_voting_hold": 129,
+            "consensus_type": "SELL",
+            "consensus_strength": "60.6%"
+          }
+        }
+      },
+      "trades_executed": [
+        {
+          "trade_id": "TRADE_36",
+          "symbol": "BTCUSDT",
+          "cycle": 21,
+          "timestamp": "2025-11-09T09:59:34.050940",
+          "action": "SELL",
+          "ai_confidence": 0.6329373929272103,
+          "status": "EXECUTED",
+          "type": "SELL",
+          "quantity": 0.2564102564102564,
+          "entry_price": 117,
+          "exit_price": 123,
+          "pnl": 1.53846153846154,
+          "pnl_percent": 5.128205128205134,
+          "fee": 0.031538461538461536
+        },
+        {
+          "trade_id": "TRADE_37",
+          "symbol": "ETHUSDT",
+          "cycle": 21,
+          "timestamp": "2025-11-09T09:59:34.051055",
+          "action": "SELL",
+          "ai_confidence": 0.6557887835526159,
+          "status": "EXECUTED",
+          "type": "SELL",
+          "quantity": 0.2564102564102564,
+          "entry_price": 117,
+          "exit_price": 123,
+          "pnl": 1.53846153846154,
+          "pnl_percent": 5.128205128205134,
+          "fee": 0.031538461538461536
+        },
+        {
+          "trade_id": "TRADE_38",
+          "symbol": "BNBUSDT",
+          "cycle": 21,
+          "timestamp": "2025-11-09T09:59:34.051133",
+          "action": "SELL",
+          "ai_confidence": 0.7921170085669812,
+          "status": "EXECUTED",
+          "type": "SELL",
+          "quantity": 0.2564102564102564,
+          "entry_price": 117,
+          "exit_price": 123,
+          "pnl": 1.53846153846154,
+          "pnl_percent": 5.128205128205134,
+          "fee": 0.031538461538461536
+        },
+        {
+          "trade_id": "TRADE_39",
+          "symbol": "ADAUSDT",
+          "cycle": 21,
+          "timestamp": "2025-11-09T09:59:34.051206",
+          "action": "SELL",
+          "ai_confidence": 0.7897022629639486,
+          "status": "EXECUTED",
+          "type": "SELL",
+          "quantity": 0.2564102564102564,
+          "entry_price": 117,
+          "exit_price": 123,
+          "pnl": 1.53846153846154,
+          "pnl_percent": 5.128205128205134,
+          "fee": 0.031538461538461536
+        },
+        {
+          "trade_id": "TRADE_40",
+          "symbol": "XRPUSDT",
+          "cycle": 21,
+          "timestamp": "2025-11-09T09:59:34.051277",
+          "action": "SELL",
+          "ai_confidence": 0.6064935632086504,
+          "status": "EXECUTED",
+          "type": "SELL",
+          "quantity": 0.2564102564102564,
+          "entry_price": 117,
+          "exit_price": 123,
+          "pnl": 1.53846153846154,
+          "pnl_percent": 5.128205128205134,
+          "fee": 0.031538461538461536
+        }
+      ],
+      "cycle_summary": {
+        "buy_decisions": 0,
+        "sell_decisions": 5,
+        "hold_decisions": 0,
+        "trades_executed": 5,
+        "total_pnl": 24.611989951795792,
+        "total_trades": 40
+      }
+    },
+    {
+      "cycle": 22,
+      "timestamp": "2025-11-09T09:59:34.251486",
+      "decisions": {
+        "BTCUSDT": {
+          "symbol": "BTCUSDT",
+          "cycle": 22,
+          "timestamp": "2025-11-09T09:59:34.251839",
+          "action": "HOLD",
+          "confidence": 0.4617790425059087,
+          "confidence_percent": "46.2%",
+          "reasoning": "Market neutral - RSI 52.0, MACD -0.30, Bollinger position 0.22, Trend NEUTRAL",
+          "ai_models_analysis": {
+            "total_models": 327,
+            "models_voting_buy": 65,
+            "models_voting_sell": 66,
+            "models_voting_hold": 196,
+            "consensus_type": "HOLD",
+            "consensus_strength": "59.9%"
+          }
+        },
+        "ETHUSDT": {
+          "symbol": "ETHUSDT",
+          "cycle": 22,
+          "timestamp": "2025-11-09T09:59:34.251941",
+          "action": "HOLD",
+          "confidence": 0.6609015292376904,
+          "confidence_percent": "66.1%",
+          "reasoning": "Market neutral - RSI 52.0, MACD -0.30, Bollinger position 0.22, Trend NEUTRAL",
+          "ai_models_analysis": {
+            "total_models": 327,
+            "models_voting_buy": 65,
+            "models_voting_sell": 66,
+            "models_voting_hold": 196,
+            "consensus_type": "HOLD",
+            "consensus_strength": "59.9%"
+          }
+        },
+        "BNBUSDT": {
+          "symbol": "BNBUSDT",
+          "cycle": 22,
+          "timestamp": "2025-11-09T09:59:34.252012",
+          "action": "HOLD",
+          "confidence": 0.5426886592004334,
+          "confidence_percent": "54.3%",
+          "reasoning": "Market neutral - RSI 52.0, MACD -0.30, Bollinger position 0.22, Trend NEUTRAL",
+          "ai_models_analysis": {
+            "total_models": 327,
+            "models_voting_buy": 65,
+            "models_voting_sell": 66,
+            "models_voting_hold": 196,
+            "consensus_type": "HOLD",
+            "consensus_strength": "59.9%"
+          }
+        },
+        "ADAUSDT": {
+          "symbol": "ADAUSDT",
+          "cycle": 22,
+          "timestamp": "2025-11-09T09:59:34.252083",
+          "action": "HOLD",
+          "confidence": 0.5420829738903652,
+          "confidence_percent": "54.2%",
+          "reasoning": "Market neutral - RSI 52.0, MACD -0.30, Bollinger position 0.22, Trend NEUTRAL",
+          "ai_models_analysis": {
+            "total_models": 327,
+            "models_voting_buy": 65,
+            "models_voting_sell": 66,
+            "models_voting_hold": 196,
+            "consensus_type": "HOLD",
+            "consensus_strength": "59.9%"
+          }
+        },
+        "XRPUSDT": {
+          "symbol": "XRPUSDT",
+          "cycle": 22,
+          "timestamp": "2025-11-09T09:59:34.252156",
+          "action": "HOLD",
+          "confidence": 0.5482907813736876,
+          "confidence_percent": "54.8%",
+          "reasoning": "Market neutral - RSI 52.0, MACD -0.30, Bollinger position 0.22, Trend NEUTRAL",
+          "ai_models_analysis": {
+            "total_models": 327,
+            "models_voting_buy": 65,
+            "models_voting_sell": 66,
+            "models_voting_hold": 196,
+            "consensus_type": "HOLD",
+            "consensus_strength": "59.9%"
+          }
+        }
+      },
+      "trades_executed": [],
+      "cycle_summary": {
+        "buy_decisions": 0,
+        "sell_decisions": 0,
+        "hold_decisions": 5,
+        "trades_executed": 0,
+        "total_pnl": 24.611989951795792,
+        "total_trades": 40
+      }
+    },
+    {
+      "cycle": 23,
+      "timestamp": "2025-11-09T09:59:34.452431",
+      "decisions": {
+        "BTCUSDT": {
+          "symbol": "BTCUSDT",
+          "cycle": 23,
+          "timestamp": "2025-11-09T09:59:34.452786",
+          "action": "HOLD",
+          "confidence": 0.45223360021740955,
+          "confidence_percent": "45.2%",
+          "reasoning": "Market neutral - RSI 53.0, MACD -0.20, Bollinger position 0.23, Trend NEUTRAL",
+          "ai_models_analysis": {
+            "total_models": 327,
+            "models_voting_buy": 65,
+            "models_voting_sell": 66,
+            "models_voting_hold": 196,
+            "consensus_type": "HOLD",
+            "consensus_strength": "59.9%"
+          }
+        },
+        "ETHUSDT": {
+          "symbol": "ETHUSDT",
+          "cycle": 23,
+          "timestamp": "2025-11-09T09:59:34.452882",
+          "action": "HOLD",
+          "confidence": 0.5572199588051588,
+          "confidence_percent": "55.7%",
+          "reasoning": "Market neutral - RSI 53.0, MACD -0.20, Bollinger position 0.23, Trend NEUTRAL",
+          "ai_models_analysis": {
+            "total_models": 327,
+            "models_voting_buy": 65,
+            "models_voting_sell": 66,
+            "models_voting_hold": 196,
+            "consensus_type": "HOLD",
+            "consensus_strength": "59.9%"
+          }
+        },
+        "BNBUSDT": {
+          "symbol": "BNBUSDT",
+          "cycle": 23,
+          "timestamp": "2025-11-09T09:59:34.452954",
+          "action": "HOLD",
+          "confidence": 0.6481927460713143,
+          "confidence_percent": "64.8%",
+          "reasoning": "Market neutral - RSI 53.0, MACD -0.20, Bollinger position 0.23, Trend NEUTRAL",
+          "ai_models_analysis": {
+            "total_models": 327,
+            "models_voting_buy": 65,
+            "models_voting_sell": 66,
+            "models_voting_hold": 196,
+            "consensus_type": "HOLD",
+            "consensus_strength": "59.9%"
+          }
+        },
+        "ADAUSDT": {
+          "symbol": "ADAUSDT",
+          "cycle": 23,
+          "timestamp": "2025-11-09T09:59:34.453023",
+          "action": "HOLD",
+          "confidence": 0.48227837221552483,
+          "confidence_percent": "48.2%",
+          "reasoning": "Market neutral - RSI 53.0, MACD -0.20, Bollinger position 0.23, Trend NEUTRAL",
+          "ai_models_analysis": {
+            "total_models": 327,
+            "models_voting_buy": 65,
+            "models_voting_sell": 66,
+            "models_voting_hold": 196,
+            "consensus_type": "HOLD",
+            "consensus_strength": "59.9%"
+          }
+        },
+        "XRPUSDT": {
+          "symbol": "XRPUSDT",
+          "cycle": 23,
+          "timestamp": "2025-11-09T09:59:34.453090",
+          "action": "HOLD",
+          "confidence": 0.5830739419719755,
+          "confidence_percent": "58.3%",
+          "reasoning": "Market neutral - RSI 53.0, MACD -0.20, Bollinger position 0.23, Trend NEUTRAL",
+          "ai_models_analysis": {
+            "total_models": 327,
+            "models_voting_buy": 65,
+            "models_voting_sell": 66,
+            "models_voting_hold": 196,
+            "consensus_type": "HOLD",
+            "consensus_strength": "59.9%"
+          }
+        }
+      },
+      "trades_executed": [],
+      "cycle_summary": {
+        "buy_decisions": 0,
+        "sell_decisions": 0,
+        "hold_decisions": 5,
+        "trades_executed": 0,
+        "total_pnl": 24.611989951795792,
+        "total_trades": 40
+      }
+    },
+    {
+      "cycle": 24,
+      "timestamp": "2025-11-09T09:59:34.653399",
+      "decisions": {
+        "BTCUSDT": {
+          "symbol": "BTCUSDT",
+          "cycle": 24,
+          "timestamp": "2025-11-09T09:59:34.653758",
+          "action": "BUY",
+          "confidence": 0.8750743242863709,
+          "confidence_percent": "87.5%",
+          "reasoning": "RSI oversold (54.0), MACD bullish, Volume spike 1.76x, Trend UP",
+          "ai_models_analysis": {
+            "total_models": 327,
+            "models_voting_buy": 286,
+            "models_voting_sell": 0,
+            "models_voting_hold": 41,
+            "consensus_type": "BUY",
+            "consensus_strength": "87.5%"
+          }
+        },
+        "ETHUSDT": {
+          "symbol": "ETHUSDT",
+          "cycle": 24,
+          "timestamp": "2025-11-09T09:59:34.653864",
+          "action": "BUY",
+          "confidence": 0.660727974247777,
+          "confidence_percent": "66.1%",
+          "reasoning": "RSI oversold (54.0), MACD bullish, Volume spike 1.76x, Trend UP",
+          "ai_models_analysis": {
+            "total_models": 327,
+            "models_voting_buy": 216,
+            "models_voting_sell": 0,
+            "models_voting_hold": 111,
+            "consensus_type": "BUY",
+            "consensus_strength": "66.1%"
+          }
+        },
+        "BNBUSDT": {
+          "symbol": "BNBUSDT",
+          "cycle": 24,
+          "timestamp": "2025-11-09T09:59:34.653939",
+          "action": "BUY",
+          "confidence": 0.7140188013284141,
+          "confidence_percent": "71.4%",
+          "reasoning": "RSI oversold (54.0), MACD bullish, Volume spike 1.76x, Trend UP",
+          "ai_models_analysis": {
+            "total_models": 327,
+            "models_voting_buy": 233,
+            "models_voting_sell": 0,
+            "models_voting_hold": 94,
+            "consensus_type": "BUY",
+            "consensus_strength": "71.3%"
+          }
+        },
+        "ADAUSDT": {
+          "symbol": "ADAUSDT",
+          "cycle": 24,
+          "timestamp": "2025-11-09T09:59:34.654011",
+          "action": "BUY",
+          "confidence": 0.8853927133482085,
+          "confidence_percent": "88.5%",
+          "reasoning": "RSI oversold (54.0), MACD bullish, Volume spike 1.76x, Trend UP",
+          "ai_models_analysis": {
+            "total_models": 327,
+            "models_voting_buy": 289,
+            "models_voting_sell": 0,
+            "models_voting_hold": 38,
+            "consensus_type": "BUY",
+            "consensus_strength": "88.4%"
+          }
+        },
+        "XRPUSDT": {
+          "symbol": "XRPUSDT",
+          "cycle": 24,
+          "timestamp": "2025-11-09T09:59:34.654111",
+          "action": "BUY",
+          "confidence": 0.8095850659926742,
+          "confidence_percent": "81.0%",
+          "reasoning": "RSI oversold (54.0), MACD bullish, Volume spike 1.76x, Trend UP",
+          "ai_models_analysis": {
+            "total_models": 327,
+            "models_voting_buy": 264,
+            "models_voting_sell": 0,
+            "models_voting_hold": 63,
+            "consensus_type": "BUY",
+            "consensus_strength": "80.7%"
+          }
+        }
+      },
+      "trades_executed": [
+        {
+          "trade_id": "TRADE_41",
+          "symbol": "BTCUSDT",
+          "cycle": 24,
+          "timestamp": "2025-11-09T09:59:34.653758",
+          "action": "BUY",
+          "ai_confidence": 0.8750743242863709,
+          "status": "EXECUTED",
+          "type": "BUY",
+          "quantity": 0.24193548387096775,
+          "price": 124,
+          "cost": 30.0,
+          "fee": 0.03
+        },
+        {
+          "trade_id": "TRADE_42",
+          "symbol": "ETHUSDT",
+          "cycle": 24,
+          "timestamp": "2025-11-09T09:59:34.653864",
+          "action": "BUY",
+          "ai_confidence": 0.660727974247777,
+          "status": "EXECUTED",
+          "type": "BUY",
+          "quantity": 0.24193548387096775,
+          "price": 124,
+          "cost": 30.0,
+          "fee": 0.03
+        },
+        {
+          "trade_id": "TRADE_43",
+          "symbol": "BNBUSDT",
+          "cycle": 24,
+          "timestamp": "2025-11-09T09:59:34.653939",
+          "action": "BUY",
+          "ai_confidence": 0.7140188013284141,
+          "status": "EXECUTED",
+          "type": "BUY",
+          "quantity": 0.24193548387096775,
+          "price": 124,
+          "cost": 30.0,
+          "fee": 0.03
+        },
+        {
+          "trade_id": "TRADE_44",
+          "symbol": "ADAUSDT",
+          "cycle": 24,
+          "timestamp": "2025-11-09T09:59:34.654011",
+          "action": "BUY",
+          "ai_confidence": 0.8853927133482085,
+          "status": "EXECUTED",
+          "type": "BUY",
+          "quantity": 0.24193548387096775,
+          "price": 124,
+          "cost": 30.0,
+          "fee": 0.03
+        },
+        {
+          "trade_id": "TRADE_45",
+          "symbol": "XRPUSDT",
+          "cycle": 24,
+          "timestamp": "2025-11-09T09:59:34.654111",
+          "action": "BUY",
+          "ai_confidence": 0.8095850659926742,
+          "status": "EXECUTED",
+          "type": "BUY",
+          "quantity": 0.24193548387096775,
+          "price": 124,
+          "cost": 30.0,
+          "fee": 0.03
+        }
+      ],
+      "cycle_summary": {
+        "buy_decisions": 5,
+        "sell_decisions": 0,
+        "hold_decisions": 0,
+        "trades_executed": 5,
+        "total_pnl": 24.611989951795792,
+        "total_trades": 45
+      }
+    }
+  ],
+  "summary_statistics": {
+    "total_cycles": 24,
+    "total_decisions": 120,
+    "total_trades": 45,
+    "winning_trades": 15,
+    "losing_trades": 0,
+    "total_pnl": 24.611989951795792,
+    "total_pnl_percent": 2.461198995179579,
+    "final_capital": 1024.6119899517957
+  },
+  "ai_decisions_analysis": {
+    "BUY": {
+      "total_count": 30,
+      "executed": 30,
+      "avg_confidence": "78.7%",
+      "percentage_of_total": "25.0%"
+    },
+    "SELL": {
+      "total_count": 15,
+      "executed": 15,
+      "avg_confidence": "70.0%",
+      "percentage_of_total": "12.5%"
+    },
+    "HOLD": {
+      "total_count": 75,
+      "avg_confidence": "58.5%",
+      "percentage_of_total": "62.5%"
+    }
+  },
+  "trades_executed": [],
+  "performance_metrics": {}
+}
