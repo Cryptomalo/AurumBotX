@@ -1,0 +1,1384 @@
+{
+  "timestamp": "2025-11-10T08:16:56.965323",
+  "config": {
+    "challenge_name": "Demo Mainnet 100 USD - AI Autonomous",
+    "initial_capital": 100.0,
+    "mode": "demo_mainnet",
+    "ai_autonomous": true,
+    "trading_pairs": [
+      "BTC/USDT",
+      "ETH/USDT",
+      "SOL/USDT",
+      "BNB/USDT",
+      "XRP/USDT"
+    ],
+    "ai_configuration": {
+      "models_count": 327,
+      "decision_mode": "autonomous",
+      "confidence_threshold": 0.6,
+      "strategy_selection": "ai_driven",
+      "risk_management": "adaptive"
+    },
+    "strategy_settings": {
+      "mode": "ai_autonomous",
+      "available_strategies": [
+        "volatility_surfing",
+        "liquidity_hunting",
+        "smart_position_sizing",
+        "multi_timeframe_confluence",
+        "adaptive_risk_management"
+      ],
+      "ai_decides": {
+        "strategy_selection": true,
+        "position_sizing": true,
+        "entry_timing": true,
+        "exit_timing": true,
+        "risk_parameters": true
+      }
+    },
+    "risk_management": {
+      "mode": "ai_adaptive",
+      "max_drawdown_percentage": 15.0,
+      "max_concurrent_positions": 3,
+      "max_position_size_percentage": 20.0,
+      "min_position_size_percentage": 5.0,
+      "daily_loss_limit_percentage": 5.0,
+      "emergency_stop_enabled": true,
+      "circuit_breaker_enabled": true
+    },
+    "execution_parameters": {
+      "use_real_market_data": true,
+      "simulate_trades": true,
+      "apply_realistic_slippage": true,
+      "slippage_range": [
+        0.01,
+        0.1
+      ],
+      "apply_realistic_fees": true,
+      "fee_percentage": 0.1,
+      "latency_simulation": true,
+      "latency_range_ms": [
+        50,
+        200
+      ]
+    },
+    "monitoring": {
+      "log_all_decisions": true,
+      "log_ai_reasoning": true,
+      "save_results": true,
+      "results_directory": "demo_trading",
+      "real_time_updates": true
+    },
+    "performance_targets": {
+      "daily_roi_target": 3.0,
+      "weekly_roi_target": 15.0,
+      "monthly_roi_target": 50.0,
+      "win_rate_target": 65.0,
+      "sharpe_ratio_target": 2.0
+    }
+  },
+  "execution_params": {
+    "cycles": 15,
+    "duration_seconds": 4.507819414138794,
+    "ai_models": 327,
+    "confidence_threshold": 0.6
+  },
+  "performance": {
+    "initial_capital": 100.0,
+    "final_capital": 100.0,
+    "total_pnl": 0.0,
+    "roi_pct": 0.0,
+    "total_trades": 0,
+    "winning_trades": 0,
+    "losing_trades": 0,
+    "win_rate_pct": 0,
+    "sharpe_ratio": 0,
+    "max_drawdown_pct": 0,
+    "profit_factor": 0
+  },
+  "strategy_usage": {
+    "volatility_surfing": 15,
+    "liquidity_hunting": 0,
+    "smart_position_sizing": 0,
+    "multi_timeframe_confluence": 0,
+    "adaptive_risk_management": 0
+  },
+  "ai_decisions": [
+    {
+      "cycle": 1,
+      "pair": "BTC/USDT",
+      "action": "BUY",
+      "confidence": 0.4984709480122324,
+      "votes": {
+        "BUY": 163,
+        "SELL": 53,
+        "HOLD": 111
+      },
+      "price": 48484.121872145624,
+      "volatility": 0.059026279029640444,
+      "position_size_pct": 0.05,
+      "stop_loss_pct": 0.04,
+      "take_profit_pct": 0.08,
+      "strategy_used": "volatility_surfing"
+    },
+    {
+      "cycle": 1,
+      "pair": "ETH/USDT",
+      "action": "HOLD",
+      "confidence": 0.4709480122324159,
+      "votes": {
+        "BUY": 125,
+        "SELL": 48,
+        "HOLD": 154
+      },
+      "price": 3208.302914648803,
+      "volatility": 0.040059191908052495,
+      "position_size_pct": 0.0,
+      "stop_loss_pct": 0.0,
+      "take_profit_pct": 0.0,
+      "strategy_used": "volatility_surfing"
+    },
+    {
+      "cycle": 1,
+      "pair": "SOL/USDT",
+      "action": "BUY",
+      "confidence": 0.5443425076452599,
+      "votes": {
+        "BUY": 178,
+        "SELL": 65,
+        "HOLD": 84
+      },
+      "price": 166.15680291271016,
+      "volatility": 0.078223149955089,
+      "position_size_pct": 0.05,
+      "stop_loss_pct": 0.04,
+      "take_profit_pct": 0.08,
+      "strategy_used": "volatility_surfing"
+    },
+    {
+      "cycle": 1,
+      "pair": "BNB/USDT",
+      "action": "HOLD",
+      "confidence": 0.7370030581039755,
+      "votes": {
+        "BUY": 86,
+        "SELL": 0,
+        "HOLD": 241
+      },
+      "price": 384.6953873509722,
+      "volatility": 0.02586639253422263,
+      "position_size_pct": 0.0,
+      "stop_loss_pct": 0.0,
+      "take_profit_pct": 0.0,
+      "strategy_used": "volatility_surfing"
+    },
+    {
+      "cycle": 1,
+      "pair": "XRP/USDT",
+      "action": "BUY",
+      "confidence": 0.4525993883792049,
+      "votes": {
+        "BUY": 148,
+        "SELL": 74,
+        "HOLD": 105
+      },
+      "price": 0.4591158295629072,
+      "volatility": 0.04333573381693965,
+      "position_size_pct": 0.05,
+      "stop_loss_pct": 0.03666786690846982,
+      "take_profit_pct": 0.06872057482113582,
+      "strategy_used": "volatility_surfing"
+    },
+    {
+      "cycle": 2,
+      "pair": "BTC/USDT",
+      "action": "BUY",
+      "confidence": 0.5259938837920489,
+      "votes": {
+        "BUY": 172,
+        "SELL": 80,
+        "HOLD": 75
+      },
+      "price": 49189.33699606464,
+      "volatility": 0.059026279029640444,
+      "position_size_pct": 0.05,
+      "stop_loss_pct": 0.04,
+      "take_profit_pct": 0.08,
+      "strategy_used": "volatility_surfing"
+    },
+    {
+      "cycle": 2,
+      "pair": "ETH/USDT",
+      "action": "HOLD",
+      "confidence": 0.4709480122324159,
+      "votes": {
+        "BUY": 128,
+        "SELL": 45,
+        "HOLD": 154
+      },
+      "price": 3273.9909277813726,
+      "volatility": 0.040059191908052495,
+      "position_size_pct": 0.0,
+      "stop_loss_pct": 0.0,
+      "take_profit_pct": 0.0,
+      "strategy_used": "volatility_surfing"
+    },
+    {
+      "cycle": 2,
+      "pair": "SOL/USDT",
+      "action": "BUY",
+      "confidence": 0.42201834862385323,
+      "votes": {
+        "BUY": 138,
+        "SELL": 58,
+        "HOLD": 131
+      },
+      "price": 161.42442576179516,
+      "volatility": 0.078223149955089,
+      "position_size_pct": 0.05,
+      "stop_loss_pct": 0.04,
+      "take_profit_pct": 0.08,
+      "strategy_used": "volatility_surfing"
+    },
+    {
+      "cycle": 2,
+      "pair": "BNB/USDT",
+      "action": "HOLD",
+      "confidence": 0.7798165137614679,
+      "votes": {
+        "BUY": 72,
+        "SELL": 0,
+        "HOLD": 255
+      },
+      "price": 377.90632675850526,
+      "volatility": 0.02586639253422263,
+      "position_size_pct": 0.0,
+      "stop_loss_pct": 0.0,
+      "take_profit_pct": 0.0,
+      "strategy_used": "volatility_surfing"
+    },
+    {
+      "cycle": 2,
+      "pair": "XRP/USDT",
+      "action": "BUY",
+      "confidence": 0.5198776758409785,
+      "votes": {
+        "BUY": 170,
+        "SELL": 47,
+        "HOLD": 110
+      },
+      "price": 0.4649218797825292,
+      "volatility": 0.04333573381693965,
+      "position_size_pct": 0.05,
+      "stop_loss_pct": 0.03666786690846982,
+      "take_profit_pct": 0.07006614057037129,
+      "strategy_used": "volatility_surfing"
+    },
+    {
+      "cycle": 3,
+      "pair": "BTC/USDT",
+      "action": "BUY",
+      "confidence": 0.41896024464831805,
+      "votes": {
+        "BUY": 137,
+        "SELL": 75,
+        "HOLD": 115
+      },
+      "price": 48758.77050210311,
+      "volatility": 0.059026279029640444,
+      "position_size_pct": 0.05,
+      "stop_loss_pct": 0.04,
+      "take_profit_pct": 0.08,
+      "strategy_used": "volatility_surfing"
+    },
+    {
+      "cycle": 3,
+      "pair": "ETH/USDT",
+      "action": "BUY",
+      "confidence": 0.5168195718654435,
+      "votes": {
+        "BUY": 169,
+        "SELL": 62,
+        "HOLD": 96
+      },
+      "price": 3259.8278772981553,
+      "volatility": 0.040059191908052495,
+      "position_size_pct": 0.05,
+      "stop_loss_pct": 0.035029595954026244,
+      "take_profit_pct": 0.06738374496375087,
+      "strategy_used": "volatility_surfing"
+    },
+    {
+      "cycle": 3,
+      "pair": "SOL/USDT",
+      "action": "BUY",
+      "confidence": 0.4709480122324159,
+      "votes": {
+        "BUY": 154,
+        "SELL": 76,
+        "HOLD": 97
+      },
+      "price": 153.56526343494005,
+      "volatility": 0.078223149955089,
+      "position_size_pct": 0.05,
+      "stop_loss_pct": 0.04,
+      "take_profit_pct": 0.08,
+      "strategy_used": "volatility_surfing"
+    },
+    {
+      "cycle": 3,
+      "pair": "BNB/USDT",
+      "action": "HOLD",
+      "confidence": 0.709480122324159,
+      "votes": {
+        "BUY": 95,
+        "SELL": 0,
+        "HOLD": 232
+      },
+      "price": 373.6221992287956,
+      "volatility": 0.02586639253422263,
+      "position_size_pct": 0.0,
+      "stop_loss_pct": 0.0,
+      "take_profit_pct": 0.0,
+      "strategy_used": "volatility_surfing"
+    },
+    {
+      "cycle": 3,
+      "pair": "XRP/USDT",
+      "action": "BUY",
+      "confidence": 0.5321100917431193,
+      "votes": {
+        "BUY": 174,
+        "SELL": 41,
+        "HOLD": 112
+      },
+      "price": 0.47431220617860886,
+      "volatility": 0.04333573381693965,
+      "position_size_pct": 0.05,
+      "stop_loss_pct": 0.03666786690846982,
+      "take_profit_pct": 0.0703107888884141,
+      "strategy_used": "volatility_surfing"
+    },
+    {
+      "cycle": 4,
+      "pair": "BTC/USDT",
+      "action": "HOLD",
+      "confidence": 0.41896024464831805,
+      "votes": {
+        "BUY": 125,
+        "SELL": 65,
+        "HOLD": 137
+      },
+      "price": 50604.21305027453,
+      "volatility": 0.059026279029640444,
+      "position_size_pct": 0.0,
+      "stop_loss_pct": 0.0,
+      "take_profit_pct": 0.0,
+      "strategy_used": "volatility_surfing"
+    },
+    {
+      "cycle": 4,
+      "pair": "ETH/USDT",
+      "action": "BUY",
+      "confidence": 0.45871559633027525,
+      "votes": {
+        "BUY": 150,
+        "SELL": 79,
+        "HOLD": 98
+      },
+      "price": 3308.0468976273064,
+      "volatility": 0.040059191908052495,
+      "position_size_pct": 0.05,
+      "stop_loss_pct": 0.035029595954026244,
+      "take_profit_pct": 0.0662216654530475,
+      "strategy_used": "volatility_surfing"
+    },
+    {
+      "cycle": 4,
+      "pair": "SOL/USDT",
+      "action": "BUY",
+      "confidence": 0.45871559633027525,
+      "votes": {
+        "BUY": 150,
+        "SELL": 40,
+        "HOLD": 137
+      },
+      "price": 159.96860061395773,
+      "volatility": 0.078223149955089,
+      "position_size_pct": 0.05,
+      "stop_loss_pct": 0.04,
+      "take_profit_pct": 0.08,
+      "strategy_used": "volatility_surfing"
+    },
+    {
+      "cycle": 4,
+      "pair": "BNB/USDT",
+      "action": "HOLD",
+      "confidence": 0.7522935779816514,
+      "votes": {
+        "BUY": 81,
+        "SELL": 0,
+        "HOLD": 246
+      },
+      "price": 367.348967583252,
+      "volatility": 0.02586639253422263,
+      "position_size_pct": 0.0,
+      "stop_loss_pct": 0.0,
+      "take_profit_pct": 0.0,
+      "strategy_used": "volatility_surfing"
+    },
+    {
+      "cycle": 4,
+      "pair": "XRP/USDT",
+      "action": "BUY",
+      "confidence": 0.4036697247706422,
+      "votes": {
+        "BUY": 132,
+        "SELL": 75,
+        "HOLD": 120
+      },
+      "price": 0.4550268523679326,
+      "volatility": 0.04333573381693965,
+      "position_size_pct": 0.05,
+      "stop_loss_pct": 0.03666786690846982,
+      "take_profit_pct": 0.06774198154896456,
+      "strategy_used": "volatility_surfing"
+    },
+    {
+      "cycle": 5,
+      "pair": "BTC/USDT",
+      "action": "HOLD",
+      "confidence": 0.47706422018348627,
+      "votes": {
+        "BUY": 128,
+        "SELL": 43,
+        "HOLD": 156
+      },
+      "price": 53576.09246870134,
+      "volatility": 0.059026279029640444,
+      "position_size_pct": 0.0,
+      "stop_loss_pct": 0.0,
+      "take_profit_pct": 0.0,
+      "strategy_used": "volatility_surfing"
+    },
+    {
+      "cycle": 5,
+      "pair": "ETH/USDT",
+      "action": "BUY",
+      "confidence": 0.5229357798165137,
+      "votes": {
+        "BUY": 171,
+        "SELL": 80,
+        "HOLD": 76
+      },
+      "price": 3317.8054017692216,
+      "volatility": 0.040059191908052495,
+      "position_size_pct": 0.05,
+      "stop_loss_pct": 0.035029595954026244,
+      "take_profit_pct": 0.06750606912277227,
+      "strategy_used": "volatility_surfing"
+    },
+    {
+      "cycle": 5,
+      "pair": "SOL/USDT",
+      "action": "BUY",
+      "confidence": 0.4709480122324159,
+      "votes": {
+        "BUY": 154,
+        "SELL": 52,
+        "HOLD": 121
+      },
+      "price": 162.63114256266547,
+      "volatility": 0.078223149955089,
+      "position_size_pct": 0.05,
+      "stop_loss_pct": 0.04,
+      "take_profit_pct": 0.08,
+      "strategy_used": "volatility_surfing"
+    },
+    {
+      "cycle": 5,
+      "pair": "BNB/USDT",
+      "action": "HOLD",
+      "confidence": 0.7737003058103975,
+      "votes": {
+        "BUY": 74,
+        "SELL": 0,
+        "HOLD": 253
+      },
+      "price": 368.2981411568492,
+      "volatility": 0.02586639253422263,
+      "position_size_pct": 0.0,
+      "stop_loss_pct": 0.0,
+      "take_profit_pct": 0.0,
+      "strategy_used": "volatility_surfing"
+    },
+    {
+      "cycle": 5,
+      "pair": "XRP/USDT",
+      "action": "HOLD",
+      "confidence": 0.40672782874617736,
+      "votes": {
+        "BUY": 123,
+        "SELL": 71,
+        "HOLD": 133
+      },
+      "price": 0.4705469931999615,
+      "volatility": 0.04333573381693965,
+      "position_size_pct": 0.0,
+      "stop_loss_pct": 0.0,
+      "take_profit_pct": 0.0,
+      "strategy_used": "volatility_surfing"
+    },
+    {
+      "cycle": 6,
+      "pair": "BTC/USDT",
+      "action": "BUY",
+      "confidence": 0.4801223241590214,
+      "votes": {
+        "BUY": 157,
+        "SELL": 64,
+        "HOLD": 106
+      },
+      "price": 56321.64524108061,
+      "volatility": 0.059026279029640444,
+      "position_size_pct": 0.05,
+      "stop_loss_pct": 0.04,
+      "take_profit_pct": 0.08,
+      "strategy_used": "volatility_surfing"
+    },
+    {
+      "cycle": 6,
+      "pair": "ETH/USDT",
+      "action": "HOLD",
+      "confidence": 0.42813455657492355,
+      "votes": {
+        "BUY": 130,
+        "SELL": 57,
+        "HOLD": 140
+      },
+      "price": 3267.1204969271034,
+      "volatility": 0.040059191908052495,
+      "position_size_pct": 0.0,
+      "stop_loss_pct": 0.0,
+      "take_profit_pct": 0.0,
+      "strategy_used": "volatility_surfing"
+    },
+    {
+      "cycle": 6,
+      "pair": "SOL/USDT",
+      "action": "BUY",
+      "confidence": 0.5412844036697247,
+      "votes": {
+        "BUY": 177,
+        "SELL": 47,
+        "HOLD": 103
+      },
+      "price": 157.8343658204522,
+      "volatility": 0.078223149955089,
+      "position_size_pct": 0.05,
+      "stop_loss_pct": 0.04,
+      "take_profit_pct": 0.08,
+      "strategy_used": "volatility_surfing"
+    },
+    {
+      "cycle": 6,
+      "pair": "BNB/USDT",
+      "action": "HOLD",
+      "confidence": 0.8073394495412844,
+      "votes": {
+        "BUY": 63,
+        "SELL": 0,
+        "HOLD": 264
+      },
+      "price": 374.0259421114914,
+      "volatility": 0.02586639253422263,
+      "position_size_pct": 0.0,
+      "stop_loss_pct": 0.0,
+      "take_profit_pct": 0.0,
+      "strategy_used": "volatility_surfing"
+    },
+    {
+      "cycle": 6,
+      "pair": "XRP/USDT",
+      "action": "BUY",
+      "confidence": 0.5229357798165137,
+      "votes": {
+        "BUY": 171,
+        "SELL": 76,
+        "HOLD": 80
+      },
+      "price": 0.47124108438621415,
+      "volatility": 0.04333573381693965,
+      "position_size_pct": 0.05,
+      "stop_loss_pct": 0.03666786690846982,
+      "take_profit_pct": 0.070127302649882,
+      "strategy_used": "volatility_surfing"
+    },
+    {
+      "cycle": 7,
+      "pair": "BTC/USDT",
+      "action": "BUY",
+      "confidence": 0.46788990825688076,
+      "votes": {
+        "BUY": 153,
+        "SELL": 54,
+        "HOLD": 120
+      },
+      "price": 53279.16084704062,
+      "volatility": 0.059026279029640444,
+      "position_size_pct": 0.05,
+      "stop_loss_pct": 0.04,
+      "take_profit_pct": 0.08,
+      "strategy_used": "volatility_surfing"
+    },
+    {
+      "cycle": 7,
+      "pair": "ETH/USDT",
+      "action": "BUY",
+      "confidence": 0.5382262996941896,
+      "votes": {
+        "BUY": 176,
+        "SELL": 80,
+        "HOLD": 71
+      },
+      "price": 3305.603168833733,
+      "volatility": 0.040059191908052495,
+      "position_size_pct": 0.05,
+      "stop_loss_pct": 0.035029595954026244,
+      "take_profit_pct": 0.06781187952032579,
+      "strategy_used": "volatility_surfing"
+    },
+    {
+      "cycle": 7,
+      "pair": "SOL/USDT",
+      "action": "BUY",
+      "confidence": 0.5015290519877675,
+      "votes": {
+        "BUY": 164,
+        "SELL": 47,
+        "HOLD": 116
+      },
+      "price": 156.4467449867535,
+      "volatility": 0.078223149955089,
+      "position_size_pct": 0.05,
+      "stop_loss_pct": 0.04,
+      "take_profit_pct": 0.08,
+      "strategy_used": "volatility_surfing"
+    },
+    {
+      "cycle": 7,
+      "pair": "BNB/USDT",
+      "action": "HOLD",
+      "confidence": 0.6941896024464832,
+      "votes": {
+        "BUY": 100,
+        "SELL": 0,
+        "HOLD": 227
+      },
+      "price": 368.2475842857622,
+      "volatility": 0.02586639253422263,
+      "position_size_pct": 0.0,
+      "stop_loss_pct": 0.0,
+      "take_profit_pct": 0.0,
+      "strategy_used": "volatility_surfing"
+    },
+    {
+      "cycle": 7,
+      "pair": "XRP/USDT",
+      "action": "BUY",
+      "confidence": 0.5107033639143731,
+      "votes": {
+        "BUY": 167,
+        "SELL": 70,
+        "HOLD": 90
+      },
+      "price": 0.476983768485196,
+      "volatility": 0.04333573381693965,
+      "position_size_pct": 0.05,
+      "stop_loss_pct": 0.03666786690846982,
+      "take_profit_pct": 0.06988265433183918,
+      "strategy_used": "volatility_surfing"
+    },
+    {
+      "cycle": 8,
+      "pair": "BTC/USDT",
+      "action": "HOLD",
+      "confidence": 0.4617737003058104,
+      "votes": {
+        "BUY": 133,
+        "SELL": 43,
+        "HOLD": 151
+      },
+      "price": 54596.299946375,
+      "volatility": 0.059026279029640444,
+      "position_size_pct": 0.0,
+      "stop_loss_pct": 0.0,
+      "take_profit_pct": 0.0,
+      "strategy_used": "volatility_surfing"
+    },
+    {
+      "cycle": 8,
+      "pair": "ETH/USDT",
+      "action": "BUY",
+      "confidence": 0.44036697247706424,
+      "votes": {
+        "BUY": 144,
+        "SELL": 46,
+        "HOLD": 137
+      },
+      "price": 3312.999521519727,
+      "volatility": 0.040059191908052495,
+      "position_size_pct": 0.05,
+      "stop_loss_pct": 0.035029595954026244,
+      "take_profit_pct": 0.06585469297598329,
+      "strategy_used": "volatility_surfing"
+    },
+    {
+      "cycle": 8,
+      "pair": "SOL/USDT",
+      "action": "BUY",
+      "confidence": 0.43425076452599387,
+      "votes": {
+        "BUY": 142,
+        "SELL": 56,
+        "HOLD": 129
+      },
+      "price": 163.10223372455377,
+      "volatility": 0.078223149955089,
+      "position_size_pct": 0.05,
+      "stop_loss_pct": 0.04,
+      "take_profit_pct": 0.08,
+      "strategy_used": "volatility_surfing"
+    },
+    {
+      "cycle": 8,
+      "pair": "BNB/USDT",
+      "action": "HOLD",
+      "confidence": 0.746177370030581,
+      "votes": {
+        "BUY": 83,
+        "SELL": 0,
+        "HOLD": 244
+      },
+      "price": 371.7082068120981,
+      "volatility": 0.02586639253422263,
+      "position_size_pct": 0.0,
+      "stop_loss_pct": 0.0,
+      "take_profit_pct": 0.0,
+      "strategy_used": "volatility_surfing"
+    },
+    {
+      "cycle": 8,
+      "pair": "XRP/USDT",
+      "action": "HOLD",
+      "confidence": 0.41284403669724773,
+      "votes": {
+        "BUY": 124,
+        "SELL": 68,
+        "HOLD": 135
+      },
+      "price": 0.48515176776715774,
+      "volatility": 0.04333573381693965,
+      "position_size_pct": 0.0,
+      "stop_loss_pct": 0.0,
+      "take_profit_pct": 0.0,
+      "strategy_used": "volatility_surfing"
+    },
+    {
+      "cycle": 9,
+      "pair": "BTC/USDT",
+      "action": "BUY",
+      "confidence": 0.47706422018348627,
+      "votes": {
+        "BUY": 156,
+        "SELL": 73,
+        "HOLD": 98
+      },
+      "price": 57703.676030386516,
+      "volatility": 0.059026279029640444,
+      "position_size_pct": 0.05,
+      "stop_loss_pct": 0.04,
+      "take_profit_pct": 0.08,
+      "strategy_used": "volatility_surfing"
+    },
+    {
+      "cycle": 9,
+      "pair": "ETH/USDT",
+      "action": "BUY",
+      "confidence": 0.4892966360856269,
+      "votes": {
+        "BUY": 160,
+        "SELL": 59,
+        "HOLD": 108
+      },
+      "price": 3202.2791709705316,
+      "volatility": 0.040059191908052495,
+      "position_size_pct": 0.05,
+      "stop_loss_pct": 0.035029595954026244,
+      "take_profit_pct": 0.06683328624815453,
+      "strategy_used": "volatility_surfing"
+    },
+    {
+      "cycle": 9,
+      "pair": "SOL/USDT",
+      "action": "BUY",
+      "confidence": 0.4892966360856269,
+      "votes": {
+        "BUY": 160,
+        "SELL": 51,
+        "HOLD": 116
+      },
+      "price": 169.68922283877816,
+      "volatility": 0.078223149955089,
+      "position_size_pct": 0.05,
+      "stop_loss_pct": 0.04,
+      "take_profit_pct": 0.08,
+      "strategy_used": "volatility_surfing"
+    },
+    {
+      "cycle": 9,
+      "pair": "BNB/USDT",
+      "action": "HOLD",
+      "confidence": 0.7584097859327217,
+      "votes": {
+        "BUY": 79,
+        "SELL": 0,
+        "HOLD": 248
+      },
+      "price": 364.5024485253906,
+      "volatility": 0.02586639253422263,
+      "position_size_pct": 0.0,
+      "stop_loss_pct": 0.0,
+      "take_profit_pct": 0.0,
+      "strategy_used": "volatility_surfing"
+    },
+    {
+      "cycle": 9,
+      "pair": "XRP/USDT",
+      "action": "BUY",
+      "confidence": 0.44648318042813456,
+      "votes": {
+        "BUY": 146,
+        "SELL": 42,
+        "HOLD": 139
+      },
+      "price": 0.49447337580787365,
+      "volatility": 0.04333573381693965,
+      "position_size_pct": 0.05,
+      "stop_loss_pct": 0.03666786690846982,
+      "take_profit_pct": 0.06859825066211442,
+      "strategy_used": "volatility_surfing"
+    },
+    {
+      "cycle": 10,
+      "pair": "BTC/USDT",
+      "action": "BUY",
+      "confidence": 0.45871559633027525,
+      "votes": {
+        "BUY": 150,
+        "SELL": 66,
+        "HOLD": 111
+      },
+      "price": 56632.012626662625,
+      "volatility": 0.059026279029640444,
+      "position_size_pct": 0.05,
+      "stop_loss_pct": 0.04,
+      "take_profit_pct": 0.08,
+      "strategy_used": "volatility_surfing"
+    },
+    {
+      "cycle": 10,
+      "pair": "ETH/USDT",
+      "action": "BUY",
+      "confidence": 0.48623853211009177,
+      "votes": {
+        "BUY": 159,
+        "SELL": 52,
+        "HOLD": 116
+      },
+      "price": 3108.839878397119,
+      "volatility": 0.040059191908052495,
+      "position_size_pct": 0.05,
+      "stop_loss_pct": 0.035029595954026244,
+      "take_profit_pct": 0.06677212416864384,
+      "strategy_used": "volatility_surfing"
+    },
+    {
+      "cycle": 10,
+      "pair": "SOL/USDT",
+      "action": "BUY",
+      "confidence": 0.4617737003058104,
+      "votes": {
+        "BUY": 151,
+        "SELL": 66,
+        "HOLD": 110
+      },
+      "price": 169.40282284921827,
+      "volatility": 0.078223149955089,
+      "position_size_pct": 0.05,
+      "stop_loss_pct": 0.04,
+      "take_profit_pct": 0.08,
+      "strategy_used": "volatility_surfing"
+    },
+    {
+      "cycle": 10,
+      "pair": "BNB/USDT",
+      "action": "HOLD",
+      "confidence": 0.72782874617737,
+      "votes": {
+        "BUY": 89,
+        "SELL": 0,
+        "HOLD": 238
+      },
+      "price": 370.837968092242,
+      "volatility": 0.02586639253422263,
+      "position_size_pct": 0.0,
+      "stop_loss_pct": 0.0,
+      "take_profit_pct": 0.0,
+      "strategy_used": "volatility_surfing"
+    },
+    {
+      "cycle": 10,
+      "pair": "XRP/USDT",
+      "action": "BUY",
+      "confidence": 0.4892966360856269,
+      "votes": {
+        "BUY": 160,
+        "SELL": 53,
+        "HOLD": 114
+      },
+      "price": 0.5044610527996325,
+      "volatility": 0.04333573381693965,
+      "position_size_pct": 0.05,
+      "stop_loss_pct": 0.03666786690846982,
+      "take_profit_pct": 0.06945451977526426,
+      "strategy_used": "volatility_surfing"
+    },
+    {
+      "cycle": 11,
+      "pair": "BTC/USDT",
+      "action": "BUY",
+      "confidence": 0.4831804281345566,
+      "votes": {
+        "BUY": 158,
+        "SELL": 47,
+        "HOLD": 122
+      },
+      "price": 54095.03505934907,
+      "volatility": 0.059026279029640444,
+      "position_size_pct": 0.05,
+      "stop_loss_pct": 0.04,
+      "take_profit_pct": 0.08,
+      "strategy_used": "volatility_surfing"
+    },
+    {
+      "cycle": 11,
+      "pair": "ETH/USDT",
+      "action": "BUY",
+      "confidence": 0.382262996941896,
+      "votes": {
+        "BUY": 125,
+        "SELL": 77,
+        "HOLD": 125
+      },
+      "price": 3070.630411021483,
+      "volatility": 0.040059191908052495,
+      "position_size_pct": 0.05,
+      "stop_loss_pct": 0.035029595954026244,
+      "take_profit_pct": 0.06469261346527992,
+      "strategy_used": "volatility_surfing"
+    },
+    {
+      "cycle": 11,
+      "pair": "SOL/USDT",
+      "action": "BUY",
+      "confidence": 0.4434250764525994,
+      "votes": {
+        "BUY": 145,
+        "SELL": 56,
+        "HOLD": 126
+      },
+      "price": 165.29777445210598,
+      "volatility": 0.078223149955089,
+      "position_size_pct": 0.05,
+      "stop_loss_pct": 0.04,
+      "take_profit_pct": 0.08,
+      "strategy_used": "volatility_surfing"
+    },
+    {
+      "cycle": 11,
+      "pair": "BNB/USDT",
+      "action": "HOLD",
+      "confidence": 0.764525993883792,
+      "votes": {
+        "BUY": 77,
+        "SELL": 0,
+        "HOLD": 250
+      },
+      "price": 373.0605434420748,
+      "volatility": 0.02586639253422263,
+      "position_size_pct": 0.0,
+      "stop_loss_pct": 0.0,
+      "take_profit_pct": 0.0,
+      "strategy_used": "volatility_surfing"
+    },
+    {
+      "cycle": 11,
+      "pair": "XRP/USDT",
+      "action": "BUY",
+      "confidence": 0.5015290519877675,
+      "votes": {
+        "BUY": 164,
+        "SELL": 46,
+        "HOLD": 117
+      },
+      "price": 0.5110115232284166,
+      "volatility": 0.04333573381693965,
+      "position_size_pct": 0.05,
+      "stop_loss_pct": 0.03666786690846982,
+      "take_profit_pct": 0.06969916809330708,
+      "strategy_used": "volatility_surfing"
+    },
+    {
+      "cycle": 12,
+      "pair": "BTC/USDT",
+      "action": "BUY",
+      "confidence": 0.4954128440366973,
+      "votes": {
+        "BUY": 162,
+        "SELL": 79,
+        "HOLD": 86
+      },
+      "price": 57197.65627238536,
+      "volatility": 0.059026279029640444,
+      "position_size_pct": 0.05,
+      "stop_loss_pct": 0.04,
+      "take_profit_pct": 0.08,
+      "strategy_used": "volatility_surfing"
+    },
+    {
+      "cycle": 12,
+      "pair": "ETH/USDT",
+      "action": "BUY",
+      "confidence": 0.4617737003058104,
+      "votes": {
+        "BUY": 151,
+        "SELL": 57,
+        "HOLD": 119
+      },
+      "price": 3068.2282057537486,
+      "volatility": 0.040059191908052495,
+      "position_size_pct": 0.05,
+      "stop_loss_pct": 0.035029595954026244,
+      "take_profit_pct": 0.06628282753255821,
+      "strategy_used": "volatility_surfing"
+    },
+    {
+      "cycle": 12,
+      "pair": "SOL/USDT",
+      "action": "HOLD",
+      "confidence": 0.44954128440366975,
+      "votes": {
+        "BUY": 129,
+        "SELL": 51,
+        "HOLD": 147
+      },
+      "price": 162.63360326293787,
+      "volatility": 0.078223149955089,
+      "position_size_pct": 0.0,
+      "stop_loss_pct": 0.0,
+      "take_profit_pct": 0.0,
+      "strategy_used": "volatility_surfing"
+    },
+    {
+      "cycle": 12,
+      "pair": "BNB/USDT",
+      "action": "HOLD",
+      "confidence": 0.7981651376146789,
+      "votes": {
+        "BUY": 66,
+        "SELL": 0,
+        "HOLD": 261
+      },
+      "price": 369.143759771629,
+      "volatility": 0.02586639253422263,
+      "position_size_pct": 0.0,
+      "stop_loss_pct": 0.0,
+      "take_profit_pct": 0.0,
+      "strategy_used": "volatility_surfing"
+    },
+    {
+      "cycle": 12,
+      "pair": "XRP/USDT",
+      "action": "HOLD",
+      "confidence": 0.42813455657492355,
+      "votes": {
+        "BUY": 125,
+        "SELL": 62,
+        "HOLD": 140
+      },
+      "price": 0.5109690765486552,
+      "volatility": 0.04333573381693965,
+      "position_size_pct": 0.0,
+      "stop_loss_pct": 0.0,
+      "take_profit_pct": 0.0,
+      "strategy_used": "volatility_surfing"
+    },
+    {
+      "cycle": 13,
+      "pair": "BTC/USDT",
+      "action": "BUY",
+      "confidence": 0.46788990825688076,
+      "votes": {
+        "BUY": 153,
+        "SELL": 62,
+        "HOLD": 112
+      },
+      "price": 57839.82690603372,
+      "volatility": 0.059026279029640444,
+      "position_size_pct": 0.05,
+      "stop_loss_pct": 0.04,
+      "take_profit_pct": 0.08,
+      "strategy_used": "volatility_surfing"
+    },
+    {
+      "cycle": 13,
+      "pair": "ETH/USDT",
+      "action": "BUY",
+      "confidence": 0.4617737003058104,
+      "votes": {
+        "BUY": 151,
+        "SELL": 61,
+        "HOLD": 115
+      },
+      "price": 3002.6253859125327,
+      "volatility": 0.040059191908052495,
+      "position_size_pct": 0.05,
+      "stop_loss_pct": 0.035029595954026244,
+      "take_profit_pct": 0.06628282753255821,
+      "strategy_used": "volatility_surfing"
+    },
+    {
+      "cycle": 13,
+      "pair": "SOL/USDT",
+      "action": "BUY",
+      "confidence": 0.4923547400611621,
+      "votes": {
+        "BUY": 161,
+        "SELL": 60,
+        "HOLD": 106
+      },
+      "price": 171.14926908631182,
+      "volatility": 0.078223149955089,
+      "position_size_pct": 0.05,
+      "stop_loss_pct": 0.04,
+      "take_profit_pct": 0.08,
+      "strategy_used": "volatility_surfing"
+    },
+    {
+      "cycle": 13,
+      "pair": "BNB/USDT",
+      "action": "HOLD",
+      "confidence": 0.7003058103975535,
+      "votes": {
+        "BUY": 98,
+        "SELL": 0,
+        "HOLD": 229
+      },
+      "price": 364.56038525699256,
+      "volatility": 0.02586639253422263,
+      "position_size_pct": 0.0,
+      "stop_loss_pct": 0.0,
+      "take_profit_pct": 0.0,
+      "strategy_used": "volatility_surfing"
+    },
+    {
+      "cycle": 13,
+      "pair": "XRP/USDT",
+      "action": "HOLD",
+      "confidence": 0.42201834862385323,
+      "votes": {
+        "BUY": 125,
+        "SELL": 64,
+        "HOLD": 138
+      },
+      "price": 0.4953352161525215,
+      "volatility": 0.04333573381693965,
+      "position_size_pct": 0.0,
+      "stop_loss_pct": 0.0,
+      "take_profit_pct": 0.0,
+      "strategy_used": "volatility_surfing"
+    },
+    {
+      "cycle": 14,
+      "pair": "BTC/USDT",
+      "action": "BUY",
+      "confidence": 0.44954128440366975,
+      "votes": {
+        "BUY": 147,
+        "SELL": 78,
+        "HOLD": 102
+      },
+      "price": 57978.60095452213,
+      "volatility": 0.059026279029640444,
+      "position_size_pct": 0.05,
+      "stop_loss_pct": 0.04,
+      "take_profit_pct": 0.08,
+      "strategy_used": "volatility_surfing"
+    },
+    {
+      "cycle": 14,
+      "pair": "ETH/USDT",
+      "action": "BUY",
+      "confidence": 0.44036697247706424,
+      "votes": {
+        "BUY": 144,
+        "SELL": 47,
+        "HOLD": 136
+      },
+      "price": 3020.0484426076373,
+      "volatility": 0.040059191908052495,
+      "position_size_pct": 0.05,
+      "stop_loss_pct": 0.035029595954026244,
+      "take_profit_pct": 0.06585469297598329,
+      "strategy_used": "volatility_surfing"
+    },
+    {
+      "cycle": 14,
+      "pair": "SOL/USDT",
+      "action": "HOLD",
+      "confidence": 0.42813455657492355,
+      "votes": {
+        "BUY": 129,
+        "SELL": 58,
+        "HOLD": 140
+      },
+      "price": 183.8981621040152,
+      "volatility": 0.078223149955089,
+      "position_size_pct": 0.0,
+      "stop_loss_pct": 0.0,
+      "take_profit_pct": 0.0,
+      "strategy_used": "volatility_surfing"
+    },
+    {
+      "cycle": 14,
+      "pair": "BNB/USDT",
+      "action": "HOLD",
+      "confidence": 0.7522935779816514,
+      "votes": {
+        "BUY": 81,
+        "SELL": 0,
+        "HOLD": 246
+      },
+      "price": 361.8601926192584,
+      "volatility": 0.02586639253422263,
+      "position_size_pct": 0.0,
+      "stop_loss_pct": 0.0,
+      "take_profit_pct": 0.0,
+      "strategy_used": "volatility_surfing"
+    },
+    {
+      "cycle": 14,
+      "pair": "XRP/USDT",
+      "action": "BUY",
+      "confidence": 0.43425076452599387,
+      "votes": {
+        "BUY": 142,
+        "SELL": 78,
+        "HOLD": 107
+      },
+      "price": 0.4826418118782384,
+      "volatility": 0.04333573381693965,
+      "position_size_pct": 0.05,
+      "stop_loss_pct": 0.03666786690846982,
+      "take_profit_pct": 0.0683536023440716,
+      "strategy_used": "volatility_surfing"
+    },
+    {
+      "cycle": 15,
+      "pair": "BTC/USDT",
+      "action": "BUY",
+      "confidence": 0.5290519877675841,
+      "votes": {
+        "BUY": 173,
+        "SELL": 78,
+        "HOLD": 76
+      },
+      "price": 61083.46289970089,
+      "volatility": 0.059026279029640444,
+      "position_size_pct": 0.05,
+      "stop_loss_pct": 0.04,
+      "take_profit_pct": 0.08,
+      "strategy_used": "volatility_surfing"
+    },
+    {
+      "cycle": 15,
+      "pair": "ETH/USDT",
+      "action": "HOLD",
+      "confidence": 0.46788990825688076,
+      "votes": {
+        "BUY": 124,
+        "SELL": 50,
+        "HOLD": 153
+      },
+      "price": 3091.0639237072205,
+      "volatility": 0.040059191908052495,
+      "position_size_pct": 0.0,
+      "stop_loss_pct": 0.0,
+      "take_profit_pct": 0.0,
+      "strategy_used": "volatility_surfing"
+    },
+    {
+      "cycle": 15,
+      "pair": "SOL/USDT",
+      "action": "BUY",
+      "confidence": 0.4036697247706422,
+      "votes": {
+        "BUY": 132,
+        "SELL": 77,
+        "HOLD": 118
+      },
+      "price": 171.52847049104133,
+      "volatility": 0.078223149955089,
+      "position_size_pct": 0.05,
+      "stop_loss_pct": 0.04,
+      "take_profit_pct": 0.08,
+      "strategy_used": "volatility_surfing"
+    },
+    {
+      "cycle": 15,
+      "pair": "BNB/USDT",
+      "action": "HOLD",
+      "confidence": 0.7951070336391437,
+      "votes": {
+        "BUY": 67,
+        "SELL": 0,
+        "HOLD": 260
+      },
+      "price": 369.839226859995,
+      "volatility": 0.02586639253422263,
+      "position_size_pct": 0.0,
+      "stop_loss_pct": 0.0,
+      "take_profit_pct": 0.0,
+      "strategy_used": "volatility_surfing"
+    },
+    {
+      "cycle": 15,
+      "pair": "XRP/USDT",
+      "action": "BUY",
+      "confidence": 0.5168195718654435,
+      "votes": {
+        "BUY": 169,
+        "SELL": 77,
+        "HOLD": 81
+      },
+      "price": 0.46238918308607807,
+      "volatility": 0.04333573381693965,
+      "position_size_pct": 0.05,
+      "stop_loss_pct": 0.03666786690846982,
+      "take_profit_pct": 0.0700049784908606,
+      "strategy_used": "volatility_surfing"
+    }
+  ],
+  "trades_history": []
+}
