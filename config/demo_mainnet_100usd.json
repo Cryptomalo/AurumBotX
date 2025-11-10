@@ -13,7 +13,7 @@
   "ai_configuration": {
     "models_count": 327,
     "decision_mode": "autonomous",
-    "confidence_threshold": 0.60,
+      "confidence_threshold": 0.50,
     "strategy_selection": "ai_driven",
     "risk_management": "adaptive"
   },
