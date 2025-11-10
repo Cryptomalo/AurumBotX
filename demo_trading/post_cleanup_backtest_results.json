@@ -1,0 +1,266 @@
+{
+  "timestamp": "2025-11-10T07:41:08.350377",
+  "config": {
+    "challenge_name": "50 USDT Live Testing",
+    "initial_capital": 50.0,
+    "target_capital": 100.0,
+    "trading_pairs": [
+      "BTC/USDT",
+      "ETH/USDT"
+    ],
+    "strategy_settings": {
+      "name": "ChallengeGrowthStrategyUSDT",
+      "parameters": {
+        "risk_level": "conservative",
+        "position_size_percentage": 5.0,
+        "stop_loss_percentage": 2.5,
+        "take_profit_percentage": 5.0
+      }
+    },
+    "risk_management": {
+      "max_drawdown_percentage": 15.0,
+      "max_concurrent_positions": 2
+    }
+  },
+  "backtest_params": {
+    "cycles": 10,
+    "duration_seconds": 5.005893230438232,
+    "ai_models": 327,
+    "confidence_threshold": 0.55
+  },
+  "performance": {
+    "initial_capital": 50.0,
+    "final_capital": 50.0,
+    "total_pnl": 0.0,
+    "roi_pct": 0.0,
+    "total_trades": 0,
+    "winning_trades": 0,
+    "losing_trades": 0,
+    "win_rate_pct": 0,
+    "sharpe_ratio": 0,
+    "max_drawdown_pct": 0
+  },
+  "ai_decisions": [
+    {
+      "cycle": 1,
+      "pair": "BTC/USDT",
+      "action": "BUY",
+      "confidence": 0.37920489296636084,
+      "votes": {
+        "BUY": 124,
+        "SELL": 80,
+        "HOLD": 123
+      }
+    },
+    {
+      "cycle": 1,
+      "pair": "ETH/USDT",
+      "action": "HOLD",
+      "confidence": 0.4434250764525994,
+      "votes": {
+        "BUY": 137,
+        "SELL": 45,
+        "HOLD": 145
+      }
+    },
+    {
+      "cycle": 2,
+      "pair": "BTC/USDT",
+      "action": "HOLD",
+      "confidence": 0.44648318042813456,
+      "votes": {
+        "BUY": 125,
+        "SELL": 56,
+        "HOLD": 146
+      }
+    },
+    {
+      "cycle": 2,
+      "pair": "ETH/USDT",
+      "action": "HOLD",
+      "confidence": 0.41284403669724773,
+      "votes": {
+        "BUY": 94,
+        "SELL": 98,
+        "HOLD": 135
+      }
+    },
+    {
+      "cycle": 3,
+      "pair": "BTC/USDT",
+      "action": "HOLD",
+      "confidence": 0.37920489296636084,
+      "votes": {
+        "BUY": 121,
+        "SELL": 82,
+        "HOLD": 124
+      }
+    },
+    {
+      "cycle": 3,
+      "pair": "ETH/USDT",
+      "action": "HOLD",
+      "confidence": 0.382262996941896,
+      "votes": {
+        "BUY": 122,
+        "SELL": 80,
+        "HOLD": 125
+      }
+    },
+    {
+      "cycle": 4,
+      "pair": "BTC/USDT",
+      "action": "HOLD",
+      "confidence": 0.4892966360856269,
+      "votes": {
+        "BUY": 125,
+        "SELL": 42,
+        "HOLD": 160
+      }
+    },
+    {
+      "cycle": 4,
+      "pair": "ETH/USDT",
+      "action": "HOLD",
+      "confidence": 0.5351681957186545,
+      "votes": {
+        "BUY": 97,
+        "SELL": 55,
+        "HOLD": 175
+      }
+    },
+    {
+      "cycle": 5,
+      "pair": "BTC/USDT",
+      "action": "HOLD",
+      "confidence": 0.4036697247706422,
+      "votes": {
+        "BUY": 100,
+        "SELL": 95,
+        "HOLD": 132
+      }
+    },
+    {
+      "cycle": 5,
+      "pair": "ETH/USDT",
+      "action": "BUY",
+      "confidence": 0.4434250764525994,
+      "votes": {
+        "BUY": 145,
+        "SELL": 98,
+        "HOLD": 84
+      }
+    },
+    {
+      "cycle": 6,
+      "pair": "BTC/USDT",
+      "action": "HOLD",
+      "confidence": 0.382262996941896,
+      "votes": {
+        "BUY": 110,
+        "SELL": 92,
+        "HOLD": 125
+      }
+    },
+    {
+      "cycle": 6,
+      "pair": "ETH/USDT",
+      "action": "BUY",
+      "confidence": 0.44954128440366975,
+      "votes": {
+        "BUY": 147,
+        "SELL": 58,
+        "HOLD": 122
+      }
+    },
+    {
+      "cycle": 7,
+      "pair": "BTC/USDT",
+      "action": "HOLD",
+      "confidence": 0.43730886850152906,
+      "votes": {
+        "BUY": 111,
+        "SELL": 73,
+        "HOLD": 143
+      }
+    },
+    {
+      "cycle": 7,
+      "pair": "ETH/USDT",
+      "action": "HOLD",
+      "confidence": 0.46788990825688076,
+      "votes": {
+        "BUY": 126,
+        "SELL": 48,
+        "HOLD": 153
+      }
+    },
+    {
+      "cycle": 8,
+      "pair": "BTC/USDT",
+      "action": "HOLD",
+      "confidence": 0.40978593272171254,
+      "votes": {
+        "BUY": 112,
+        "SELL": 81,
+        "HOLD": 134
+      }
+    },
+    {
+      "cycle": 8,
+      "pair": "ETH/USDT",
+      "action": "HOLD",
+      "confidence": 0.43425076452599387,
+      "votes": {
+        "BUY": 113,
+        "SELL": 72,
+        "HOLD": 142
+      }
+    },
+    {
+      "cycle": 9,
+      "pair": "BTC/USDT",
+      "action": "HOLD",
+      "confidence": 0.4648318042813456,
+      "votes": {
+        "BUY": 107,
+        "SELL": 68,
+        "HOLD": 152
+      }
+    },
+    {
+      "cycle": 9,
+      "pair": "ETH/USDT",
+      "action": "HOLD",
+      "confidence": 0.5504587155963303,
+      "votes": {
+        "BUY": 104,
+        "SELL": 43,
+        "HOLD": 180
+      }
+    },
+    {
+      "cycle": 10,
+      "pair": "BTC/USDT",
+      "action": "HOLD",
+      "confidence": 0.46788990825688076,
+      "votes": {
+        "BUY": 114,
+        "SELL": 60,
+        "HOLD": 153
+      }
+    },
+    {
+      "cycle": 10,
+      "pair": "ETH/USDT",
+      "action": "HOLD",
+      "confidence": 0.4648318042813456,
+      "votes": {
+        "BUY": 121,
+        "SELL": 54,
+        "HOLD": 152
+      }
+    }
+  ],
+  "trades_history": []
+}
