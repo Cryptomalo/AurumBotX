@@ -69,10 +69,16 @@ tmp/
 temp/
 *.tmp
 
-# API Keys and secrets
+# API Keys and secrets (CRITICAL!)
 config/config.json
 secrets.json
 credentials.json
+*_api_key*
+*_secret*
+*_token*
+secrets/
+credentials/
+wallets/
 
 # Data files
 data/
@@ -81,3 +87,17 @@ data/
 
 # Streamlit
 .streamlit/secrets.toml
+
+# Trading State Files
+demo_trading/*.json
+demo_trading/*_state.json
+always_on_state.json
+
+# Nohup
+nohup.out
+*.nohup
+
+# User Data
+user_data/
+reports/sensitive/
+reports/*_private*
