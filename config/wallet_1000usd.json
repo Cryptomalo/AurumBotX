@@ -1,6 +1,7 @@
 {
-  "challenge_name": "Demo Mainnet 100 USD - AI Autonomous",
-  "initial_capital": 100.0,
+  "challenge_name": "Multi-Wallet Session - 1000 USD",
+  "wallet_id": "wallet_1000",
+  "initial_capital": 1000.0,
   "mode": "demo_mainnet",
   "ai_autonomous": true,
   "trading_pairs": [
@@ -8,12 +9,13 @@
     "ETH/USDT",
     "SOL/USDT",
     "BNB/USDT",
-    "XRP/USDT"
+    "XRP/USDT",
+    "ADA/USDT"
   ],
   "ai_configuration": {
     "models_count": 327,
     "decision_mode": "autonomous",
-      "confidence_threshold": 0.50,
+    "confidence_threshold": 0.55,
     "strategy_selection": "ai_driven",
     "risk_management": "adaptive"
   },
@@ -36,11 +38,11 @@
   },
   "risk_management": {
     "mode": "ai_adaptive",
-    "max_drawdown_percentage": 15.0,
-    "max_concurrent_positions": 3,
-    "max_position_size_percentage": 35.0,
-    "min_position_size_percentage": 5.0,
-    "daily_loss_limit_percentage": 5.0,
+    "max_drawdown_percentage": 10.0,
+    "max_concurrent_positions": 5,
+    "max_position_size_percentage": 25.0,
+    "min_position_size_percentage": 10.0,
+    "daily_loss_limit_percentage": 3.5,
     "emergency_stop_enabled": true,
     "circuit_breaker_enabled": true
   },
@@ -48,25 +50,25 @@
     "use_real_market_data": true,
     "simulate_trades": true,
     "apply_realistic_slippage": true,
-    "slippage_range": [0.01, 0.1],
+    "slippage_range": [0.01, 0.06],
     "apply_realistic_fees": true,
     "fee_percentage": 0.1,
     "latency_simulation": true,
-    "latency_range_ms": [50, 200]
+    "latency_range_ms": [40, 120]
   },
   "monitoring": {
     "log_all_decisions": true,
     "log_ai_reasoning": true,
     "save_results": true,
-    "results_directory": "demo_trading",
+    "results_directory": "demo_trading/wallet_1000",
     "real_time_updates": true
   },
   "performance_targets": {
-    "daily_roi_target": 3.0,
-    "weekly_roi_target": 15.0,
-    "monthly_roi_target": 50.0,
-    "win_rate_target": 65.0,
-    "sharpe_ratio_target": 2.0
+    "daily_roi_target": 2.0,
+    "weekly_roi_target": 10.0,
+    "monthly_roi_target": 35.0,
+    "win_rate_target": 70.0,
+    "sharpe_ratio_target": 2.5
   }
 }
 

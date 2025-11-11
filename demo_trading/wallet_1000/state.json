@@ -1,0 +1,21 @@
+{
+  "wallet_id": "wallet_1000",
+  "initial_capital": 1000.0,
+  "capital": 1005.6343596997235,
+  "total_cycles": 1,
+  "total_trades": 1,
+  "winning_trades": 1,
+  "losing_trades": 0,
+  "total_pnl": 5.6343596997235466,
+  "daily_pnl": 5.6343596997235466,
+  "trades_history": [
+    {
+      "pair": "XRP/USDT",
+      "action": "BUY",
+      "result": "WIN",
+      "pnl": 5.6343596997235466,
+      "capital_after": 1005.6343596997235
+    }
+  ],
+  "start_time": "2025-11-11T03:34:06.302260"
+}

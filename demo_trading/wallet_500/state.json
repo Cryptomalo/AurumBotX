@@ -1,0 +1,49 @@
+{
+  "wallet_id": "wallet_500",
+  "initial_capital": 500.0,
+  "capital": 502.62995835115214,
+  "total_cycles": 1,
+  "total_trades": 5,
+  "winning_trades": 3,
+  "losing_trades": 2,
+  "total_pnl": 2.629958351152161,
+  "daily_pnl": 2.629958351152161,
+  "trades_history": [
+    {
+      "pair": "BTC/USDT",
+      "action": "BUY",
+      "result": "WIN",
+      "pnl": 2.0534486420002933,
+      "capital_after": 502.0534486420003
+    },
+    {
+      "pair": "ETH/USDT",
+      "action": "BUY",
+      "result": "LOSS",
+      "pnl": -2.0938699331074844,
+      "capital_after": 499.9595787088928
+    },
+    {
+      "pair": "SOL/USDT",
+      "action": "SELL",
+      "result": "WIN",
+      "pnl": 2.9834492301605997,
+      "capital_after": 502.9430279390534
+    },
+    {
+      "pair": "BNB/USDT",
+      "action": "BUY",
+      "result": "WIN",
+      "pnl": 2.7226664072465008,
+      "capital_after": 505.6656943462999
+    },
+    {
+      "pair": "XRP/USDT",
+      "action": "BUY",
+      "result": "LOSS",
+      "pnl": -3.035735995147749,
+      "capital_after": 502.62995835115214
+    }
+  ],
+  "start_time": "2025-11-11T03:34:00.463569"
+}

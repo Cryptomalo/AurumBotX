@@ -1,0 +1,56 @@
+{
+  "wallet_id": "wallet_5000",
+  "initial_capital": 5000.0,
+  "capital": 5110.55977947079,
+  "total_cycles": 1,
+  "total_trades": 6,
+  "winning_trades": 6,
+  "losing_trades": 0,
+  "total_pnl": 110.55977947079052,
+  "daily_pnl": 110.55977947079052,
+  "trades_history": [
+    {
+      "pair": "BTC/USDT",
+      "action": "SELL",
+      "result": "WIN",
+      "pnl": 30.665580899389333,
+      "capital_after": 5030.665580899389
+    },
+    {
+      "pair": "ETH/USDT",
+      "action": "BUY",
+      "result": "WIN",
+      "pnl": 6.331404229276598,
+      "capital_after": 5036.996985128666
+    },
+    {
+      "pair": "SOL/USDT",
+      "action": "SELL",
+      "result": "WIN",
+      "pnl": 7.503341488168096,
+      "capital_after": 5044.500326616834
+    },
+    {
+      "pair": "XRP/USDT",
+      "action": "SELL",
+      "result": "WIN",
+      "pnl": 31.159274325988154,
+      "capital_after": 5075.659600942822
+    },
+    {
+      "pair": "ADA/USDT",
+      "action": "SELL",
+      "result": "WIN",
+      "pnl": 4.3096858173243024,
+      "capital_after": 5079.969286760146
+    },
+    {
+      "pair": "AVAX/USDT",
+      "action": "SELL",
+      "result": "WIN",
+      "pnl": 30.59049271064402,
+      "capital_after": 5110.55977947079
+    }
+  ],
+  "start_time": "2025-11-11T03:34:13.539645"
+}
