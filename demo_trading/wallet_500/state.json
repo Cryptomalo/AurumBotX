@@ -1,13 +1,13 @@
 {
   "wallet_id": "wallet_500",
   "initial_capital": 500.0,
-  "capital": 502.62995835115214,
-  "total_cycles": 1,
-  "total_trades": 5,
-  "winning_trades": 3,
-  "losing_trades": 2,
-  "total_pnl": 2.629958351152161,
-  "daily_pnl": 2.629958351152161,
+  "capital": 514.6188057411383,
+  "total_cycles": 5,
+  "total_trades": 15,
+  "winning_trades": 9,
+  "losing_trades": 6,
+  "total_pnl": 14.618805741138173,
+  "daily_pnl": 14.618805741138173,
   "trades_history": [
     {
       "pair": "BTC/USDT",
@@ -43,6 +43,76 @@
       "result": "LOSS",
       "pnl": -3.035735995147749,
       "capital_after": 502.62995835115214
+    },
+    {
+      "pair": "BTC/USDT",
+      "action": "BUY",
+      "result": "LOSS",
+      "pnl": -1.045060360889912,
+      "capital_after": 501.5848979902622
+    },
+    {
+      "pair": "ETH/USDT",
+      "action": "SELL",
+      "result": "LOSS",
+      "pnl": -2.8050656766649382,
+      "capital_after": 498.7798323135973
+    },
+    {
+      "pair": "SOL/USDT",
+      "action": "BUY",
+      "result": "WIN",
+      "pnl": 2.262353616236233,
+      "capital_after": 501.0421859298335
+    },
+    {
+      "pair": "BNB/USDT",
+      "action": "BUY",
+      "result": "LOSS",
+      "pnl": -1.6254010971824946,
+      "capital_after": 499.41678483265105
+    },
+    {
+      "pair": "BTC/USDT",
+      "action": "SELL",
+      "result": "WIN",
+      "pnl": 3.2759120149320875,
+      "capital_after": 502.69269684758314
+    },
+    {
+      "pair": "SOL/USDT",
+      "action": "BUY",
+      "result": "WIN",
+      "pnl": 3.8006310750281034,
+      "capital_after": 506.49332792261123
+    },
+    {
+      "pair": "ETH/USDT",
+      "action": "BUY",
+      "result": "WIN",
+      "pnl": 2.7821680662498642,
+      "capital_after": 509.2754959888611
+    },
+    {
+      "pair": "SOL/USDT",
+      "action": "BUY",
+      "result": "WIN",
+      "pnl": 4.25882079073279,
+      "capital_after": 513.534316779594
+    },
+    {
+      "pair": "XRP/USDT",
+      "action": "BUY",
+      "result": "LOSS",
+      "pnl": -1.4174461610879567,
+      "capital_after": 512.116870618506
+    },
+    {
+      "pair": "BTC/USDT",
+      "action": "BUY",
+      "result": "WIN",
+      "pnl": 2.501935122632236,
+      "capital_after": 514.6188057411383
     }
   ],
   "start_time": "2025-11-11T03:34:00.463569"

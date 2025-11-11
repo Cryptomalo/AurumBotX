@@ -1,13 +1,13 @@
 {
   "wallet_id": "wallet_1000",
   "initial_capital": 1000.0,
-  "capital": 1005.6343596997235,
-  "total_cycles": 1,
-  "total_trades": 1,
-  "winning_trades": 1,
-  "losing_trades": 0,
-  "total_pnl": 5.6343596997235466,
-  "daily_pnl": 5.6343596997235466,
+  "capital": 1024.3042320535378,
+  "total_cycles": 5,
+  "total_trades": 11,
+  "winning_trades": 7,
+  "losing_trades": 4,
+  "total_pnl": 24.30423205353802,
+  "daily_pnl": 24.30423205353802,
   "trades_history": [
     {
       "pair": "XRP/USDT",
@@ -15,6 +15,76 @@
       "result": "WIN",
       "pnl": 5.6343596997235466,
       "capital_after": 1005.6343596997235
+    },
+    {
+      "pair": "SOL/USDT",
+      "action": "SELL",
+      "result": "WIN",
+      "pnl": 1.6553886491541614,
+      "capital_after": 1007.2897483488777
+    },
+    {
+      "pair": "ADA/USDT",
+      "action": "BUY",
+      "result": "WIN",
+      "pnl": 2.0326113385846063,
+      "capital_after": 1009.3223596874623
+    },
+    {
+      "pair": "SOL/USDT",
+      "action": "BUY",
+      "result": "WIN",
+      "pnl": 4.774443646654634,
+      "capital_after": 1014.0968033341169
+    },
+    {
+      "pair": "ETH/USDT",
+      "action": "BUY",
+      "result": "LOSS",
+      "pnl": -3.6097601772853327,
+      "capital_after": 1010.4870431568315
+    },
+    {
+      "pair": "SOL/USDT",
+      "action": "SELL",
+      "result": "WIN",
+      "pnl": 8.422914048697344,
+      "capital_after": 1018.9099572055288
+    },
+    {
+      "pair": "XRP/USDT",
+      "action": "BUY",
+      "result": "WIN",
+      "pnl": 6.143087643490029,
+      "capital_after": 1025.0530448490188
+    },
+    {
+      "pair": "ADA/USDT",
+      "action": "BUY",
+      "result": "WIN",
+      "pnl": 3.839117140018279,
+      "capital_after": 1028.892161989037
+    },
+    {
+      "pair": "ETH/USDT",
+      "action": "SELL",
+      "result": "LOSS",
+      "pnl": -1.2110841364595226,
+      "capital_after": 1027.6810778525776
+    },
+    {
+      "pair": "BNB/USDT",
+      "action": "BUY",
+      "result": "LOSS",
+      "pnl": -1.5185361158583386,
+      "capital_after": 1026.1625417367193
+    },
+    {
+      "pair": "ADA/USDT",
+      "action": "SELL",
+      "result": "LOSS",
+      "pnl": -1.858309683181386,
+      "capital_after": 1024.3042320535378
     }
   ],
   "start_time": "2025-11-11T03:34:06.302260"

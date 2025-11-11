@@ -1,13 +1,13 @@
 {
   "wallet_id": "wallet_5000",
   "initial_capital": 5000.0,
-  "capital": 5110.55977947079,
-  "total_cycles": 1,
-  "total_trades": 6,
-  "winning_trades": 6,
-  "losing_trades": 0,
-  "total_pnl": 110.55977947079052,
-  "daily_pnl": 110.55977947079052,
+  "capital": 5292.59963499396,
+  "total_cycles": 5,
+  "total_trades": 20,
+  "winning_trades": 17,
+  "losing_trades": 3,
+  "total_pnl": 292.59963499395826,
+  "daily_pnl": 292.59963499395826,
   "trades_history": [
     {
       "pair": "BTC/USDT",
@@ -50,6 +50,104 @@
       "result": "WIN",
       "pnl": 30.59049271064402,
       "capital_after": 5110.55977947079
+    },
+    {
+      "pair": "ETH/USDT",
+      "action": "SELL",
+      "result": "WIN",
+      "pnl": 10.60223616889374,
+      "capital_after": 5121.162015639684
+    },
+    {
+      "pair": "BNB/USDT",
+      "action": "SELL",
+      "result": "WIN",
+      "pnl": 12.619395719150637,
+      "capital_after": 5133.781411358835
+    },
+    {
+      "pair": "XRP/USDT",
+      "action": "SELL",
+      "result": "WIN",
+      "pnl": 26.684206125549995,
+      "capital_after": 5160.465617484385
+    },
+    {
+      "pair": "BTC/USDT",
+      "action": "BUY",
+      "result": "WIN",
+      "pnl": 32.50008782259517,
+      "capital_after": 5192.96570530698
+    },
+    {
+      "pair": "ETH/USDT",
+      "action": "BUY",
+      "result": "LOSS",
+      "pnl": -9.05320234590734,
+      "capital_after": 5183.912502961073
+    },
+    {
+      "pair": "BNB/USDT",
+      "action": "SELL",
+      "result": "WIN",
+      "pnl": 16.831858022801264,
+      "capital_after": 5200.744360983875
+    },
+    {
+      "pair": "XRP/USDT",
+      "action": "BUY",
+      "result": "WIN",
+      "pnl": 16.421270306214968,
+      "capital_after": 5217.16563129009
+    },
+    {
+      "pair": "ADA/USDT",
+      "action": "SELL",
+      "result": "WIN",
+      "pnl": 18.412070468331077,
+      "capital_after": 5235.5777017584205
+    },
+    {
+      "pair": "AVAX/USDT",
+      "action": "BUY",
+      "result": "WIN",
+      "pnl": 8.594410171121604,
+      "capital_after": 5244.172111929543
+    },
+    {
+      "pair": "BNB/USDT",
+      "action": "SELL",
+      "result": "LOSS",
+      "pnl": -16.87551697205801,
+      "capital_after": 5227.296594957485
+    },
+    {
+      "pair": "ADA/USDT",
+      "action": "BUY",
+      "result": "WIN",
+      "pnl": 35.3030541258904,
+      "capital_after": 5262.599649083375
+    },
+    {
+      "pair": "ETH/USDT",
+      "action": "BUY",
+      "result": "LOSS",
+      "pnl": -14.717719877660203,
+      "capital_after": 5247.881929205715
+    },
+    {
+      "pair": "XRP/USDT",
+      "action": "BUY",
+      "result": "WIN",
+      "pnl": 33.8564160291801,
+      "capital_after": 5281.738345234895
+    },
+    {
+      "pair": "ADA/USDT",
+      "action": "SELL",
+      "result": "WIN",
+      "pnl": 10.86128975906432,
+      "capital_after": 5292.59963499396
     }
   ],
   "start_time": "2025-11-11T03:34:13.539645"
