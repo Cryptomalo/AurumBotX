@@ -1,0 +1,309 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AurumBotX - Trading Autonomo AI</title>
+    
+    <!-- External Libraries -->
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Inter', sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: #fff;
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 1200px;
+            width: 100%;
+        }
+        
+        header {
+            text-align: center;
+            margin-bottom: 60px;
+        }
+        
+        header h1 {
+            font-size: 3.5rem;
+            font-weight: 800;
+            margin-bottom: 15px;
+            text-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+        }
+        
+        header .subtitle {
+            font-size: 1.3rem;
+            opacity: 0.95;
+            font-weight: 300;
+        }
+        
+        .status-bar {
+            background: rgba(255, 255, 255, 0.15);
+            backdrop-filter: blur(10px);
+            border-radius: 15px;
+            padding: 20px 30px;
+            margin-bottom: 40px;
+            display: flex;
+            justify-content: space-around;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 20px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+        }
+        
+        .status-item {
+            text-align: center;
+        }
+        
+        .status-item .label {
+            font-size: 0.85rem;
+            opacity: 0.8;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-bottom: 5px;
+        }
+        
+        .status-item .value {
+            font-size: 1.8rem;
+            font-weight: 700;
+        }
+        
+        .dashboard-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 30px;
+            margin-bottom: 40px;
+        }
+        
+        .dashboard-card {
+            background: rgba(255, 255, 255, 0.15);
+            backdrop-filter: blur(10px);
+            border-radius: 20px;
+            padding: 35px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            transition: all 0.3s ease;
+            cursor: pointer;
+            text-decoration: none;
+            color: #fff;
+            display: block;
+        }
+        
+        .dashboard-card:hover {
+            transform: translateY(-10px);
+            box-shadow: 0 12px 48px rgba(0, 0, 0, 0.3);
+            background: rgba(255, 255, 255, 0.2);
+        }
+        
+        .dashboard-card .icon {
+            font-size: 3rem;
+            margin-bottom: 20px;
+            display: block;
+        }
+        
+        .dashboard-card h2 {
+            font-size: 1.5rem;
+            margin-bottom: 12px;
+            font-weight: 600;
+        }
+        
+        .dashboard-card p {
+            font-size: 1rem;
+            opacity: 0.9;
+            line-height: 1.6;
+        }
+        
+        .dashboard-card .badge {
+            display: inline-block;
+            background: rgba(16, 185, 129, 0.3);
+            color: #10b981;
+            padding: 5px 15px;
+            border-radius: 20px;
+            font-size: 0.85rem;
+            font-weight: 600;
+            margin-top: 15px;
+        }
+        
+        .dashboard-card.primary {
+            background: linear-gradient(135deg, rgba(16, 185, 129, 0.3) 0%, rgba(5, 150, 105, 0.3) 100%);
+            border: 2px solid rgba(16, 185, 129, 0.5);
+        }
+        
+        .footer {
+            text-align: center;
+            margin-top: 40px;
+            opacity: 0.8;
+        }
+        
+        .footer a {
+            color: #fff;
+            text-decoration: none;
+            margin: 0 15px;
+            transition: opacity 0.3s;
+        }
+        
+        .footer a:hover {
+            opacity: 0.7;
+        }
+        
+        @media (max-width: 768px) {
+            header h1 {
+                font-size: 2.5rem;
+            }
+            
+            header .subtitle {
+                font-size: 1.1rem;
+            }
+            
+            .dashboard-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>🚀 AurumBotX</h1>
+            <p class="subtitle">Trading Autonomo AI - Sistema Multi-Wallet Enterprise</p>
+        </header>
+        
+        <!-- Status Bar -->
+        <div class="status-bar">
+            <div class="status-item">
+                <div class="label">Capitale Totale</div>
+                <div class="value" id="total-capital">$0.00</div>
+            </div>
+            <div class="status-item">
+                <div class="label">P&L Totale</div>
+                <div class="value" id="total-pnl" style="color: #10b981;">$0.00</div>
+            </div>
+            <div class="status-item">
+                <div class="label">ROI</div>
+                <div class="value" id="total-roi" style="color: #10b981;">0.00%</div>
+            </div>
+            <div class="status-item">
+                <div class="label">Win Rate</div>
+                <div class="value" id="win-rate">0.0%</div>
+            </div>
+            <div class="status-item">
+                <div class="label">Wallet Attivi</div>
+                <div class="value" id="active-wallets">0/4</div>
+            </div>
+        </div>
+        
+        <!-- Dashboard Grid -->
+        <div class="dashboard-grid">
+            <!-- Multi-Wallet Dashboard -->
+            <a href="multi_wallet.html" class="dashboard-card primary">
+                <i class="icon fas fa-wallet"></i>
+                <h2>Multi-Wallet Dashboard</h2>
+                <p>Monitora tutti e 4 i wallet in tempo reale. Visualizza P&L, ROI, trade e performance per ogni wallet.</p>
+                <span class="badge">✅ ATTIVO</span>
+            </a>
+            
+            <!-- Trading Dashboard -->
+            <a href="multi_wallet.html#performance" class="dashboard-card">
+                <i class="icon fas fa-chart-line"></i>
+                <h2>Trading Dashboard</h2>
+                <p>Dashboard completa con grafici, analisi tecnica, posizioni aperte e storico trade.</p>
+                <span class="badge">✅ DISPONIBILE</span>
+            </a>
+            
+            <!-- Analytics -->
+            <a href="multi_wallet.html#analytics" class="dashboard-card">
+                <i class="icon fas fa-chart-bar"></i>
+                <h2>Analytics Avanzate</h2>
+                <p>Metriche avanzate: Sharpe Ratio, Profit Factor, Max Drawdown, analisi per coppia e strategia.</p>
+                <span class="badge">✅ DISPONIBILE</span>
+            </a>
+            
+            <!-- Settings -->
+            <a href="multi_wallet.html#wallets" class="dashboard-card">
+                <i class="icon fas fa-cog"></i>
+                <h2>Configurazioni</h2>
+                <p>Gestisci strategie, risk management, API keys, notifiche e parametri di trading.</p>
+                <span class="badge">✅ DISPONIBILE</span>
+            </a>
+            
+            <!-- Documentation -->
+            <a href="../AURUMBOTX_ENTERPRISE_DOCUMENTATION.md" class="dashboard-card">
+                <i class="icon fas fa-book"></i>
+                <h2>Documentazione</h2>
+                <p>Guida completa: deployment, API, strategie, troubleshooting e best practices.</p>
+                <span class="badge">📚 DOCS</span>
+            </a>
+            
+            <!-- GitHub -->
+            <a href="https://github.com/Cryptomalo/AurumBotX" target="_blank" class="dashboard-card">
+                <i class="icon fab fa-github"></i>
+                <h2>Repository GitHub</h2>
+                <p>Codice sorgente, issues, releases e contributi. Open source e trasparente.</p>
+                <span class="badge">🔗 GITHUB</span>
+            </a>
+        </div>
+        
+        <!-- Footer -->
+        <div class="footer">
+            <p>AurumBotX v2.3 - Multi-Wallet Enterprise Edition</p>
+            <p>
+                <a href="https://github.com/Cryptomalo/AurumBotX" target="_blank">
+                    <i class="fab fa-github"></i> GitHub
+                </a>
+                <a href="../AURUMBOTX_ENTERPRISE_DOCUMENTATION.md">
+                    <i class="fas fa-book"></i> Docs
+                </a>
+                <a href="multi_wallet.html">
+                    <i class="fas fa-wallet"></i> Multi-Wallet
+                </a>
+            </p>
+        </div>
+    </div>
+    
+    <!-- Load Status Script -->
+    <script>
+        // Carica status in tempo reale
+        async function loadStatus() {
+            try {
+                const response = await fetch('/api/summary');
+                const data = await response.json();
+                
+                document.getElementById('total-capital').textContent = `$${data.total_capital.toFixed(2)}`;
+                document.getElementById('total-pnl').textContent = `$${data.total_pnl >= 0 ? '+' : ''}${data.total_pnl.toFixed(2)}`;
+                document.getElementById('total-roi').textContent = `${data.total_roi >= 0 ? '+' : ''}${data.total_roi.toFixed(2)}%`;
+                document.getElementById('win-rate').textContent = `${data.avg_win_rate.toFixed(1)}%`;
+                document.getElementById('active-wallets').textContent = `${data.active_wallets}/4`;
+                
+                // Colori dinamici
+                const pnlEl = document.getElementById('total-pnl');
+                pnlEl.style.color = data.total_pnl >= 0 ? '#10b981' : '#ef4444';
+                
+                const roiEl = document.getElementById('total-roi');
+                roiEl.style.color = data.total_roi >= 0 ? '#10b981' : '#ef4444';
+            } catch (error) {
+                console.log('API non disponibile, usando valori di default');
+            }
+        }
+        
+        // Carica al load
+        loadStatus();
+        
+        // Auto-refresh ogni 30 secondi
+        setInterval(loadStatus, 30000);
+    </script>
+</body>
+</html>
+

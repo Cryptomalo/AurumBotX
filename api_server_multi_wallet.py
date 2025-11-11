@@ -35,7 +35,7 @@ def load_wallet_state(wallet):
 @app.route('/')
 def index():
     """Serve la dashboard web"""
-    return send_from_directory('web_interface', 'index.html')
+    return send_from_directory('web_interface', 'home.html')
 
 @app.route('/api/status')
 def api_status():
