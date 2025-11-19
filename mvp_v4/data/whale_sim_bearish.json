@@ -1,0 +1,61 @@
+{
+  "timestamp": "2025-11-12T09:59:48.515420",
+  "symbol": "bitcoin",
+  "analysis_window_hours": 6,
+  "data_source": "SIMULATED (bearish)",
+  "whale_activity": {
+    "inflows_usd": 665865272.0485572,
+    "outflows_usd": 51390712.02340554,
+    "net_flow_usd": -614474560.0251516,
+    "signal": "strong_bearish",
+    "confidence": 0.85,
+    "transactions_count": 48,
+    "weighted_score": -99,
+    "adjusted_confidence": 0.95,
+    "pattern_detected": true,
+    "pattern_details": {
+      "has_cluster": true,
+      "has_sustained": false,
+      "pattern_multiplier": 2.0,
+      "cluster_count": 1,
+      "time_span_hours": 5.756388888888889
+    }
+  },
+  "top_transactions": [
+    {
+      "amount_usd": 210691345.34838217,
+      "type": "exchange_inflow",
+      "signal": "bearish",
+      "size_class": "mega",
+      "timestamp": "2025-11-12T09:40:02"
+    },
+    {
+      "amount_usd": 94958957.99196123,
+      "type": "exchange_inflow",
+      "signal": "bearish",
+      "size_class": "large",
+      "timestamp": "2025-11-12T07:13:12"
+    },
+    {
+      "amount_usd": 92929413.98064415,
+      "type": "exchange_inflow",
+      "signal": "bearish",
+      "size_class": "large",
+      "timestamp": "2025-11-12T06:40:20"
+    },
+    {
+      "amount_usd": 76358372.94973785,
+      "type": "exchange_inflow",
+      "signal": "bearish",
+      "size_class": "large",
+      "timestamp": "2025-11-12T09:26:19"
+    },
+    {
+      "amount_usd": 42680500.55808613,
+      "type": "exchange_inflow",
+      "signal": "bearish",
+      "size_class": "large",
+      "timestamp": "2025-11-12T06:15:12"
+    }
+  ]
+}

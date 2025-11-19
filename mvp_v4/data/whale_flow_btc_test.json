@@ -1,0 +1,22 @@
+{
+  "timestamp": "2025-11-12T09:58:55.985699",
+  "symbol": "bitcoin",
+  "analysis_window_hours": 6,
+  "whale_activity": {
+    "inflows_usd": 0,
+    "outflows_usd": 0,
+    "net_flow_usd": 0,
+    "signal": "neutral",
+    "confidence": 0.0,
+    "transactions_count": 0,
+    "weighted_score": 0,
+    "adjusted_confidence": 0.0,
+    "pattern_detected": false,
+    "pattern_details": {
+      "has_cluster": false,
+      "has_sustained": false,
+      "pattern_multiplier": 1.0
+    }
+  },
+  "top_transactions": []
+}

@@ -1,0 +1,40 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+venv/
+*.egg-info/
+
+# Logs
+*.log
+logs/
+nohup.out
+
+# Trading data (sensitive)
+demo_trading/
+live_paper_trading/
+*.json.backup
+*_backup_*.json
+
+# Temporary files
+.heartbeat
+*.tmp
+*.swp
+*~
+
+# IDE
+.vscode/
+.idea/
+*.sublime-*
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Secrets
+.env
+*.key
+*.pem

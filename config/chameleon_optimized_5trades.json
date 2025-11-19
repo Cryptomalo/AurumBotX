@@ -1,0 +1,97 @@
+{
+  "wallet_name": "Chameleon Optimized 5 Trades/Day",
+  "initial_capital": 50.0,
+  "exchange": "mexc",
+  "demo_mode": true,
+  
+  "cycle_config": {
+    "interval_hours": 4.5,
+    "analysis_duration_minutes": 30,
+    "max_daily_trades": 6,
+    "max_holding_hours": 24
+  },
+  
+  "trading_pairs": [
+    "BTC/USDT",
+    "ETH/USDT",
+    "SOL/USDT",
+    "XRP/USDT",
+    "ADA/USDT"
+  ],
+  
+  "risk_management": {
+    "max_position_size_percent": 0.05,
+    "min_position_size_percent": 0.03,
+    "stop_loss_percent": 0.02,
+    "take_profit_percent": 0.08,
+    "trailing_stop": {
+      "enabled": true,
+      "trigger_percent": 0.05,
+      "distance_percent": 0.02
+    }
+  },
+  
+  "strategy": {
+    "name": "chameleon_optimized",
+    "version": "3.5",
+    "confidence_threshold": 0.75,
+    "min_expected_profit": 0.06,
+    "holding_strategy": "dynamic"
+  },
+  
+  "levels": {
+    "TURTLE": {
+      "name": "Optimized Conservative",
+      "emoji": "🐢",
+      "position_size_percent": 0.04,
+      "take_profit_percent": 0.08,
+      "stop_loss_percent": 0.02,
+      "confidence_threshold": 0.75,
+      "pairs_count": 5
+    },
+    "RABBIT": {
+      "name": "Optimized Moderate",
+      "emoji": "🐇",
+      "position_size_percent": 0.06,
+      "take_profit_percent": 0.10,
+      "stop_loss_percent": 0.025,
+      "confidence_threshold": 0.70,
+      "pairs_count": 7
+    },
+    "EAGLE": {
+      "name": "Optimized Aggressive",
+      "emoji": "🦅",
+      "position_size_percent": 0.10,
+      "take_profit_percent": 0.12,
+      "stop_loss_percent": 0.03,
+      "confidence_threshold": 0.65,
+      "pairs_count": 10
+    }
+  },
+  
+  "level_upgrade_conditions": {
+    "TURTLE_to_RABBIT": {
+      "min_capital_percent": 1.15,
+      "min_win_rate": 0.70,
+      "min_trades": 10
+    },
+    "RABBIT_to_EAGLE": {
+      "min_capital_percent": 1.30,
+      "min_win_rate": 0.72,
+      "min_trades": 20
+    }
+  },
+  
+  "safety_limits": {
+    "daily_loss_limit_percent": 0.10,
+    "emergency_stop_percent": 0.30,
+    "max_consecutive_losses": 5,
+    "circuit_breaker_enabled": true
+  },
+  
+  "logging": {
+    "level": "INFO",
+    "save_trades": true,
+    "save_interval_minutes": 60
+  }
+}
