@@ -1,0 +1,12 @@
+[Unit]
+Description=AurumBotX Hyperliquid Trading Bot Timer
+Requires=aurumbotx-hyperliquid.service
+
+[Timer]
+OnBootSec=2min
+OnUnitActiveSec=1h
+AccuracySec=1min
+Persistent=true
+
+[Install]
+WantedBy=timers.target
