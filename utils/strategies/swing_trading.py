@@ -1,5 +1,6 @@
 import pandas as pd
 import numpy as np
+import numpy as np
 import logging
 import asyncio
 from typing import Dict, Any, List, Optional
@@ -32,7 +33,7 @@ class SwingTradingStrategy(BaseStrategy):
     ) -> List[Dict[str, Any]]:
         """Analyze market for swing trading opportunities"""
         try:
-            if not market_data:
+            if market_data is None or (hasattr(market_data, 'empty') and market_data.empty):
                 logger.warning("No market data provided")
                 return []
 
@@ -246,3 +247,82 @@ class SwingTradingStrategy(BaseStrategy):
         except Exception as e:
             logger.error(f"Error in technical sentiment: {str(e)}")
             return 0.5
+    async def _calculate_position_size(self, price: float, confidence: float) -> float:
+        """Calculate optimal position size for swing trading"""
+        try:
+            # Base position size (conservative for swing trading)
+            base_size = 0.05  # 5% of portfolio
+            
+            # Adjust based on confidence
+            confidence_multiplier = max(0.5, min(1.5, confidence))
+            
+            # Calculate position size in base currency
+            position_size = base_size * confidence_multiplier
+            
+            return position_size
+            
+        except Exception as e:
+            logger.error(f"Error calculating position size: {str(e)}")
+            return 0.01  # Fallback to 1%
+
+    async def validate_trade(self, signal: Dict[str, Any], portfolio: Dict[str, Any]) -> bool:
+        """Validate a swing trading signal"""
+        try:
+            # Check if signal has required fields
+            required_fields = ['action', 'confidence', 'price']
+            if not all(field in signal for field in required_fields):
+                return False
+            
+            # Check confidence threshold
+            if signal.get('confidence', 0) < 0.6:
+                return False
+            
+            # Check if we have enough balance for the trade
+            action = signal.get('action')
+            if action == 'buy':
+                # Check USDT balance
+                usdt_balance = portfolio.get('USDT', {}).get('free', 0)
+                required_amount = signal.get('price', 0) * 0.05  # 5% of portfolio
+                return usdt_balance >= required_amount
+            elif action == 'sell':
+                # Check asset balance
+                symbol = signal.get('symbol', 'BTC')
+                asset = symbol.replace('USDT', '')
+                asset_balance = portfolio.get(asset, {}).get('free', 0)
+                return asset_balance > 0
+            
+            return True
+            
+        except Exception as e:
+            logger.error(f"Error validating trade: {str(e)}")
+            return False
+
+    async def execute_trade(self, signal: Dict[str, Any]) -> Dict[str, Any]:
+        """Execute a swing trading signal"""
+        try:
+            # This is a placeholder for actual trade execution
+            # In a real implementation, this would interface with the exchange
+            
+            result = {
+                'success': True,
+                'signal': signal,
+                'execution_time': datetime.now().isoformat(),
+                'strategy': self.name,
+                'message': 'Trade executed successfully (simulated)'
+            }
+            
+            # Update performance metrics
+            await self.update_performance(result)
+            
+            return result
+            
+        except Exception as e:
+            logger.error(f"Error executing trade: {str(e)}")
+            return {
+                'success': False,
+                'error': str(e),
+                'signal': signal,
+                'execution_time': datetime.now().isoformat(),
+                'strategy': self.name
+            }
+

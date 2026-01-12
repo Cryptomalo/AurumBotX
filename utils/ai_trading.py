@@ -14,10 +14,10 @@ class RetryHandler:
     """Gestisce i tentativi di retry per le operazioni che possono fallire"""
     def __init__(self, max_retries: int = 3, base_delay: float = 1.0):
         self.max_retries = max_retries
-        self.base_delay = base_delay
+        self.delay = base_delay
 
     async def execute(self, operation, *args, **kwargs):
-        """Esegue un'operazione con retry e backoff esponenziale"""
+        """Esegue un"operazione con retry e backoff esponenziale"""
         retries = 0
         last_exception = None
 
@@ -28,7 +28,7 @@ class RetryHandler:
                 last_exception = e
                 retries += 1
                 if retries < self.max_retries:
-                    delay = self.base_delay * (2 ** (retries - 1))
+                    delay = self.delay * (2 ** (retries - 1))
                     logger.warning(f"Retry {retries}/{self.max_retries} dopo {delay}s. Errore: {str(e)}")
                     await asyncio.sleep(delay)
                 else:
@@ -44,10 +44,11 @@ class AITrading:
         self.logger = logger
         self.config = config or {}
         self.retry_handler = RetryHandler()
-        self.data_loader = CryptoDataLoader()
+        # Passa use_live_data=True e testnet=True esplicitamente al CryptoDataLoader
+        self.data_loader = CryptoDataLoader(use_live_data=True, testnet=True)
         self.sentiment_analyzer = SentimentAnalyzer()
         self.prediction_model = PredictionModel()
-        self.min_confidence = self.config.get('min_confidence', 0.7)
+        self.min_confidence = self.config.get("min_confidence", 0.7)
 
         # Configurazione retry
         self.max_retries = 3
@@ -55,14 +56,36 @@ class AITrading:
 
         self.logger.info("Sistema di trading AI inizializzato con retry configurati")
 
+    async def initialize(self):
+        """Inizializza i componenti asincroni di AITrading e addestra il modello di previsione"""
+        await self.data_loader.initialize()
+        await self.sentiment_analyzer.initialize()
+
+        # Addestra il modello di previsione
+        self.logger.info("Inizio addestramento modello di previsione...")
+        try:
+            # Recupera dati storici per l'addestramento
+            training_data = await self.data_loader.get_historical_data(
+                symbol="BTCUSDT",                period='30d', # Utilizza un periodo più lungo per l'addestramento
+                interval='1h'
+            )
+            if training_data is None or training_data.empty:
+                self.logger.warning("Nessun dato disponibile per l'addestramento del modello. Il modello userà previsioni di fallback.")
+            else:
+                await self.prediction_model.train_async(training_data)
+                self.logger.info("Modello di previsione addestrato con successo.")
+        except Exception as e:
+            self.logger.error(f"Errore durante l'addestramento del modello di previsione: {str(e)}")
+            self.logger.warning("Il modello di previsione userà previsioni di fallback.")
+
     async def _retry_operation(self, operation, *args, **kwargs):
         """Gestione retry generica con backoff esponenziale - Now deprecated"""
         return await self.retry_handler.execute(operation, *args, **kwargs)
 
-    def _validate_numeric(self, value: float) -> bool:
+    def _validate_numeric(self, value: Any) -> bool:
         """Validate if a numeric value is valid (not NaN or infinite)"""
         if isinstance(value, (int, float)):
-            return not (np.isnan(value) or np.isinf(value))
+            return not (pd.isna(value) or np.isinf(value))
         return False
 
     def _extract_market_metrics(self, df: Optional[pd.DataFrame]) -> Dict[str, float]:
@@ -71,37 +94,20 @@ class AITrading:
             if df is None or df.empty:
                 raise ValueError("DataFrame vuoto o None")
 
-            required_columns = ['Close', 'Volume', 'RSI', 'SMA_20', 'SMA_50']
-            missing_columns = [col for col in required_columns if col not in df.columns]
-
-            if missing_columns:
-                self.logger.warning(f"Colonne mancanti: {missing_columns}")
-                # Aggiungi colonne mancanti con valori di default
-                for col in missing_columns:
-                    if col == 'RSI':
-                        df[col] = 50  # RSI neutrale
-                    elif col in ['SMA_20', 'SMA_50']:
-                        df[col] = df['Close'].rolling(window=int(col.split('_')[1])).mean()
-                    else:
-                        df[col] = 0
-
             latest = df.iloc[-1]
             metrics = {
                 'price': float(latest['Close']),
                 'volume': float(latest['Volume']),
-                'rsi': float(latest['RSI']),
-                'trend': 1 if latest['SMA_20'] > latest['SMA_50'] else -1
+                'rsi': float(latest['RSI'] if 'RSI' in latest and self._validate_numeric(latest['RSI']) else 50.0),
+                'sma_20': float(latest['SMA_20'] if 'SMA_20' in latest and self._validate_numeric(latest['SMA_20']) else latest['Close']),
+                'sma_50': float(latest['SMA_50'] if 'SMA_50' in latest and self._validate_numeric(latest['SMA_50']) else latest['Close']),
+                'trend': 1 if ('SMA_20' in latest and 'SMA_50' in latest and self._validate_numeric(latest['SMA_20']) and self._validate_numeric(latest['SMA_50']) and latest['SMA_20'] > latest['SMA_50']) else -1
             }
 
             # Validate numeric values
-            invalid_metrics = [
-                key for key, value in metrics.items()
-                if not self._validate_numeric(value)
-            ]
-
-            if invalid_metrics:
-                self.logger.warning(f"Invalid metrics found: {invalid_metrics}")
-                for key in invalid_metrics:
+            for key, value in metrics.items():
+                if not self._validate_numeric(value) and key != 'trend': # trend can be -1 or 1
+                    self.logger.warning(f"Invalid metric found for {key}: {value}. Setting to default.")
                     metrics[key] = 0.0 if key != 'trend' else 0
 
             return metrics
@@ -112,6 +118,8 @@ class AITrading:
                 'price': 0.0,
                 'volume': 0.0,
                 'rsi': 50.0,
+                'sma_20': 0.0,
+                'sma_50': 0.0,
                 'trend': 0
             }
 
@@ -205,7 +213,7 @@ class AITrading:
     async def analyze_and_predict(self, symbol: str) -> Dict[str, Any]:
         """Analizza il mercato e genera previsioni con gestione errori completa"""
         try:
-            # Ottieni l'analisi del mercato con retry
+            # Ottieni l\\"analisi del mercato con retry
             analysis = await self._retry_operation(self.analyze_market, symbol)
             if not analysis:
                 self.logger.warning(f"Nessuna analisi disponibile per {symbol}")
@@ -339,7 +347,7 @@ class AITrading:
             # Validate all values
             for key, value in indicators.items():
                 if not self._validate_numeric(value):
-                    self.logger.warning(f"Invalid indicator value for {key}")
+                    self.logger.warning(f"Invalid indicator value for {key}. Setting to default.")
                     indicators[key] = 0.0 if key != 'trend' else 0
 
             return indicators
@@ -367,7 +375,7 @@ class AITrading:
         """Backtest AI trading strategy"""
         try:
             # Get historical data
-            historical_data = await self.data_loader.get_historical_data_async(
+            historical_data = await self.data_loader.get_historical_data(
                 symbol, start_date=start_date, end_date=end_date
             )
             if historical_data is None or historical_data.empty:
@@ -395,5 +403,12 @@ class AITrading:
             }
 
         except Exception as e:
-            self.logger.error(f"Error in backtesting: {str(e)}")
+            self.logger.error(f"Errore in backtesting: {str(e)}")
             return {'error': str(e)}
+
+
+
+
+
+
+

@@ -1,0 +1,20 @@
+{
+  "timestamp": "2025-08-31T14:11:29.522948",
+  "cycle_count": 170,
+  "aggressive_stats": {
+    "total_trades": 170,
+    "forced_trades": 0,
+    "natural_trades": 170,
+    "total_fees": 120.39619247101207,
+    "total_profit_loss": 10.523075348782994,
+    "current_balance": 890.1268828777726,
+    "initial_capital": 1000.0,
+    "roi": -10.987311712222743,
+    "win_rate": 60.588235294117645,
+    "avg_confidence": 0.6076470588235283,
+    "net_profit": -109.87311712222908,
+    "cycles_since_trade": 0
+  },
+  "final_report": false,
+  "version": "aggressive_v1"
+}

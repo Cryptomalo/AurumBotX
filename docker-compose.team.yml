@@ -1,0 +1,20 @@
+version: '3.8'
+
+services:
+  aurumbotx-team:
+    build:
+      context: .
+      dockerfile: Dockerfile.standalone
+    ports:
+      - "8080:8080"
+    volumes:
+      - ./data:/app/data
+      - ./logs:/app/logs
+    environment:
+      - TEAM_ACCESS=true
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080"]
+      interval: 30s
+      timeout: 10s
+      retries: 3

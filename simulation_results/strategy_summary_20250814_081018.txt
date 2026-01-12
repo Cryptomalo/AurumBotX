@@ -1,0 +1,42 @@
+SIMULAZIONE STRATEGIE AURUMBOTX
+==================================================
+
+Data: 2025-08-14 08:10:18
+Strategie testate: 6
+
+Strategia: Swing Trading Conservativo
+Tipo: swing
+Trade totali: 0
+Win rate: 0.0%
+Sharpe ratio: 0.00
+
+Strategia: Swing Trading Moderato (Attuale)
+Tipo: swing
+Trade totali: 0
+Win rate: 0.0%
+Sharpe ratio: 0.00
+
+Strategia: Swing Trading Aggressivo
+Tipo: swing
+Trade totali: 0
+Win rate: 0.0%
+Sharpe ratio: 0.00
+
+Strategia: Scalping Conservativo
+Tipo: scalping
+Trade totali: 147
+Win rate: 0.0%
+Sharpe ratio: -12.21
+
+Strategia: Scalping Moderato
+Tipo: scalping
+Trade totali: 72
+Win rate: 0.0%
+Sharpe ratio: -12.40
+
+Strategia: Scalping Aggressivo
+Tipo: scalping
+Trade totali: 48
+Win rate: 0.0%
+Sharpe ratio: -12.38
+

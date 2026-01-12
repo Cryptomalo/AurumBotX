@@ -1,0 +1,17 @@
+{
+  "timestamp": "2025-09-01T02:25:30.990981",
+  "cycle_count": 100,
+  "performance": {
+    "total_trades": 0,
+    "total_fees": 0.0,
+    "total_profit_loss": 0.0,
+    "current_balance": 1000.0,
+    "initial_capital": 1000.0,
+    "roi": 0.0,
+    "win_rate": 0,
+    "avg_confidence": 0.0,
+    "net_profit": 0.0
+  },
+  "final_report": false,
+  "version": "enhanced_v2"
+}

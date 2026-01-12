@@ -1,5 +1,5 @@
 import logging
-import ccxt
+import ccxt.async_support as ccxt
 from typing import Dict, Optional
 
 class ExchangeManager:
@@ -92,11 +92,11 @@ class ExchangeManager:
             self.logger.error(error_msg)
             return {'success': False, 'error': error_msg}
 
-    def close(self):
+    async def close(self):
         """Close exchange connection"""
         try:
             if hasattr(self.exchange, 'close'):
-                self.exchange.close()
+                await self.exchange.close()
                 self.logger.info("Exchange connection closed")
         except Exception as e:
             self.logger.error(f"Error closing exchange connection: {str(e)}")
