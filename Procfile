@@ -1,1 +1,1 @@
-web: streamlit run team_management_system.py --server.port=$PORT --server.address=0.0.0.0\n
+worker: python src/wallet_runner_hyperliquid.py
