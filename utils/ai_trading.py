@@ -372,40 +372,92 @@ class AITrading:
             return pd.Series([50] * len(prices) if prices is not None else [])
 
     async def backtest_strategy(self, symbol: str, start_date: str, end_date: str) -> Dict[str, Any]:
-        """Backtest AI trading strategy"""
+        """Backtest AI trading strategy with historical data only."""
         try:
-            # Get historical data
             historical_data = await self.data_loader.get_historical_data(
                 symbol, start_date=start_date, end_date=end_date
             )
             if historical_data is None or historical_data.empty:
                 return {'error': 'No historical data available'}
 
-            signals = []
-            portfolio_value = 1000  # Initial portfolio value
-            position = None
+            initial_capital = float(self.config.get("backtest_initial_capital", 1000))
+            cash_balance = initial_capital
+            position_size = 0.0
+            position_entry_price = 0.0
+            trades: List[Dict[str, Any]] = []
 
-            # Simulate trading
             for i in range(len(historical_data)):
-                data_window = historical_data.iloc[:i+1]
-                analysis = await self._analyze_technical_indicators(data_window)
+                data_window = historical_data.iloc[: i + 1]
+                indicators = await self._analyze_technical_indicators(data_window)
+                if not indicators or i < 50:
+                    continue
 
-                if i > 50:  # Wait for enough data
-                    signal = await self._retry_operation(self.generate_trading_signals, symbol)
-                    if signal:
-                        signals.append(signal[0])
-                        # Implement trading logic here
+                price = indicators.get("close", 0.0)
+                if price <= 0:
+                    continue
+
+                should_buy = (
+                    indicators["sma_20"] > indicators["sma_50"]
+                    and indicators["rsi"] < 70
+                    and position_size == 0
+                )
+                should_sell = (
+                    indicators["sma_20"] < indicators["sma_50"]
+                    and indicators["rsi"] > 30
+                    and position_size > 0
+                )
+
+                if should_buy:
+                    allocation = cash_balance * 0.95
+                    position_size = allocation / price
+                    position_entry_price = price
+                    cash_balance -= allocation
+                    trades.append(
+                        {
+                            "timestamp": data_window.index[-1].isoformat(),
+                            "action": "buy",
+                            "price": price,
+                            "size": position_size,
+                        }
+                    )
+                elif should_sell:
+                    proceeds = position_size * price
+                    pnl = proceeds - (position_size * position_entry_price)
+                    cash_balance += proceeds
+                    trades.append(
+                        {
+                            "timestamp": data_window.index[-1].isoformat(),
+                            "action": "sell",
+                            "price": price,
+                            "size": position_size,
+                            "pnl": pnl,
+                        }
+                    )
+                    position_size = 0.0
+                    position_entry_price = 0.0
+
+            final_price = float(historical_data["Close"].iloc[-1])
+            final_value = cash_balance + (position_size * final_price)
+            win_trades = [t for t in trades if t["action"] == "sell" and t.get("pnl", 0) > 0]
+            loss_trades = [t for t in trades if t["action"] == "sell" and t.get("pnl", 0) <= 0]
 
             return {
-                'signals': signals,
-                'final_value': portfolio_value,
-                'total_trades': len(signals)
+                "initial_capital": initial_capital,
+                "final_value": round(final_value, 2),
+                "total_trades": len([t for t in trades if t["action"] == "sell"]),
+                "win_rate": round(
+                    (len(win_trades) / len([t for t in trades if t["action"] == "sell"]) * 100)
+                    if [t for t in trades if t["action"] == "sell"]
+                    else 0,
+                    2,
+                ),
+                "trades": trades,
+                "open_position": position_size > 0,
             }
 
         except Exception as e:
             self.logger.error(f"Errore in backtesting: {str(e)}")
             return {'error': str(e)}
-
 
 
 
