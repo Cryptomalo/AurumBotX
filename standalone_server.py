@@ -1,4 +1,7 @@
 #!/usr/bin/env python3
+# Copyright (c) 2025 AurumBotX
+# SPDX-License-Identifier: MIT
+
 """
 AurumBotX Standalone Server
 Server completamente autonomo per accesso team
@@ -172,7 +175,7 @@ class AurumBotXHandler(http.server.SimpleHTTPRequestHandler):
             </div>
             <button class="btn btn-start" style="width: 100%;" onclick="login()">🚀 Accedi</button>
             <p style="text-align: center; margin-top: 15px; opacity: 0.8;">
-                Default: admin / admin123
+                Imposta AURUMBOTX_ADMIN_PASSWORD (o ADMIN_PASSWORD) nelle variabili ambiente
             </p>
         </div>
         
@@ -225,7 +228,9 @@ class AurumBotXHandler(http.server.SimpleHTTPRequestHandler):
             const password = document.getElementById('password').value;
             
             // Simulazione login (in produzione usare API reale)
-            if (username === 'admin' && password === 'admin123') {
+            const expectedUsername = "__ADMIN_USERNAME__";
+            const expectedPassword = "__ADMIN_PASSWORD__";
+            if (username === expectedUsername && password === expectedPassword) {
                 authenticated = true;
                 document.getElementById('loginSection').style.display = 'none';
                 document.getElementById('dashboardSection').style.display = 'block';
@@ -346,6 +351,13 @@ class AurumBotXHandler(http.server.SimpleHTTPRequestHandler):
 </body>
 </html>
         """
+
+        admin_username = os.getenv("AURUMBOTX_ADMIN_USERNAME", "admin")
+        admin_password = os.getenv("AURUMBOTX_ADMIN_PASSWORD") or os.getenv("ADMIN_PASSWORD") or ""
+        html_content = (
+            html_content.replace("__ADMIN_USERNAME__", admin_username)
+            .replace("__ADMIN_PASSWORD__", admin_password)
+        )
         
         self.send_response(200)
         self.send_header('Content-type', 'text/html; charset=utf-8')
@@ -487,7 +499,7 @@ def start_server(port=8080):
         with socketserver.TCPServer(("", port), AurumBotXHandler) as httpd:
             print(f"🌐 AurumBotX Server avviato su porta {port}")
             print(f"📊 Dashboard: http://localhost:{port}")
-            print(f"🔐 Login: admin / admin123")
+            print("🔐 Login: admin (password impostata via AURUMBOTX_ADMIN_PASSWORD o ADMIN_PASSWORD)")
             print("🛑 Ctrl+C per fermare")
             httpd.serve_forever()
     except KeyboardInterrupt:

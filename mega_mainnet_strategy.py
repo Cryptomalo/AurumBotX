@@ -1,4 +1,7 @@
 #!/usr/bin/env python3
+# Copyright (c) 2025 AurumBotX
+# SPDX-License-Identifier: MIT
+
 """
 AurumBotX Mega Mainnet Strategy
 Strategia mega-aggressiva adattata per mainnet con parametri moderati

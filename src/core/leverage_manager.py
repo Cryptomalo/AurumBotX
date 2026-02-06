@@ -1,4 +1,7 @@
 #!/usr/bin/env python3
+# Copyright (c) 2025 AurumBotX
+# SPDX-License-Identifier: MIT
+
 """
 AurumBotX Leverage Manager
 Gestione intelligente del leverage per perpetual futures trading su Hyperliquid

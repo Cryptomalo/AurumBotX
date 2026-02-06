@@ -1,4 +1,7 @@
 #!/usr/bin/env python3
+# Copyright (c) 2025 AurumBotX
+# SPDX-License-Identifier: MIT
+
 """
 AurumBotX Database Migration: SQLite → PostgreSQL
 Script completo per migrare tutti i dati da SQLite a PostgreSQL

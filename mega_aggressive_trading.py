@@ -1,4 +1,7 @@
 #!/usr/bin/env python3
+# Copyright (c) 2025 AurumBotX
+# SPDX-License-Identifier: MIT
+
 """
 AurumBotX Mega-Aggressive Trading System
 Sistema di trading mega-aggressivo con position size 25% e target 20-50 euro per trade

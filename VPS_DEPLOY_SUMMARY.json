@@ -29,7 +29,7 @@
   ],
   "team_access": {
     "dashboard_url": "http://VPS_IP:8507",
-    "login": "admin/admin123",
+    "login": "admin (password impostata via AURUMBOTX_ADMIN_PASSWORD o ADMIN_PASSWORD)",
     "features": [
       "Start/Stop bot da dashboard",
       "Monitoraggio real-time",

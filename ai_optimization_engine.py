@@ -1,4 +1,7 @@
 #!/usr/bin/env python3
+# Copyright (c) 2025 AurumBotX
+# SPDX-License-Identifier: MIT
+
 """
 AurumBotX AI Optimization Engine
 Sistema avanzato di ottimizzazione AI per migliorare predizioni e performance

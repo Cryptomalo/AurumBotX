@@ -1,4 +1,7 @@
 #!/usr/bin/env python3
+# Copyright (c) 2025 AurumBotX
+# SPDX-License-Identifier: MIT
+
 """
 AurumBotX External Access Manager
 Script per rendere i link accessibili da qualsiasi luogo, non solo da Manus

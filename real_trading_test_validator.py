@@ -1,4 +1,7 @@
 #!/usr/bin/env python3
+# Copyright (c) 2025 AurumBotX
+# SPDX-License-Identifier: MIT
+
 """
 Test Trading Reale e Validazione Profitti
 Sistema completo per testare il trading reale su Binance Testnet

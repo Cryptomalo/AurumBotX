@@ -1,3 +1,6 @@
+# Copyright (c) 2025 AurumBotX
+# SPDX-License-Identifier: MIT
+
 import plotly.express as px
 import plotly.graph_objects as go
 from typing import List, Dict, Any

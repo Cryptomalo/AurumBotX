@@ -1,3 +1,6 @@
+# Copyright (c) 2025 AurumBotX
+# SPDX-License-Identifier: MIT
+
 """
 AurumBotX - Advanced Security Module
 Protezione avanzata per transazioni, dati sensibili e comunicazioni

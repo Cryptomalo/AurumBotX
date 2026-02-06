@@ -1,4 +1,7 @@
 #!/usr/bin/env python3
+# Copyright (c) 2025 AurumBotX
+# SPDX-License-Identifier: MIT
+
 """
 AurumBotX Ultra Aggressive Trading System
 Sistema di trading ultra-aggressivo per massimizzare profitti

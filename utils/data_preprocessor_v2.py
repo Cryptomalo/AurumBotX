@@ -1,82 +1,51 @@
-#!/usr/bin/env python3  
-"""  
-Trade Executor con retry logic e validazione completa  
-"""  
-import asyncio  
-import logging  
-from typing import Dict, Optional  
-from datetime import datetime  
-  
-class RobustTradeExecutor:  
-    def __init__(self, exchange_manager):  
-        self.exchange = exchange_manager  
-        self.logger = logging.getLogger('TradeExecutor')  
-        self.max_retries = 3  
-        self.retry_delay = 2  
-          
-    async def execute_trade(self, signal: Dict) -> Optional[Dict]:  
-        """Esegue trade con retry automatico"""  
-          
-        # 1. Validazione segnale  
-        if not self._validate_signal(signal):  
-            self.logger.warning(f"Segnale non valido: {signal}")  
-            return None  
-          
-        # 2. Verifica limiti di rischio  
-        if not self._check_risk_limits(signal):  
-            self.logger.warning("Limiti di rischio superati")  
-            return None  
-          
-        # 3. Esecuzione con retry  
-        for attempt in range(self.max_retries):  
-            try:  
-                order = await self._place_order(signal)  
-                if order and order.get('status') == 'FILLED':  
-                    self.logger.info(f"✅ Trade eseguito: {order['id']}")  
-                    return order  
-                      
-            except Exception as e:  
-                self.logger.error(f"Tentativo {attempt+1} fallito: {e}")  
-                if attempt < self.max_retries - 1:  
-                    await asyncio.sleep(self.retry_delay * (attempt + 1))  
-                      
-        return None  
-      
-    def _validate_signal(self, signal: Dict) -> bool:  
-        """Valida il segnale di trading"""  
-        required_keys = ['action', 'symbol', 'confidence']  
-          
-        if not all(key in signal for key in required_keys):  
-            return False  
-              
-        if signal['action'] not in ['buy', 'sell']:  
-            return False  
-              
-        if not (0 <= signal['confidence'] <= 1):  
-            return False  
-              
-        return True  
-      
-    def _check_risk_limits(self, signal: Dict) -> bool:  
-        """Verifica limiti di rischio"""  
-        # Implementa logica risk management  
-        min_confidence = 0.65  
-        return signal['confidence'] >= min_confidence  
-      
-    async def _place_order(self, signal: Dict) -> Optional[Dict]:  
-        """Piazza ordine sull'exchange"""  
-        try:  
-            if signal['action'] == 'buy':  
-                order = await self.exchange.create_market_buy_order(  
-                    symbol=signal['symbol'],  
-                    amount=signal.get('amount', 0.0001)  
-                )  
-            else:  
-                order = await self.exchange.create_market_sell_order(  
-                    symbol=signal['symbol'],  
-                    amount=signal.get('amount', 0.0001)  
-                )  
-            return order  
-        except Exception as e:  
-            self.logger.error(f"Errore piazzamento ordine: {e}")  
-            raise
+#!/usr/bin/env python3
+# Copyright (c) 2025 AurumBotX
+# SPDX-License-Identifier: MIT
+
+"""
+Data Preprocessor V2 - normalizza dati e rimuove NaN/infiniti.
+"""
+from __future__ import annotations
+
+import logging
+from typing import Optional
+
+import numpy as np
+import pandas as pd
+
+from utils.nan_eliminator import NaNEliminator
+
+logger = logging.getLogger(__name__)
+
+
+class DataPreprocessorV2:
+    """Preprocessore dati con pipeline robusta di pulizia."""
+
+    def __init__(self) -> None:
+        self.nan_eliminator = NaNEliminator()
+
+    def preprocess(self, data: pd.DataFrame) -> Optional[pd.DataFrame]:
+        if data is None or data.empty:
+            logger.warning("DataPreprocessorV2: input vuoto")
+            return None
+
+        df = data.copy()
+        df = self._standardize_columns(df)
+        df = self.nan_eliminator.clean(df)
+        df = self._clip_outliers(df)
+        return df
+
+    def _standardize_columns(self, df: pd.DataFrame) -> pd.DataFrame:
+        rename_map = {col: col.capitalize() for col in df.columns}
+        df = df.rename(columns=rename_map)
+        return df
+
+    def _clip_outliers(self, df: pd.DataFrame) -> pd.DataFrame:
+        numeric_cols = df.select_dtypes(include=[np.number]).columns
+        for col in numeric_cols:
+            series = df[col]
+            if series.empty:
+                continue
+            lower, upper = series.quantile([0.01, 0.99])
+            df[col] = series.clip(lower=lower, upper=upper)
+        return df

@@ -1,4 +1,7 @@
 #!/usr/bin/env python3
+# Copyright (c) 2025 AurumBotX
+# SPDX-License-Identifier: MIT
+
 """
 Test Finale e Validazione Sistema AurumBotX Ottimizzato
 Risolve tutti i problemi critici e valida il sistema completo

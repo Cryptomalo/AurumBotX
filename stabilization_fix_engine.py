@@ -1,4 +1,7 @@
 #!/usr/bin/env python3
+# Copyright (c) 2025 AurumBotX
+# SPDX-License-Identifier: MIT
+
 """
 AurumBotX Stabilization Fix Engine
 Sistema per stabilizzazione e risoluzione problemi minori della roadmap

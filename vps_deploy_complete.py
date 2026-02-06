@@ -1,4 +1,7 @@
 #!/usr/bin/env python3
+# Copyright (c) 2025 AurumBotX
+# SPDX-License-Identifier: MIT
+
 """
 AurumBotX VPS Deploy System
 Sistema completo per deploy su VPS con accesso team universale
@@ -258,7 +261,7 @@ docker-compose up -d
 ## 🌐 Accesso Dashboard
 
 - **URL**: `http://YOUR_VPS_IP:8507`
-- **Login**: admin / admin123
+- **Login**: admin (password impostata via AURUMBOTX_ADMIN_PASSWORD o ADMIN_PASSWORD)
 - **Mobile**: Responsive design
 
 ## 🎛️ Controlli Sistema
@@ -484,7 +487,7 @@ docker system prune -f
             ],
             "team_access": {
                 "dashboard_url": "http://VPS_IP:8507",
-                "login": "admin/admin123",
+                "login": "admin (password impostata via AURUMBOTX_ADMIN_PASSWORD o ADMIN_PASSWORD)",
                 "features": [
                     "Start/Stop bot da dashboard",
                     "Monitoraggio real-time",
@@ -533,4 +536,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-

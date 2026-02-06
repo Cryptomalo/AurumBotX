@@ -27,7 +27,7 @@ docker-compose up -d
 ## 🌐 Accesso Dashboard
 
 - **URL**: `http://YOUR_VPS_IP:8507`
-- **Login**: admin / admin123
+- **Login**: admin (password impostata via AURUMBOTX_ADMIN_PASSWORD o ADMIN_PASSWORD)
 - **Mobile**: Responsive design
 
 ## 🎛️ Controlli Sistema

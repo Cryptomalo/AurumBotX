@@ -1,4 +1,7 @@
 #!/usr/bin/env python3
+# Copyright (c) 2025 AurumBotX
+# SPDX-License-Identifier: MIT
+
 """
 AurumBotX Aggressive Trading Fix - Forza Esecuzione Trade
 Versione aggressiva per garantire esecuzione trade con soglie più basse

@@ -45,7 +45,7 @@ except:
 echo ""
 echo "🎉 AurumBotX accessibile pubblicamente!"
 echo "🔗 URL Pubblico: $PUBLIC_URL"
-echo "🔐 Login: admin / admin123"
+echo "🔐 Login: admin (password impostata via AURUMBOTX_ADMIN_PASSWORD o ADMIN_PASSWORD)"
 echo ""
 echo "📋 Condividi questo URL con il tuo team:"
 echo "$PUBLIC_URL"

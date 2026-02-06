@@ -1,4 +1,7 @@
 #!/usr/bin/env python3
+# Copyright (c) 2025 AurumBotX
+# SPDX-License-Identifier: MIT
+
 """
 🔧 FIX INTEGRAZIONE AI E ATTIVAZIONE SEGNALI TRADING
 Risolve problemi AI e attiva generazione segnali operativi

@@ -63,6 +63,7 @@ backup/
 backups/
 *.backup
 *.bak
+*.pdf
 
 # Temporary files
 tmp/
@@ -84,6 +85,8 @@ wallets/
 data/
 *.csv
 *.json.bak
+!src/data/
+!src/data/**
 
 # Streamlit
 .streamlit/secrets.toml

@@ -1,4 +1,7 @@
 #!/usr/bin/env python3
+# Copyright (c) 2025 AurumBotX
+# SPDX-License-Identifier: MIT
+
 """
 AurumBotX 24/7 Monitoring System
 Sistema di monitoraggio continuo per AurumBotX con logging avanzato e recovery automatico

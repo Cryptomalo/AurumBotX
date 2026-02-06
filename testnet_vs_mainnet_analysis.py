@@ -1,4 +1,7 @@
 #!/usr/bin/env python3
+# Copyright (c) 2025 AurumBotX
+# SPDX-License-Identifier: MIT
+
 """
 AurumBotX Testnet vs Mainnet Analysis
 Analisi completa delle differenze tra trading testnet e mainnet

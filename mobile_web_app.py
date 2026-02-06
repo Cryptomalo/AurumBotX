@@ -1,4 +1,7 @@
 #!/usr/bin/env python3
+# Copyright (c) 2025 AurumBotX
+# SPDX-License-Identifier: MIT
+
 """
 📱 AURUMBOTX MOBILE WEB APP
 App web ottimizzata per smartphone con tutte le funzionalità

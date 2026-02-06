@@ -1,4 +1,7 @@
 #!/usr/bin/env python3
+# Copyright (c) 2025 AurumBotX
+# SPDX-License-Identifier: MIT
+
 """
 AurumBotX Mainnet Strategy - €250 Capital
 Strategia Mega-Mainnet adattata per capitale €250

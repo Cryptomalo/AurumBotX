@@ -1,4 +1,7 @@
 #!/usr/bin/env python3
+# Copyright (c) 2025 AurumBotX
+# SPDX-License-Identifier: MIT
+
 """
 AurumBotX Continuous Monitoring System (24-48h)
 Sistema di monitoraggio continuo con analisi approfondita e reporting automatico

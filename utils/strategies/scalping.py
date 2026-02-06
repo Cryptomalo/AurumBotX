@@ -1,3 +1,6 @@
+# Copyright (c) 2025 AurumBotX
+# SPDX-License-Identifier: MIT
+
 from typing import Dict, Any, List, Optional
 import numpy as np
 import pandas as pd

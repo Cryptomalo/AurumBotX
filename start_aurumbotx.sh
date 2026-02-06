@@ -72,7 +72,7 @@ if not os.path.exists('aurumbotx.db'):
 # Avvia sistema
 echo "🌐 Avvio dashboard..."
 echo "📊 Dashboard disponibile su: http://localhost:8507"
-echo "🔐 Login: admin / admin123"
+echo "🔐 Login: admin (password impostata via AURUMBOTX_ADMIN_PASSWORD o ADMIN_PASSWORD)"
 
 # Avvia in background se richiesto
 if [ "$1" = "--background" ]; then

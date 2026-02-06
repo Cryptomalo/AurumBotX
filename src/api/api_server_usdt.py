@@ -1,3 +1,6 @@
+# Copyright (c) 2025 AurumBotX
+# SPDX-License-Identifier: MIT
+
 from flask import Flask, jsonify, request
 import sys
 sys.path.append('/home/ubuntu/AurumBotX')

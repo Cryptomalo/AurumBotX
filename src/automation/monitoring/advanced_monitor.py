@@ -1,4 +1,7 @@
 #!/usr/bin/env python3
+# Copyright (c) 2025 AurumBotX
+# SPDX-License-Identifier: MIT
+
 """
 AurumBotX v2.1 - Advanced Monitoring System
 Enterprise-grade monitoring and alerting system

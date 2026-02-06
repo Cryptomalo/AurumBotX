@@ -1,4 +1,7 @@
 #!/usr/bin/env python3
+# Copyright (c) 2025 AurumBotX
+# SPDX-License-Identifier: MIT
+
 """
 Fix Definitivo Segnali AI e Feature Mismatch
 Risolve il problema delle 26 vs 25 feature per attivare i segnali AI

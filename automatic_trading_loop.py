@@ -1,4 +1,7 @@
 #!/usr/bin/env python3
+# Copyright (c) 2025 AurumBotX
+# SPDX-License-Identifier: MIT
+
 """
 Loop Trading Automatico AurumBotX
 Esegue trading automatico continuo con strategia 6M conservativa

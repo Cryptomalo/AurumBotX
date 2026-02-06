@@ -1,4 +1,7 @@
 #!/usr/bin/env python3
+# Copyright (c) 2025 AurumBotX
+# SPDX-License-Identifier: MIT
+
 """
 AurumBotX Team Management System
 Sistema completo per gestione team con autenticazione e controllo accessi
@@ -91,7 +94,12 @@ class TeamManagementSystem:
         # Crea admin di default se non esiste
         cursor.execute("SELECT COUNT(*) FROM team_users WHERE role = 'admin'")
         if cursor.fetchone()[0] == 0:
-            admin_password = self.hash_password("admin123")
+            admin_password_env = os.getenv("AURUMBOTX_ADMIN_PASSWORD") or os.getenv("ADMIN_PASSWORD")
+            if not admin_password_env:
+                raise RuntimeError(
+                    "Missing admin password. Set AURUMBOTX_ADMIN_PASSWORD (or ADMIN_PASSWORD) before initialization."
+                )
+            admin_password = self.hash_password(admin_password_env)
             cursor.execute("""
                 INSERT INTO team_users (username, password_hash, role, permissions, created_at)
                 VALUES (?, ?, ?, ?, ?)
@@ -264,8 +272,8 @@ class TeamManagementSystem:
                     else:
                         st.error("Credenziali non valide")
         
-        # Info credenziali default
-        st.info("**Credenziali default:** admin / admin123")
+        # Info credenziali
+        st.info("**Credenziali admin:** imposta AURUMBOTX_ADMIN_PASSWORD (o ADMIN_PASSWORD) nelle variabili ambiente.")
         return
     
     # Dashboard principale
@@ -557,4 +565,3 @@ class TeamManagementSystem:
 
 if __name__ == "__main__":
     main()
-

@@ -1,3 +1,6 @@
+# Copyright (c) 2025 AurumBotX
+# SPDX-License-Identifier: MIT
+
 from abc import ABC, abstractmethod
 import pandas as pd
 from typing import Dict, Any, List, Optional
