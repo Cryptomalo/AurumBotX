@@ -1,0 +1,1 @@
+"""AurumBotX core package."""

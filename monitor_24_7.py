@@ -16,13 +16,8 @@ from pathlib import Path
 import traceback
 
 # Aggiungi il percorso del progetto
-sys.path.append('/home/ubuntu/AurumBotX')
-
-# Configurazione environment
-os.environ['DATABASE_URL'] = 'postgresql://aurumbotx_user:your_secure_password@localhost:5432/aurumbotx_db'
-os.environ['BINANCE_API_KEY'] = 'ieuTfW7ZHrQp0ktZba8Fgs9b5QPygvC9w2qrhHg9ihTIfi2mRw4PCQbdNSm4GYie'
-os.environ['BINANCE_SECRET_KEY'] = 'pcbYMZbW00goPM7x5PTNbrFaUvkZ6Ik9RZYpViFv7LgVu3X3KxEaJIwFGrDdtBP4'
-os.environ['OPENROUTER_API_KEY'] = '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'
+project_root = Path(__file__).resolve().parent
+sys.path.append(str(project_root))
 
 class AurumBotMonitor:
     def __init__(self):
@@ -399,4 +394,3 @@ class AurumBotMonitor:
 if __name__ == "__main__":
     monitor = AurumBotMonitor()
     asyncio.run(monitor.run())
-

@@ -151,6 +151,7 @@ class TradingEngineUSDT:
         project_root = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
         self.db_path = os.path.join(project_root, db_path)
         self.base_currency = 'USDT'
+        os.makedirs(os.path.dirname(self.db_path), exist_ok=True)
 
         # Initialize SQLAlchemy Engine and Session
         self.engine = create_engine(
@@ -1259,4 +1260,3 @@ if __name__ == '__main__':
     opportunities = engine.scan_market_opportunities()
     print(opportunities)
     engine.stop_trading()
-
