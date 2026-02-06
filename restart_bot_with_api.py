@@ -11,22 +11,41 @@ import subprocess
 import time
 from datetime import datetime
 
-# Configurazione API Keys
-API_KEYS = {
-    'BINANCE_API_KEY': 'ieuTfW7ZHrQp0ktZba8Fgs9b5QQzWvKdpKhNjuAN7xVJTBtNMdNjBhgJTKvqhCGF',
-    'BINANCE_SECRET_KEY': 'fQGGbBhJmJvQJhJGJhJGJhJGJhJGJhJGJhJGJhJGJhJGJhJGJhJGJhJGJhJGJhJG',
-    'DATABASE_URL': 'postgresql://aurumbotx_user:your_password@localhost:5432/aurumbotx_db'
-}
+REQUIRED_ENV_VARS = (
+    'BINANCE_API_KEY',
+    'BINANCE_SECRET_KEY',
+)
+
+OPTIONAL_ENV_VARS = (
+    'DATABASE_URL',
+)
+
+def load_api_keys():
+    """Carica API keys dalle variabili ambiente."""
+    missing = [key for key in REQUIRED_ENV_VARS if not os.getenv(key)]
+    if missing:
+        raise RuntimeError(
+            f"Variabili ambiente mancanti: {', '.join(missing)}. "
+            "Configura le API keys prima di riavviare il bot."
+        )
+
+    keys = {key: os.getenv(key) for key in REQUIRED_ENV_VARS}
+    for key in OPTIONAL_ENV_VARS:
+        if os.getenv(key):
+            keys[key] = os.getenv(key)
+    return keys
 
 def setup_environment():
     """Setup variabili ambiente"""
     print("🔑 Configurazione API Keys...")
-    
-    for key, value in API_KEYS.items():
+    api_keys = load_api_keys()
+
+    for key, value in api_keys.items():
         os.environ[key] = value
         print(f"✅ {key}: Configurata")
-    
+
     print("✅ Tutte le API Keys configurate!")
+    return api_keys
 
 async def test_binance_connection():
     """Test connessione Binance"""
@@ -80,22 +99,26 @@ def start_bot_processes():
     
     # Prepara environment per subprocess
     env = os.environ.copy()
-    for key, value in API_KEYS.items():
+    api_keys = load_api_keys()
+    for key, value in api_keys.items():
         env[key] = value
     
     processes = []
     
     try:
-        # Avvia bot test 1000€
-        print("💰 Avvio Bot Test 1000€...")
-        proc1 = subprocess.Popen(
-            ['python', 'test_trading_1000_euro.py'],
-            env=env,
-            stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE
-        )
-        processes.append(('Bot Test 1000€', proc1))
-        time.sleep(2)
+        # Avvia bot test 1000€ se presente
+        if os.path.exists('test_trading_1000_euro.py'):
+            print("💰 Avvio Bot Test 1000€...")
+            proc1 = subprocess.Popen(
+                ['python', 'test_trading_1000_euro.py'],
+                env=env,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE
+            )
+            processes.append(('Bot Test 1000€', proc1))
+            time.sleep(2)
+        else:
+            print("⚠️ test_trading_1000_euro.py non trovato, salto avvio.")
         
         # Avvia bot monitoraggio 24h
         print("📊 Avvio Bot Monitoraggio 24h...")
@@ -226,4 +249,3 @@ async def main():
 
 if __name__ == "__main__":
     asyncio.run(main())
-

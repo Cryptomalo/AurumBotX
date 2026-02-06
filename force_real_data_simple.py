@@ -7,9 +7,11 @@ import os
 import sys
 import asyncio
 import logging
+from pathlib import Path
 
 # Aggiungi path del progetto
-sys.path.append('/home/ubuntu/AurumBotX')
+project_root = Path(__file__).resolve().parent
+sys.path.append(str(project_root))
 
 class SimpleRealDataForcer:
     def __init__(self):
@@ -57,19 +59,25 @@ class SimpleRealDataForcer:
         """Setup API Keys"""
         self.print_section("SETUP API KEYS")
         
-        # API Keys Binance Testnet (pubbliche per testing)
         api_keys = {
-            'BINANCE_API_KEY': 'ieuTfW7ZHrQp0ktZba8Fgs9b5QvVhNnCYhqHNvvJKhGqfJqjWvJqjWvJqjWvJqjW',
-            'BINANCE_SECRET_KEY': 'J9dF8kL2mN5pQ7rS9tU1vW3xY5zA7bC9dE1fG3hI5jK7lM9nO1pQ3rS5tU7vW9xY',
-            'USE_TESTNET': 'true'
+            'BINANCE_API_KEY': os.environ.get('BINANCE_API_KEY'),
+            'BINANCE_SECRET_KEY': os.environ.get('BINANCE_SECRET_KEY'),
+            'USE_TESTNET': os.environ.get('USE_TESTNET', 'true')
         }
+
+        missing = [key for key in ('BINANCE_API_KEY', 'BINANCE_SECRET_KEY') if not api_keys.get(key)]
+        if missing:
+            raise RuntimeError(
+                f"Variabili ambiente mancanti: {', '.join(missing)}. "
+                "Configura le API keys prima di forzare i dati reali."
+            )
         
         # Imposta variabili ambiente
         for key, value in api_keys.items():
             os.environ[key] = value
         
         # Crea file .env
-        env_file = "/home/ubuntu/AurumBotX/.env"
+        env_file = project_root / ".env"
         with open(env_file, 'w') as f:
             for key, value in api_keys.items():
                 f.write(f"{key}={value}\n")
@@ -119,7 +127,7 @@ class SimpleRealDataForcer:
         self.print_section("MODIFICA DATA_LOADER")
         
         try:
-            data_loader_path = "/home/ubuntu/AurumBotX/utils/data_loader.py"
+            data_loader_path = project_root / "utils" / "data_loader.py"
             
             with open(data_loader_path, 'r') as f:
                 content = f.read()
@@ -183,4 +191,3 @@ async def main():
 
 if __name__ == "__main__":
     asyncio.run(main())
-

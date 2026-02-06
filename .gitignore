@@ -82,8 +82,12 @@ wallets/
 
 # Data files
 data/
+!src/data/
+!src/data/**
+src/data/__pycache__/
 *.csv
 *.json.bak
+SYSTEM_TEST_REPORT_*.json
 
 # Streamlit
 .streamlit/secrets.toml

@@ -220,16 +220,13 @@ GRANT ALL PRIVILEGES ON DATABASE aurumbotx_db TO aurumbotx_user;
 ### Test Automatici
 ```bash
 # Test completo del sistema
-python test_ai_trading_complete.py
+python test_system_complete.py
 
-# Test esecuzione trade
-python test_trade_execution.py
+# Test auto update
+python test_auto_update.py
 
-# Test strategie
-python test_trading_strategies.py
-
-# Test prediction model
-python test_prediction_model_features.py
+# Test verifica strategia
+python strategy_verification_test.py
 ```
 
 ### Test Manuali
@@ -359,4 +356,3 @@ Questo progetto è licenziato sotto la Licenza MIT - vedi il file [LICENSE](LICE
 *Stato: Operativo in Testnet* ✅
 
 **🚀 Pronto per il trading automatico!**
-

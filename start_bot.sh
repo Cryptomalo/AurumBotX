@@ -1,26 +1,35 @@
 #!/bin/sh
 
-# Imposta le variabili d'ambiente per il database
-export DATABASE_URL="postgresql://aurumbotx_user:your_secure_password@localhost:5432/aurumbotx_db"
-export ASYNC_DATABASE_URL="postgresql+asyncpg://aurumbotx_user:your_secure_password@localhost:5432/aurumbotx_db"
+# Carica variabili d'ambiente da .env se presente
+if [ -f ".env" ]; then
+  set -a
+  . ./.env
+  set +a
+fi
 
-# Imposta le variabili d'ambiente per le API di Binance Testnet
-export BINANCE_API_KEY_TESTNET="ieuTfW7ZHrQp0ktZba8Fgs9b5QPygvC9w2qrhHg9ihTIfi2mRw4PCQbdNSm4GYie"
-export BINANCE_SECRET_KEY_TESTNET="pcbYMZbW00goPM7x5PTNbrFaUvkZ6Ik9RZYpViFv7LgVu3X3KxEaJIwFGrDdtBP4"
+# Verifica configurazione essenziale
+if [ -z "${BINANCE_API_KEY}" ] || [ -z "${BINANCE_SECRET_KEY}" ]; then
+  echo "⚠️  BINANCE_API_KEY o BINANCE_SECRET_KEY non configurate."
+  echo "   Configura le variabili ambiente o il file .env prima di avviare il bot."
+fi
 
-# Imposta la variabile d'ambiente per OpenRouter
-export OPENROUTER_API_KEY="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"
-
-# Avvia l'interfaccia Streamlit
-streamlit run streamlit_app.py --server.address 0.0.0.0 --server.port 5000 --server.headless true &
+# Avvia l'interfaccia Streamlit (se presente)
+if [ -f "team_management_system.py" ]; then
+  streamlit run team_management_system.py --server.address 0.0.0.0 --server.port "${DASHBOARD_PORT:-8507}" --server.headless true &
+else
+  echo "⚠️  team_management_system.py non trovato, dashboard non avviata."
+fi
 
 # Avvia il Trading Bot
 python3 start_trading.py &
 
-# Avvia il System Monitor
-python3 utils/system_checkup.py &
+# Avvio monitor opzionale se presente
+if [ -f "monitor_24_7.py" ]; then
+  python3 monitor_24_7.py &
+else
+  echo "⚠️  monitor_24_7.py non trovato, monitor non avviato."
+fi
 
 # Attendi che tutti i processi siano terminati
 wait
-
 
