@@ -15,6 +15,7 @@ from typing import Dict, List, Any, Optional, Tuple
 from dataclasses import dataclass
 import pandas as pd
 import numpy as np
+import random
 
 # Aggiungi path del progetto
 sys.path.append('/home/ubuntu/AurumBotX')
@@ -566,4 +567,3 @@ async def main():
 
 if __name__ == "__main__":
     asyncio.run(main())
-
