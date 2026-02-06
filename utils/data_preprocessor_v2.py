@@ -1,4 +1,7 @@
 #!/usr/bin/env python3
+# Copyright (c) 2025 AurumBotX
+# SPDX-License-Identifier: MIT
+
 """
 Data Preprocessor V2 - normalizza dati e rimuove NaN/infiniti.
 """

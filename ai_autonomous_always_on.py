@@ -1,4 +1,7 @@
 #!/usr/bin/env python3
+# Copyright (c) 2025 AurumBotX
+# SPDX-License-Identifier: MIT
+
 """
 AurumBotX - AI Autonomous Always-On System
 Sistema sempre attivo in background con auto-recovery

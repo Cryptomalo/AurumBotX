@@ -1,4 +1,7 @@
 #!/usr/bin/env python3
+# Copyright (c) 2025 AurumBotX
+# SPDX-License-Identifier: MIT
+
 """
 AurumBotX - Hyperliquid Integrated Demo
 Demo end-to-end completa che dimostra l'integrazione di Hyperliquid con le strategie esistenti

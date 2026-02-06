@@ -1,4 +1,7 @@
 #!/usr/bin/env python3
+# Copyright (c) 2025 AurumBotX
+# SPDX-License-Identifier: MIT
+
 """
 AurumBotX Trading Report Generator
 Genera report PDF completo con tutti i dati di trading

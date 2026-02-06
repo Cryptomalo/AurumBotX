@@ -1,3 +1,6 @@
+# Copyright (c) 2025 AurumBotX
+# SPDX-License-Identifier: MIT
+
 import pytest
 
 from utils.trade_executor_v2 import RobustTradeExecutor

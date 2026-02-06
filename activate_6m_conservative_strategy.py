@@ -1,4 +1,7 @@
 #!/usr/bin/env python3
+# Copyright (c) 2025 AurumBotX
+# SPDX-License-Identifier: MIT
+
 """
 Attivazione Strategia 6M Conservativa
 Loop automatico con gestione NaN robusta per trading reale

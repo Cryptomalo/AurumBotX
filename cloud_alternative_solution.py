@@ -1,4 +1,7 @@
 #!/usr/bin/env python3
+# Copyright (c) 2025 AurumBotX
+# SPDX-License-Identifier: MIT
+
 """
 AurumBotX Cloud Alternative Solution
 Soluzione completa per sostituire Google Cloud con alternative locali/open source

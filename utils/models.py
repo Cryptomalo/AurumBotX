@@ -1,3 +1,6 @@
+# Copyright (c) 2025 AurumBotX
+# SPDX-License-Identifier: MIT
+
 """
 Database models for AurumBotX trading platform
 """

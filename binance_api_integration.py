@@ -1,4 +1,7 @@
 #!/usr/bin/env python3
+# Copyright (c) 2025 AurumBotX
+# SPDX-License-Identifier: MIT
+
 """
 AurumBotX Binance API Integration - Dati Reali
 Integrazione robusta con Binance Testnet per dati di mercato reali

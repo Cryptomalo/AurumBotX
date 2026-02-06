@@ -1,4 +1,7 @@
 #!/usr/bin/env python3
+# Copyright (c) 2025 AurumBotX
+# SPDX-License-Identifier: MIT
+
 """
 AurumBotX Bootstrap Fix - Core Trading Engine
 Fix immediato per rendere operativo il sistema con budget zero

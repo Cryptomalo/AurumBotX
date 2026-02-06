@@ -1,3 +1,6 @@
+# Copyright (c) 2025 AurumBotX
+# SPDX-License-Identifier: MIT
+
 import logging
 from typing import Dict, Any, List, Optional
 import pandas as pd

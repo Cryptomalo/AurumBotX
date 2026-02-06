@@ -1,4 +1,7 @@
 #!/usr/bin/env python3
+# Copyright (c) 2025 AurumBotX
+# SPDX-License-Identifier: MIT
+
 """
 Simulatore Completo Strategie AurumBotX
 Simula e compara tutte le strategie disponibili con dati reali

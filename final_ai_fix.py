@@ -1,4 +1,7 @@
 #!/usr/bin/env python3
+# Copyright (c) 2025 AurumBotX
+# SPDX-License-Identifier: MIT
+
 """
 Fix Finale per Segnali AI
 Risolve gli ultimi problemi per attivare completamente i segnali AI

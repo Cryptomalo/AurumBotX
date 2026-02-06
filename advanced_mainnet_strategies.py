@@ -1,4 +1,7 @@
 #!/usr/bin/env python3
+# Copyright (c) 2025 AurumBotX
+# SPDX-License-Identifier: MIT
+
 """
 AurumBotX Advanced Mainnet Strategies
 Strategie avanzate specifiche per ottimizzazione mainnet con esempi pratici

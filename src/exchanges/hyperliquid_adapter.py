@@ -1,4 +1,7 @@
 #!/usr/bin/env python3
+# Copyright (c) 2025 AurumBotX
+# SPDX-License-Identifier: MIT
+
 """
 AurumBotX Hyperliquid Adapter
 Integrazione completa con Hyperliquid DEX per perpetual futures trading

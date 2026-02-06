@@ -1,4 +1,7 @@
 #!/usr/bin/env python3
+# Copyright (c) 2025 AurumBotX
+# SPDX-License-Identifier: MIT
+
 """
 AurumBotX Auto Deploy System
 Sistema completo per deploy automatico su cloud con configurazione zero
@@ -229,7 +232,7 @@ LOG_FILE=logs/aurumbotx.log
 
 # Team Management
 ADMIN_USERNAME=admin
-ADMIN_PASSWORD=admin123
+ADMIN_PASSWORD=CHANGE_ME
 """
         
         with open(".env.template", "w") as f:
@@ -318,7 +321,7 @@ if not os.path.exists('aurumbotx.db'):
 # Avvia sistema
 echo "🌐 Avvio dashboard..."
 echo "📊 Dashboard disponibile su: http://localhost:8507"
-echo "🔐 Login: admin / admin123"
+echo "🔐 Login: admin (password impostata via AURUMBOTX_ADMIN_PASSWORD o ADMIN_PASSWORD)"
 
 # Avvia in background se richiesto
 if [ "$1" = "--background" ]; then
@@ -377,7 +380,7 @@ docker-compose up -d
 
 ### 📊 Dashboard Principale
 - **URL**: http://localhost:8507 (locale) o URL cloud
-- **Login**: admin / admin123
+- **Login**: admin (password impostata via AURUMBOTX_ADMIN_PASSWORD o ADMIN_PASSWORD)
 - **Funzioni**: Controllo completo sistema
 
 ### 👥 Gestione Team
@@ -437,7 +440,7 @@ DATABASE_TYPE=sqlite
 INITIAL_BALANCE=250.0
 DEMO_MODE=true
 ADMIN_USERNAME=admin
-ADMIN_PASSWORD=admin123
+ADMIN_PASSWORD=CHANGE_ME
 ```
 
 ## 🚨 Troubleshooting
@@ -579,7 +582,7 @@ if st.query_params.get("health"):
             self.log("1. 🔧 git add . && git commit -m 'Deploy ready'")
             self.log("2. 🚀 git push origin main")
             self.log("3. 🌐 Deploy su Railway/Heroku/Render")
-            self.log("4. 🔐 Login: admin / admin123")
+            self.log("4. 🔐 Login: admin (password impostata via AURUMBOTX_ADMIN_PASSWORD o ADMIN_PASSWORD)")
             self.log("\\n🌍 DEPLOY OPTIONS:")
             self.log("- Railway: https://railway.app (1-click)")
             self.log("- Heroku: heroku create && git push heroku main")
@@ -611,4 +614,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-

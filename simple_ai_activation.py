@@ -1,4 +1,7 @@
 #!/usr/bin/env python3
+# Copyright (c) 2025 AurumBotX
+# SPDX-License-Identifier: MIT
+
 """
 Attivazione Semplice Segnali AI
 Approccio diretto per attivare i segnali AI senza modifiche complesse

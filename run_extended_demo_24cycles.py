@@ -1,4 +1,7 @@
 #!/usr/bin/env python3
+# Copyright (c) 2025 AurumBotX
+# SPDX-License-Identifier: MIT
+
 """
 AurumBotX Extended Demo - 24 Cycles
 Demo estesa con registrazione completa di tutte le decisioni AI

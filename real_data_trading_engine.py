@@ -1,4 +1,7 @@
 #!/usr/bin/env python3
+# Copyright (c) 2025 AurumBotX
+# SPDX-License-Identifier: MIT
+
 """
 AurumBotX Real Data Trading Engine - Dati Binance Reali
 Trading engine che usa dati reali da Binance Testnet invece di mock data

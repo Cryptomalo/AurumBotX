@@ -1,4 +1,7 @@
 #!/usr/bin/env python3
+# Copyright (c) 2025 AurumBotX
+# SPDX-License-Identifier: MIT
+
 """
 AurumBotX Mainnet Optimization Strategies
 Sistema avanzato di ottimizzazione per trading mainnet reale

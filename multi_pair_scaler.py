@@ -1,4 +1,7 @@
 #!/usr/bin/env python3
+# Copyright (c) 2025 AurumBotX
+# SPDX-License-Identifier: MIT
+
 """
 AurumBotX Multi-Pair Scaler
 Sistema di scaling per multiple coppie di trading con gestione avanzata del rischio

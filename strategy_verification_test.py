@@ -1,4 +1,7 @@
 #!/usr/bin/env python3
+# Copyright (c) 2025 AurumBotX
+# SPDX-License-Identifier: MIT
+
 """
 Test di verifica logica strategia BTC
 Analizza la strategia attualmente implementata e verifica la correttezza della logica

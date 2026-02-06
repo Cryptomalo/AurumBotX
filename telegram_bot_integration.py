@@ -1,4 +1,7 @@
 #!/usr/bin/env python3
+# Copyright (c) 2025 AurumBotX
+# SPDX-License-Identifier: MIT
+
 """
 🤖 AURUMBOTX TELEGRAM BOT INTEGRATION
 Bot Telegram completo per accesso mobile alla piattaforma

@@ -1,4 +1,7 @@
 #!/usr/bin/env python3
+# Copyright (c) 2025 AurumBotX
+# SPDX-License-Identifier: MIT
+
 """
 Post-Cleanup Backtest - 10 Cicli
 Valida la stabilità del sistema dopo la pulizia del progetto

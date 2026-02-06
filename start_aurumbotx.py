@@ -1,3 +1,6 @@
+# Copyright (c) 2025 AurumBotX
+# SPDX-License-Identifier: MIT
+
 import subprocess
 import time
 import os

@@ -1,4 +1,7 @@
 #!/usr/bin/env python3
+# Copyright (c) 2025 AurumBotX
+# SPDX-License-Identifier: MIT
+
 """
 Demo Mainnet AI Autonomous - 100 USD
 Sistema completo con AI che decide autonomamente strategie, timing e risk management

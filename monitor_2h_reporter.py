@@ -1,4 +1,7 @@
 #!/usr/bin/env python3
+# Copyright (c) 2025 AurumBotX
+# SPDX-License-Identifier: MIT
+
 """
 AurumBotX 2-Hour Monitor & Reporter
 Sistema di monitoraggio ogni 2 ore con invio automatico dati

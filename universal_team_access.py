@@ -1,4 +1,7 @@
 #!/usr/bin/env python3
+# Copyright (c) 2025 AurumBotX
+# SPDX-License-Identifier: MIT
+
 """
 AurumBotX Universal Team Access System
 Sistema per accesso team universale senza dipendenze Manus
@@ -199,7 +202,7 @@ class AurumBotXHandler(http.server.SimpleHTTPRequestHandler):
             </div>
             <button class="btn btn-start" style="width: 100%;" onclick="login()">🚀 Accedi</button>
             <p style="text-align: center; margin-top: 15px; opacity: 0.8;">
-                Default: admin / admin123
+                Imposta AURUMBOTX_ADMIN_PASSWORD (o ADMIN_PASSWORD) nelle variabili ambiente
             </p>
         </div>
         
@@ -252,7 +255,9 @@ class AurumBotXHandler(http.server.SimpleHTTPRequestHandler):
             const password = document.getElementById('password').value;
             
             // Simulazione login (in produzione usare API reale)
-            if (username === 'admin' && password === 'admin123') {
+            const expectedUsername = "__ADMIN_USERNAME__";
+            const expectedPassword = "__ADMIN_PASSWORD__";
+            if (username === expectedUsername && password === expectedPassword) {
                 authenticated = true;
                 document.getElementById('loginSection').style.display = 'none';
                 document.getElementById('dashboardSection').style.display = 'block';
@@ -373,6 +378,13 @@ class AurumBotXHandler(http.server.SimpleHTTPRequestHandler):
 </body>
 </html>
         """
+
+        admin_username = os.getenv("AURUMBOTX_ADMIN_USERNAME", "admin")
+        admin_password = os.getenv("AURUMBOTX_ADMIN_PASSWORD") or os.getenv("ADMIN_PASSWORD") or ""
+        html_content = (
+            html_content.replace("__ADMIN_USERNAME__", admin_username)
+            .replace("__ADMIN_PASSWORD__", admin_password)
+        )
         
         self.send_response(200)
         self.send_header('Content-type', 'text/html; charset=utf-8')
@@ -514,7 +526,7 @@ def start_server(port=8080):
         with socketserver.TCPServer(("", port), AurumBotXHandler) as httpd:
             print(f"🌐 AurumBotX Server avviato su porta {port}")
             print(f"📊 Dashboard: http://localhost:{port}")
-            print(f"🔐 Login: admin / admin123")
+            print("🔐 Login: admin (password impostata via AURUMBOTX_ADMIN_PASSWORD o ADMIN_PASSWORD)")
             print("🛑 Ctrl+C per fermare")
             httpd.serve_forever()
     except KeyboardInterrupt:
@@ -583,7 +595,7 @@ except:
 echo ""
 echo "🎉 AurumBotX accessibile pubblicamente!"
 echo "🔗 URL Pubblico: $PUBLIC_URL"
-echo "🔐 Login: admin / admin123"
+echo "🔐 Login: admin (password impostata via AURUMBOTX_ADMIN_PASSWORD o ADMIN_PASSWORD)"
 echo ""
 echo "📋 Condividi questo URL con il tuo team:"
 echo "$PUBLIC_URL"
@@ -778,7 +790,7 @@ if __name__ == "__main__":
             • File: standalone_server.py<br/>
             • Comando: python3 standalone_server.py 8080<br/>
             • Dashboard: http://localhost:8080<br/>
-            • Login: admin / admin123<br/>
+            • Login: admin (password impostata via AURUMBOTX_ADMIN_PASSWORD o ADMIN_PASSWORD)<br/>
             <br/>
             <b>2. Accesso Pubblico (Ngrok)</b><br/>
             • Script: ./setup_public_access.sh<br/>
@@ -824,7 +836,7 @@ if __name__ == "__main__":
             <br/>
             <b>🔐 CREDENZIALI:</b><br/>
             • Username: admin<br/>
-            • Password: admin123<br/>
+            • Password: impostata via AURUMBOTX_ADMIN_PASSWORD o ADMIN_PASSWORD<br/>
             <br/>
             <b>📊 FUNZIONALITÀ DISPONIBILI:</b><br/>
             • Visualizzazione dati trading real-time<br/>
@@ -861,7 +873,7 @@ if __name__ == "__main__":
                 f.write("• Server: python3 standalone_server.py 8080\n")
                 f.write("• Pubblico: ./setup_public_access.sh\n")
                 f.write("• Docker: docker-compose -f docker-compose.team.yml up\n")
-                f.write("• Login: admin / admin123\n")
+                f.write("• Login: admin (password impostata via AURUMBOTX_ADMIN_PASSWORD o ADMIN_PASSWORD)\n")
             
             self.log(f"✅ Report TXT creato: {filename}")
             return filename
@@ -946,7 +958,7 @@ if __name__ == "__main__":
             self.log("2. 🌐 Pubblico: ./setup_public_access.sh")
             self.log("3. 🐳 Docker: docker-compose -f docker-compose.team.yml up")
             self.log("4. 📱 Replit: Upload su replit.com")
-            self.log("\n🔐 Login: admin / admin123")
+            self.log("\n🔐 Login: admin (password impostata via AURUMBOTX_ADMIN_PASSWORD o ADMIN_PASSWORD)")
             self.log("📊 Dashboard: http://localhost:8080")
             
             if pdf_file:
@@ -982,4 +994,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-

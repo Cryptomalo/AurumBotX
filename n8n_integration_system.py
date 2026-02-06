@@ -1,4 +1,7 @@
 #!/usr/bin/env python3
+# Copyright (c) 2025 AurumBotX
+# SPDX-License-Identifier: MIT
+
 """
 AurumBotX n8n Integration System
 Sistema di integrazione con n8n per automazione avanzata e workflow intelligenti

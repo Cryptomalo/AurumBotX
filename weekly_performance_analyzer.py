@@ -1,4 +1,7 @@
 #!/usr/bin/env python3
+# Copyright (c) 2025 AurumBotX
+# SPDX-License-Identifier: MIT
+
 """
 AurumBotX Weekly Performance Analyzer
 Sistema di analisi performance settimanale con metriche avanzate e reporting

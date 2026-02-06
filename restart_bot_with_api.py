@@ -1,4 +1,7 @@
 #!/usr/bin/env python3
+# Copyright (c) 2025 AurumBotX
+# SPDX-License-Identifier: MIT
+
 """
 🚀 RESTART AURUMBOTX WITH CORRECT API KEYS
 Script per riavviare il bot con le API Keys corrette

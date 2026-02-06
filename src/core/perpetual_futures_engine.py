@@ -1,4 +1,7 @@
 #!/usr/bin/env python3
+# Copyright (c) 2025 AurumBotX
+# SPDX-License-Identifier: MIT
+
 """
 AurumBotX Perpetual Futures Engine
 Motore specializzato per il trading di perpetual futures su Hyperliquid

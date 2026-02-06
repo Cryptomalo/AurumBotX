@@ -1,3 +1,6 @@
+# Copyright (c) 2025 AurumBotX
+# SPDX-License-Identifier: MIT
+
 import pandas as pd
 import numpy as np
 import sqlite3

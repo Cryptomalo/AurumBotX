@@ -1,3 +1,6 @@
+# Copyright (c) 2025 AurumBotX
+# SPDX-License-Identifier: MIT
+
 from dataclasses import dataclass
 from datetime import datetime
 from enum import Enum
